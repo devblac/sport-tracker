@@ -1,0 +1,224 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light theme - Clean professional design */
+    --background: 0 0% 100%;
+    --foreground: 222.8571 84.0000% 4.9020%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.8571 84.0000% 4.9020%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.8571 84.0000% 4.9020%;
+    --primary: 221.2121 83.1933% 53.3333%;
+    --primary-foreground: 0 0% 98.0392%;
+    --secondary: 210.0000 40.0000% 96.0784%;
+    --secondary-foreground: 222.2222 47.3684% 11.1765%;
+    --muted: 210.0000 40.0000% 96.0784%;
+    --muted-foreground: 215.3846 16.3180% 46.8627%;
+    --accent: 210.0000 40.0000% 96.0784%;
+    --accent-foreground: 222.2222 47.3684% 11.1765%;
+    --destructive: 0 84.2365% 60.1961%;
+    --destructive-foreground: 0 0% 98.0392%;
+    --border: 214.2857 31.8182% 91.3725%;
+    --input: 214.2857 31.8182% 91.3725%;
+    --ring: 215.0000 20.2247% 65.0980%;
+    --chart-1: 221.2121 83.1933% 53.3333%;
+    --chart-2: 217.2193 91.2195% 59.8039%;
+    --chart-3: 213.1169 93.9024% 67.8431%;
+    --chart-4: 211.6981 96.3636% 78.4314%;
+    --chart-5: 213.3333 96.9231% 87.2549%;
+    --sidebar: 210.0000 40.0000% 98.0392%;
+    --sidebar-foreground: 215.3846 16.3180% 46.8627%;
+    --sidebar-primary: 221.2121 83.1933% 53.3333%;
+    --sidebar-primary-foreground: 0 0% 98.0392%;
+    --sidebar-accent: 210.0000 40.0000% 96.0784%;
+    --sidebar-accent-foreground: 222.2222 47.3684% 11.1765%;
+    --sidebar-border: 214.2857 31.8182% 91.3725%;
+    --sidebar-ring: 215.0000 20.2247% 65.0980%;
+    /* Legacy support */
+    --success: 142 76% 36%;
+    --warning: 38 92% 50%;
+    --error: 0 84% 60%;
+  }
+
+  .dark {
+    /* Dark theme - Professional dark with blue accents */
+    --background: 20 14.2857% 4.1176%;
+    --foreground: 0 0% 98.0392%;
+    --card: 240 5.8824% 10%;
+    --card-foreground: 0 0% 98.0392%;
+    --popover: 240 5.8824% 10%;
+    --popover-foreground: 0 0% 98.0392%;
+    --primary: 217.2193 91.2195% 59.8039%;
+    --primary-foreground: 0 0% 98.0392%;
+    --secondary: 240 3.7037% 15.8824%;
+    --secondary-foreground: 0 0% 98.0392%;
+    --muted: 240 3.7037% 15.8824%;
+    --muted-foreground: 240 5.0279% 64.9020%;
+    --accent: 215.0000 27.9070% 16.8627%;
+    --accent-foreground: 210 20.0000% 98.0392%;
+    --destructive: 0 84.2365% 60.1961%;
+    --destructive-foreground: 0 0% 98.0392%;
+    --border: 240 3.7037% 15.8824%;
+    --input: 240 3.7037% 15.8824%;
+    --ring: 217.2193 91.2195% 59.8039%;
+    --chart-1: 217.2193 91.2195% 59.8039%;
+    --chart-2: 213.1169 93.9024% 67.8431%;
+    --chart-3: 211.6981 96.3636% 78.4314%;
+    --chart-4: 213.3333 96.9231% 87.2549%;
+    --chart-5: 214.2857 94.5946% 92.7451%;
+    --sidebar: 240 5.8824% 10%;
+    --sidebar-foreground: 240 5.0279% 64.9020%;
+    --sidebar-primary: 217.2193 91.2195% 59.8039%;
+    --sidebar-primary-foreground: 0 0% 98.0392%;
+    --sidebar-accent: 240 3.7037% 15.8824%;
+    --sidebar-accent-foreground: 0 0% 98.0392%;
+    --sidebar-border: 240 3.7037% 15.8824%;
+    --sidebar-ring: 217.2193 91.2195% 59.8039%;
+    /* Legacy support */
+    --success: 142 76% 46%;
+    --warning: 38 92% 60%;
+    --error: 0 84% 70%;
+  }
+
+  .oled {
+    /* OLED theme - Pure black with high contrast */
+    --background: 0 0 0;            /* Pure black */
+    --foreground: 255 255 255;      /* Pure white text */
+    --card: 0 0 0;                  /* Pure black cards */
+    --card-foreground: 255 255 255; /* Pure white text */
+    --primary: 34 197 94;           /* Bright green (green-500) */
+    --primary-foreground: 0 0 0;
+    --secondary: 168 85 247;        /* Purple (purple-500) */
+    --secondary-foreground: 0 0 0;
+    --muted: 23 23 23;              /* Very dark gray */
+    --muted-foreground: 163 163 163; /* Light gray text */
+    --border: 64 64 64;             /* Dark gray borders */
+    --input: 23 23 23;              /* Very dark inputs */
+    --ring: 34 197 94;              /* Green focus rings */
+    --success: 34 197 94;           /* Green-500 */
+    --warning: 245 158 11;          /* Amber-500 */
+    --error: 239 68 68;             /* Red-500 */
+  }
+
+  .halloween {
+    /* Halloween theme - Orange and purple with dark background */
+    --background: 17 12 23;         /* Very dark purple */
+    --foreground: 251 146 60;       /* Orange text (orange-400) */
+    --card: 30 27 75;               /* Dark purple cards */
+    --card-foreground: 251 146 60;  /* Orange text on cards */
+    --primary: 249 115 22;          /* Bright orange (orange-500) */
+    --primary-foreground: 17 12 23;
+    --secondary: 147 51 234;        /* Purple (purple-600) */
+    --secondary-foreground: 251 146 60;
+    --muted: 55 48 163;             /* Purple muted */
+    --muted-foreground: 196 181 253; /* Light purple text */
+    --border: 109 40 217;           /* Purple borders */
+    --input: 55 48 163;             /* Purple inputs */
+    --ring: 249 115 22;             /* Orange focus rings */
+    --success: 34 197 94;           /* Green-500 */
+    --warning: 245 158 11;          /* Amber-500 */
+    --error: 239 68 68;             /* Red-500 */
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Mobile-first optimizations */
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    touch-action: manipulation;
+  }
+
+  /* PWA optimizations */
+  #root {
+    min-height: 100vh;
+    min-height: 100dvh; /* Dynamic viewport height for mobile */
+  }
+
+  /* Prevent zoom on input focus (iOS) */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  textarea {
+    font-size: 16px;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-muted;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground;
+  }
+}
+
+@layer components {
+  /* Fitness-specific animations */
+  .celebration-bounce {
+    animation: celebration 0.6s ease-out;
+  }
+
+  .pulse-ring {
+    animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+  }
+
+  @keyframes pulse-ring {
+    0% {
+      transform: scale(0.33);
+    }
+    40%, 50% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      transform: scale(1.2);
+    }
+  }
+
+  /* Mobile-first button styles */
+  .btn-mobile {
+    @apply min-h-[44px] min-w-[44px] touch-manipulation;
+  }
+
+  /* Safe area handling for mobile */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-area-left {
+    padding-left: env(safe-area-inset-left);
+  }
+
+  .safe-area-right {
+    padding-right: env(safe-area-inset-right);
+  }
+}
