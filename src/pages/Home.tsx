@@ -1,11 +1,15 @@
 import React from 'react';
-import { Card, CardHeader, CardTitle, CardContent, Button } from '@/components/ui';
+import { Card, CardContent, Button } from '@/components/ui';
 import { StreakCounter } from '@/components/gamification/StreakCounter';
 import { XPBar } from '@/components/gamification/XPBar';
-import { Play, Trophy, Users, TrendingUp } from 'lucide-react';
+import { QuickStartWorkout } from '@/components/dashboard/QuickStartWorkout';
+import { ActivitySummary } from '@/components/dashboard/ActivitySummary';
+import { TrendingUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores';
 
 export const Home: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
 
   const getGreeting = () => {
@@ -15,14 +19,30 @@ export const Home: React.FC = () => {
     return 'Good Evening';
   };
 
+  const getMotivationalQuote = () => {
+    const quotes = [
+      "The only bad workout is the one that didn't happen.",
+      "Your body can do it. It's your mind you need to convince.",
+      "Success is what comes after you stop making excuses.",
+      "The pain you feel today will be the strength you feel tomorrow.",
+      "Don't wish for it, work for it.",
+      "Champions train, losers complain.",
+      "Your only limit is your mind.",
+      "Push yourself because no one else is going to do it for you.",
+    ];
+    
+    const today = new Date().getDate();
+    return quotes[today % quotes.length];
+  };
+
   return (
     <div className="space-y-6">
       {/* Welcome Header */}
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+        <h1 className="text-3xl font-bold text-foreground mb-2">
           {getGreeting()}, {user?.profile.display_name || 'User'}! 💪
         </h1>
-        <p className="text-gray-600 dark:text-gray-400">
+        <p className="text-muted-foreground">
           Ready to crush your fitness goals?
         </p>
       </div>
@@ -41,13 +61,16 @@ export const Home: React.FC = () => {
 
       {/* XP Progress */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-muted-foreground" />
-            Your Progress
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+              <span className="text-lg">🏆</span>
+            </div>
+            <div>
+              <h3 className="font-semibold text-foreground">Level Progress</h3>
+              <p className="text-sm text-muted-foreground">Keep going to level up!</p>
+            </div>
+          </div>
           <XPBar 
             currentXP={user?.gamification.total_xp || 0}
             levelXP={100}
@@ -57,62 +80,48 @@ export const Home: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* Quick Start Workout */}
+      <QuickStartWorkout />
+
+      {/* Activity Summary */}
+      <ActivitySummary />
+
       {/* Quick Actions */}
       <div className="grid grid-cols-2 gap-4">
         <Button 
-          variant="primary" 
+          variant="outline" 
           size="lg" 
           fullWidth
-          icon={<Play className="w-5 h-5" />}
-          className="h-20 flex-col"
+          onClick={() => navigate('/progress')}
+          icon={<TrendingUp className="w-5 h-5" />}
+          className="h-16 flex-col"
         >
-          <span className="text-lg font-semibold">Start</span>
-          <span className="text-sm opacity-90">Workout</span>
+          <span className="text-base font-semibold">View Progress</span>
+          <span className="text-sm opacity-70">Charts & Stats</span>
         </Button>
         
         <Button 
-          variant="secondary" 
+          variant="outline" 
           size="lg" 
           fullWidth
-          icon={<TrendingUp className="w-5 h-5" />}
-          className="h-20 flex-col"
+          onClick={() => navigate('/exercises')}
+          className="h-16 flex-col"
         >
-          <span className="text-lg font-semibold">View</span>
-          <span className="text-sm opacity-90">Progress</span>
+          <span className="text-xl mb-1">💪</span>
+          <span className="text-base font-semibold">Browse Exercises</span>
+          <span className="text-sm opacity-70">Learn & Explore</span>
         </Button>
       </div>
 
-      {/* Recent Activity */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-muted-foreground" />
-            Recent Activity
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Users className="w-8 h-8 text-gray-400" />
-            </div>
-            <p className="text-gray-500 dark:text-gray-400 mb-4">
-              No recent activity yet
-            </p>
-            <Button variant="outline" size="sm">
-              Add Gym Friends
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Today's Motivation */}
-      <Card variant="glass" className="bg-gradient-to-r from-primary-50 to-secondary-50 dark:from-primary-900/20 dark:to-secondary-900/20">
+      <Card variant="glass" className="bg-gradient-to-r from-primary/5 to-secondary/5">
         <CardContent className="text-center py-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-            💡 Today's Motivation
+          <div className="text-2xl mb-3">💡</div>
+          <h3 className="text-lg font-semibold text-foreground mb-2">
+            Today's Motivation
           </h3>
-          <p className="text-gray-700 dark:text-gray-300 italic">
-            "The only bad workout is the one that didn't happen."
+          <p className="text-muted-foreground italic text-sm leading-relaxed">
+            "{getMotivationalQuote()}"
           </p>
         </CardContent>
       </Card>
