@@ -255,3 +255,11 @@ export { logger, LogLevel } from './logger';
 // Export user utilities
 export * from './userRoles';
 export * from './userValidation';
+
+// Export exercise utilities
+export * from './exerciseValidation';
+export * from './exerciseCategories';
+
+// Export workout utilities
+export * from './workoutValidation';
+export * from './workoutCalculations';

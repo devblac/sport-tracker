@@ -26,22 +26,36 @@ export type {
 // Legacy alias for backward compatibility
 export type UserGamification = Gamification;
 
-// Exercise Types
-export interface Exercise {
-  id: string;
-  name: string;
-  type: 'machine' | 'dumbbell' | 'barbell';
-  category: string;
-  body_parts: string[];
-  muscle_groups: string[];
-  equipment: string;
-  difficulty_level: 1 | 2 | 3 | 4 | 5;
-  instructions: string;
-  gif_url?: string;
-  muscle_diagram_url?: string;
-  created_at: Date;
-  updated_at: Date;
-}
+// Re-export exercise types from schemas (with validation)
+export type {
+  Exercise,
+  ExerciseType,
+  ExerciseCategory,
+  BodyPart,
+  MuscleGroup,
+  Equipment,
+  DifficultyLevel,
+  InstructionStep,
+  ExerciseTip,
+  ExerciseVariation,
+  ExerciseFilter,
+  ExerciseCreate,
+  ExerciseUpdate,
+} from '@/schemas/exercise';
+
+// Re-export workout types from schemas (with validation)
+export type {
+  Workout,
+  WorkoutExercise,
+  SetData,
+  SetType,
+  WorkoutStatus,
+  WorkoutTemplate,
+  WorkoutCreate,
+  WorkoutUpdate,
+  SetCreate,
+  WorkoutFilter,
+} from '@/schemas/workout';
 
 // Workout Types
 export interface Workout {

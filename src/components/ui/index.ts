@@ -17,3 +17,7 @@ export type { LoadingProps, SkeletonProps } from './Loading';
 export { ThemeSelector, ThemeToggle } from './ThemeSelector';
 
 export { ToastContainer, ToastItem } from './Toast';
+
+export { Badge } from './Badge';
+
+export { Tabs, TabsList, TabsTrigger, TabsContent } from './Tabs';

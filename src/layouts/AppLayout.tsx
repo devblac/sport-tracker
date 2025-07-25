@@ -23,7 +23,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         'flex-1 pb-20', // Extra padding for bottom nav
         'overflow-y-auto overscroll-behavior-y-contain'
       )}>
-        <div className="container mx-auto max-w-md px-4 py-4">
+        <div className="container mx-auto max-w-md sm:max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl px-4 py-4">
           {children || <Outlet />}
         </div>
       </main>
