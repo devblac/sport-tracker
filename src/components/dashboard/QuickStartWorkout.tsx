@@ -89,10 +89,10 @@ export const QuickStartWorkout: React.FC<QuickStartWorkoutProps> = ({
           fullWidth
           icon={<Play className="w-5 h-5" />}
           onClick={handleEmptyWorkout}
-          className="h-16 flex-col"
+          className="h-20 flex-col py-3"
           disabled={isStarting}
         >
-          <span className="text-lg font-semibold">Start Empty Workout</span>
+          <span className="text-lg font-semibold">Start Workout</span>
           <span className="text-sm opacity-90">Build as you go</span>
         </Button>
 

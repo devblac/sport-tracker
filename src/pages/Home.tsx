@@ -96,7 +96,7 @@ export const Home: React.FC = () => {
           icon={<TrendingUp className="w-5 h-5" />}
           className="h-16 flex-col"
         >
-          <span className="text-base font-semibold">View Progress</span>
+          <span className="text-base font-semibold">Progress</span>
           <span className="text-sm opacity-70">Charts & Stats</span>
         </Button>
         
@@ -108,7 +108,7 @@ export const Home: React.FC = () => {
           className="h-16 flex-col"
         >
           <span className="text-xl mb-1">💪</span>
-          <span className="text-base font-semibold">Browse Exercises</span>
+          <span className="text-base font-semibold">Exercises</span>
           <span className="text-sm opacity-70">Learn & Explore</span>
         </Button>
       </div>

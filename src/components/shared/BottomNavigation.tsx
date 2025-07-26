@@ -58,22 +58,39 @@ export const BottomNavigation: React.FC = () => {
           const isActive = location.pathname === item.path;
           
           if (item.isMain) {
-            // Special styling for main workout button
+            // Main workout button with consistent styling
             return (
               <NavLink
                 key={item.id}
                 to={item.path}
                 className={cn(
-                  'flex flex-col items-center justify-center',
-                  'w-14 h-14 rounded-full transition-all duration-200',
+                  'flex flex-col items-center justify-center px-3 py-2 rounded-lg',
+                  'min-w-[60px] transition-all duration-200 btn-mobile',
                   'transform active:scale-95',
                   isActive 
-                    ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30' 
-                    : 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-900/50'
+                    ? cn('text-primary-600 dark:text-primary-400', item.color)
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                 )}
               >
-                <Icon className="w-6 h-6" />
-                <span className="text-xs font-medium mt-1">{item.label}</span>
+                <Icon className={cn(
+                  'w-5 h-5 mb-1 transition-transform duration-200',
+                  isActive && 'scale-110'
+                )} />
+                <span className={cn(
+                  'text-xs font-medium transition-all duration-200',
+                  isActive ? 'opacity-100 scale-100' : 'opacity-70 scale-95'
+                )}>
+                  {item.label}
+                </span>
+                
+                {/* Active indicator */}
+                {isActive && (
+                  <div className={cn(
+                    'absolute -top-0.5 left-1/2 transform -translate-x-1/2',
+                    'w-1 h-1 rounded-full',
+                    item.color
+                  )} />
+                )}
               </NavLink>
             );
           }
