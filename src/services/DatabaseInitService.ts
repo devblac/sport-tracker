@@ -2,6 +2,7 @@ import { exerciseService } from './ExerciseService';
 import { WorkoutService } from './WorkoutService';
 import { SAMPLE_EXERCISES } from '@/data/sampleExercises';
 import { logger } from '@/utils';
+import { resetDatabase, shouldResetDatabase, getDatabaseInfo } from '@/utils/databaseReset';
 
 /**
  * Service for initializing the database with sample data
@@ -32,7 +33,9 @@ export class DatabaseInitService {
     try {
       // Check IndexedDB support
       if (!('indexedDB' in window)) {
-        throw new Error('IndexedDB is not supported in this browser');
+        logger.warn('IndexedDB is not supported in this browser, using fallback mode');
+        this.initializeFallbackMode();
+        return;
       }
 
       // Check if already initialized
@@ -43,8 +46,13 @@ export class DatabaseInitService {
 
       logger.info('Initializing database with sample data...');
 
-      // Initialize exercise service
-      await exerciseService.init();
+      // Initialize exercise service with timeout
+      const initPromise = exerciseService.init();
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Exercise service initialization timed out')), 10000);
+      });
+
+      await Promise.race([initPromise, timeoutPromise]);
       logger.info('Exercise service initialized');
 
       // Initialize workout templates
@@ -87,7 +95,75 @@ export class DatabaseInitService {
 
     } catch (error) {
       logger.error('Database initialization failed', error);
+      
+      // Try database reset if it's a known issue
+      if (error instanceof Error && shouldResetDatabase(error)) {
+        logger.warn('Attempting database reset due to initialization failure');
+        try {
+          await resetDatabase();
+          
+          // Try initialization one more time after reset
+          logger.info('Retrying database initialization after reset...');
+          await exerciseService.init();
+          
+          // If successful, continue with normal initialization
+          const workoutService = WorkoutService.getInstance();
+          await workoutService.initializeSampleTemplates();
+          
+          const existingCount = await exerciseService.getExerciseCount();
+          if (existingCount === 0) {
+            const importedExercises = await exerciseService.bulkImportExercises(SAMPLE_EXERCISES);
+            logger.info(`Successfully imported ${importedExercises.length} exercises after reset`);
+          }
+          
+          this.markAsInitialized();
+          return;
+        } catch (resetError) {
+          logger.error('Database reset failed', resetError);
+        }
+      }
+      
+      // Try fallback mode if IndexedDB fails
+      if (error instanceof Error && (
+        error.message.includes('IndexedDB') || 
+        error.message.includes('timed out') ||
+        error.message.includes('not supported')
+      )) {
+        logger.warn('Falling back to memory-only mode due to IndexedDB issues');
+        this.initializeFallbackMode();
+        return;
+      }
+      
       throw error;
+    }
+  }
+
+  /**
+   * Initialize fallback mode when IndexedDB is not available
+   */
+  private static initializeFallbackMode(): void {
+    try {
+      // Mark as initialized to prevent further attempts
+      this.markAsInitialized();
+      
+      // Store fallback flag
+      localStorage.setItem('sport-tracker-fallback-mode', 'true');
+      
+      logger.info('Fallback mode initialized - app will work with limited offline capabilities');
+    } catch (error) {
+      logger.error('Failed to initialize fallback mode', error);
+      // Even if localStorage fails, don't throw - let the app continue
+    }
+  }
+
+  /**
+   * Check if app is running in fallback mode
+   */
+  static isFallbackMode(): boolean {
+    try {
+      return localStorage.getItem('sport-tracker-fallback-mode') === 'true';
+    } catch (error) {
+      return false;
     }
   }
 
@@ -116,15 +192,38 @@ export class DatabaseInitService {
     isInitialized: boolean;
     version: string | null;
     sampleDataCount: number;
+    isFallbackMode?: boolean;
   }> {
-    await exerciseService.init();
-    
-    return {
-      exerciseCount: await exerciseService.getExerciseCount(),
-      isInitialized: this.isInitialized(),
-      version: localStorage.getItem(this.DB_VERSION_KEY),
-      sampleDataCount: SAMPLE_EXERCISES.length,
-    };
+    try {
+      if (this.isFallbackMode()) {
+        return {
+          exerciseCount: 0,
+          isInitialized: true,
+          version: this.CURRENT_DB_VERSION,
+          sampleDataCount: SAMPLE_EXERCISES.length,
+          isFallbackMode: true,
+        };
+      }
+
+      await exerciseService.init();
+      
+      return {
+        exerciseCount: await exerciseService.getExerciseCount(),
+        isInitialized: this.isInitialized(),
+        version: localStorage.getItem(this.DB_VERSION_KEY),
+        sampleDataCount: SAMPLE_EXERCISES.length,
+        isFallbackMode: false,
+      };
+    } catch (error) {
+      logger.error('Failed to get database stats', error);
+      return {
+        exerciseCount: 0,
+        isInitialized: false,
+        version: null,
+        sampleDataCount: SAMPLE_EXERCISES.length,
+        isFallbackMode: true,
+      };
+    }
   }
 
   /**
@@ -247,6 +346,52 @@ export class DatabaseInitService {
       logger.error('Database import failed', error);
       throw error;
     }
+  }
+
+  /**
+   * Debug database state
+   */
+  static async debugDatabase(): Promise<void> {
+    try {
+      logger.info('=== Database Debug Info ===');
+      
+      // Check localStorage flags
+      const initialized = localStorage.getItem(this.INIT_FLAG_KEY);
+      const version = localStorage.getItem(this.DB_VERSION_KEY);
+      const fallbackMode = localStorage.getItem('sport-tracker-fallback-mode');
+      
+      logger.info('LocalStorage flags:', {
+        initialized,
+        version,
+        fallbackMode,
+      });
+
+      // Check IndexedDB info
+      const dbInfo = await getDatabaseInfo();
+      logger.info('IndexedDB info:', dbInfo);
+
+      // Check exercise service state
+      try {
+        await exerciseService.init();
+        const exerciseCount = await exerciseService.getExerciseCount();
+        logger.info('Exercise service:', { exerciseCount });
+      } catch (error) {
+        logger.error('Exercise service error:', error);
+      }
+
+      logger.info('=== End Debug Info ===');
+    } catch (error) {
+      logger.error('Debug failed', error);
+    }
+  }
+
+  /**
+   * Force reset database (for debugging)
+   */
+  static async forceReset(): Promise<void> {
+    logger.info('Force resetting database...');
+    await resetDatabase();
+    await this.initializeDatabase(true);
   }
 }
 

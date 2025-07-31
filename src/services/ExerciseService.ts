@@ -15,12 +15,30 @@ import {
  * Service for managing exercise data in IndexedDB
  */
 export class ExerciseService {
+  private fallbackMode = false;
+  private memoryStore: Exercise[] = [];
+
   /**
    * Initialize the service
    */
   async init(): Promise<void> {
-    await dbManager.init();
-    logger.info('ExerciseService initialized');
+    try {
+      await dbManager.init();
+      logger.info('ExerciseService initialized');
+    } catch (error) {
+      logger.warn('ExerciseService falling back to memory mode', error);
+      this.fallbackMode = true;
+      this.initializeFallbackData();
+    }
+  }
+
+  /**
+   * Initialize fallback data in memory
+   */
+  private initializeFallbackData(): void {
+    // Load basic exercises from sample data
+    this.memoryStore = [];
+    logger.info('ExerciseService initialized in fallback mode');
   }
 
   /**
@@ -279,12 +297,17 @@ export class ExerciseService {
       }
     }
 
-    // Bulk insert to database
-    await dbManager.bulkPut(STORES.EXERCISES, processedExercises);
+    // Insert to database or memory store
+    if (this.fallbackMode) {
+      this.memoryStore.push(...processedExercises);
+    } else {
+      await dbManager.bulkPut(STORES.EXERCISES, processedExercises);
+    }
     
     logger.info('Bulk import completed', { 
       total: exercises.length, 
-      imported: processedExercises.length 
+      imported: processedExercises.length,
+      fallbackMode: this.fallbackMode
     });
 
     return processedExercises;
@@ -294,6 +317,9 @@ export class ExerciseService {
    * Get exercise count
    */
   async getExerciseCount(): Promise<number> {
+    if (this.fallbackMode) {
+      return this.memoryStore.length;
+    }
     return dbManager.count(STORES.EXERCISES);
   }
 

@@ -1,394 +1,377 @@
-import type { Exercise, ExerciseFilter } from '@/schemas/exercise';
-import { logger } from '@/utils';
-
 /**
- * IndexedDB configuration
+ * IndexedDB Manager
+ * 
+ * Core database management for offline-first functionality.
+ * Handles database initialization, migrations, and CRUD operations.
  */
-const DB_NAME = 'SportTrackerDB';
-const DB_VERSION = 2;
 
-/**
- * Object store names
- */
-export const STORES = {
-  EXERCISES: 'exercises',
-  WORKOUTS: 'workouts',
-  WORKOUT_TEMPLATES: 'workout_templates',
-  USER_DATA: 'userData',
-  SYNC_QUEUE: 'syncQueue',
-} as const;
+export interface DBSchema {
+  name: string;
+  version: number;
+  stores: StoreSchema[];
+}
 
-/**
- * IndexedDB Manager for offline-first data storage
- */
+export interface StoreSchema {
+  name: string;
+  keyPath?: string;
+  autoIncrement?: boolean;
+  indexes?: IndexSchema[];
+}
+
+export interface IndexSchema {
+  name: string;
+  keyPath: string | string[];
+  unique?: boolean;
+  multiEntry?: boolean;
+}
+
 export class IndexedDBManager {
   private db: IDBDatabase | null = null;
-  private initPromise: Promise<void> | null = null;
+  private dbName: string;
+  private version: number;
+  private schema: DBSchema;
+
+  constructor(schema: DBSchema) {
+    this.dbName = schema.name;
+    this.version = schema.version;
+    this.schema = schema;
+  }
 
   /**
    * Initialize the database
    */
-  async init(): Promise<void> {
-    if (this.initPromise) {
-      return this.initPromise;
-    }
-
-    logger.info('Starting IndexedDB initialization...');
-
-    this.initPromise = new Promise((resolve, reject) => {
-      if (!('indexedDB' in window)) {
-        logger.error('IndexedDB not supported in this browser');
-        reject(new Error('IndexedDB not supported'));
-        return;
-      }
-
-      logger.info(`Opening database: ${DB_NAME} version ${DB_VERSION}`);
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
+  async initialize(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(this.dbName, this.version);
 
       request.onerror = () => {
-        logger.error('IndexedDB initialization failed', request.error);
-        reject(request.error);
+        reject(new Error(`Failed to open database: ${request.error?.message}`));
       };
 
       request.onsuccess = () => {
         this.db = request.result;
-        logger.info('IndexedDB initialized successfully');
         resolve();
       };
 
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
-        this.createObjectStores(db);
+        this.handleUpgrade(db, event.oldVersion, event.newVersion || this.version);
       };
     });
-
-    return this.initPromise;
   }
 
   /**
-   * Create object stores and indexes
+   * Handle database schema upgrades
    */
-  private createObjectStores(db: IDBDatabase): void {
-    // Exercises store
-    if (!db.objectStoreNames.contains(STORES.EXERCISES)) {
-      const exerciseStore = db.createObjectStore(STORES.EXERCISES, { keyPath: 'id' });
-      
-      // Create indexes for efficient querying
-      exerciseStore.createIndex('name', 'name', { unique: false });
-      exerciseStore.createIndex('type', 'type', { unique: false });
-      exerciseStore.createIndex('category', 'category', { unique: false });
-      exerciseStore.createIndex('body_parts', 'body_parts', { unique: false, multiEntry: true });
-      exerciseStore.createIndex('muscle_groups', 'muscle_groups', { unique: false, multiEntry: true });
-      exerciseStore.createIndex('equipment', 'equipment', { unique: false });
-      exerciseStore.createIndex('difficulty_level', 'difficulty_level', { unique: false });
-      exerciseStore.createIndex('is_custom', 'is_custom', { unique: false });
-      exerciseStore.createIndex('tags', 'tags', { unique: false, multiEntry: true });
-      exerciseStore.createIndex('created_at', 'created_at', { unique: false });
-      
-      logger.info('Created exercises object store with indexes');
+  private handleUpgrade(db: IDBDatabase, oldVersion: number, newVersion: number): void {
+    console.log(`Upgrading database from version ${oldVersion} to ${newVersion}`);
+
+    // Create or update object stores
+    for (const storeSchema of this.schema.stores) {
+      if (!db.objectStoreNames.contains(storeSchema.name)) {
+        // Create new store
+        const store = db.createObjectStore(storeSchema.name, {
+          keyPath: storeSchema.keyPath,
+          autoIncrement: storeSchema.autoIncrement
+        });
+
+        // Create indexes
+        if (storeSchema.indexes) {
+          for (const indexSchema of storeSchema.indexes) {
+            store.createIndex(indexSchema.name, indexSchema.keyPath, {
+              unique: indexSchema.unique,
+              multiEntry: indexSchema.multiEntry
+            });
+          }
+        }
+      } else {
+        // Update existing store (indexes only, can't modify keyPath)
+        const transaction = db.transaction([storeSchema.name], 'versionchange');
+        const store = transaction.objectStore(storeSchema.name);
+
+        if (storeSchema.indexes) {
+          for (const indexSchema of storeSchema.indexes) {
+            if (!store.indexNames.contains(indexSchema.name)) {
+              store.createIndex(indexSchema.name, indexSchema.keyPath, {
+                unique: indexSchema.unique,
+                multiEntry: indexSchema.multiEntry
+              });
+            }
+          }
+        }
+      }
     }
 
-    // Workouts store
-    if (!db.objectStoreNames.contains(STORES.WORKOUTS)) {
-      const workoutStore = db.createObjectStore(STORES.WORKOUTS, { keyPath: 'id' });
-      workoutStore.createIndex('user_id', 'user_id', { unique: false });
-      workoutStore.createIndex('created_at', 'created_at', { unique: false });
-      workoutStore.createIndex('status', 'status', { unique: false });
-      workoutStore.createIndex('is_template', 'is_template', { unique: false });
-      workoutStore.createIndex('template_id', 'template_id', { unique: false });
-      
-      logger.info('Created workouts object store');
-    }
-
-    // Workout Templates store
-    if (!db.objectStoreNames.contains(STORES.WORKOUT_TEMPLATES)) {
-      const templateStore = db.createObjectStore(STORES.WORKOUT_TEMPLATES, { keyPath: 'id' });
-      templateStore.createIndex('user_id', 'user_id', { unique: false });
-      templateStore.createIndex('category', 'category', { unique: false });
-      templateStore.createIndex('difficulty_level', 'difficulty_level', { unique: false });
-      templateStore.createIndex('is_public_template', 'is_public_template', { unique: false });
-      templateStore.createIndex('times_used', 'times_used', { unique: false });
-      templateStore.createIndex('created_at', 'created_at', { unique: false });
-      
-      logger.info('Created workout_templates object store');
-    }
-
-    // User data store (for future use)
-    if (!db.objectStoreNames.contains(STORES.USER_DATA)) {
-      const userStore = db.createObjectStore(STORES.USER_DATA, { keyPath: 'id' });
-      userStore.createIndex('user_id', 'user_id', { unique: false });
-      userStore.createIndex('type', 'type', { unique: false });
-      
-      logger.info('Created user data object store');
-    }
-
-    // Sync queue store (for future use)
-    if (!db.objectStoreNames.contains(STORES.SYNC_QUEUE)) {
-      const syncStore = db.createObjectStore(STORES.SYNC_QUEUE, { keyPath: 'id' });
-      syncStore.createIndex('operation', 'operation', { unique: false });
-      syncStore.createIndex('created_at', 'created_at', { unique: false });
-      syncStore.createIndex('status', 'status', { unique: false });
-      
-      logger.info('Created sync queue object store');
+    // Remove obsolete stores (if needed)
+    const currentStoreNames = Array.from(db.objectStoreNames);
+    const schemaStoreNames = this.schema.stores.map(s => s.name);
+    
+    for (const storeName of currentStoreNames) {
+      if (!schemaStoreNames.includes(storeName)) {
+        console.warn(`Removing obsolete store: ${storeName}`);
+        db.deleteObjectStore(storeName);
+      }
     }
   }
 
   /**
-   * Ensure database is initialized
+   * Get a transaction for the specified stores
    */
-  private async ensureDB(): Promise<IDBDatabase> {
-    if (!this.db) {
-      await this.init();
-    }
+  private getTransaction(storeNames: string[], mode: IDBTransactionMode = 'readonly'): IDBTransaction {
     if (!this.db) {
       throw new Error('Database not initialized');
     }
-    return this.db;
+    return this.db.transaction(storeNames, mode);
   }
 
   /**
-   * Generic method to add/update data
+   * Get an object store
    */
-  async put<T>(storeName: string, data: T): Promise<void> {
-    const db = await this.ensureDB();
-    
+  private getStore(storeName: string, mode: IDBTransactionMode = 'readonly'): IDBObjectStore {
+    const transaction = this.getTransaction([storeName], mode);
+    return transaction.objectStore(storeName);
+  }
+
+  // ============================================================================
+  // CRUD Operations
+  // ============================================================================
+
+  /**
+   * Add a record to a store
+   */
+  async add<T>(storeName: string, data: T): Promise<IDBValidKey> {
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction([storeName], 'readwrite');
-      const store = transaction.objectStore(storeName);
+      const store = this.getStore(storeName, 'readwrite');
+      const request = store.add(data);
+
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(new Error(`Failed to add record: ${request.error?.message}`));
+    });
+  }
+
+  /**
+   * Put (add or update) a record in a store
+   */
+  async put<T>(storeName: string, data: T): Promise<IDBValidKey> {
+    return new Promise((resolve, reject) => {
+      const store = this.getStore(storeName, 'readwrite');
       const request = store.put(data);
 
-      request.onsuccess = () => {
-        logger.debug(`Data added to ${storeName}`, { data });
-        resolve();
-      };
-
-      request.onerror = () => {
-        logger.error(`Failed to add data to ${storeName}`, request.error);
-        reject(request.error);
-      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(new Error(`Failed to put record: ${request.error?.message}`));
     });
   }
 
   /**
-   * Generic method to get data by key
+   * Get a record by key
    */
-  async get<T>(storeName: string, key: string): Promise<T | null> {
-    const db = await this.ensureDB();
-    
+  async get<T>(storeName: string, key: IDBValidKey): Promise<T | undefined> {
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction([storeName], 'readonly');
-      const store = transaction.objectStore(storeName);
+      const store = this.getStore(storeName, 'readonly');
       const request = store.get(key);
 
-      request.onsuccess = () => {
-        resolve(request.result || null);
-      };
-
-      request.onerror = () => {
-        logger.error(`Failed to get data from ${storeName}`, request.error);
-        reject(request.error);
-      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(new Error(`Failed to get record: ${request.error?.message}`));
     });
   }
 
   /**
-   * Generic method to get all data from a store
+   * Get all records from a store
    */
-  async getAll<T>(storeName: string): Promise<T[]> {
-    const db = await this.ensureDB();
-    
+  async getAll<T>(storeName: string, query?: IDBValidKey | IDBKeyRange, count?: number): Promise<T[]> {
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction([storeName], 'readonly');
-      const store = transaction.objectStore(storeName);
-      const request = store.getAll();
+      const store = this.getStore(storeName, 'readonly');
+      const request = store.getAll(query, count);
 
-      request.onsuccess = () => {
-        resolve(request.result || []);
-      };
-
-      request.onerror = () => {
-        logger.error(`Failed to get all data from ${storeName}`, request.error);
-        reject(request.error);
-      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(new Error(`Failed to get all records: ${request.error?.message}`));
     });
   }
 
   /**
-   * Generic method to delete data by key
+   * Get records using an index
    */
-  async delete(storeName: string, key: string): Promise<void> {
-    const db = await this.ensureDB();
-    
+  async getAllByIndex<T>(
+    storeName: string, 
+    indexName: string, 
+    query?: IDBValidKey | IDBKeyRange, 
+    count?: number
+  ): Promise<T[]> {
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction([storeName], 'readwrite');
-      const store = transaction.objectStore(storeName);
+      const store = this.getStore(storeName, 'readonly');
+      const index = store.index(indexName);
+      const request = index.getAll(query, count);
+
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(new Error(`Failed to get records by index: ${request.error?.message}`));
+    });
+  }
+
+  /**
+   * Delete a record by key
+   */
+  async delete(storeName: string, key: IDBValidKey): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const store = this.getStore(storeName, 'readwrite');
       const request = store.delete(key);
 
-      request.onsuccess = () => {
-        logger.debug(`Data deleted from ${storeName}`, { key });
-        resolve();
-      };
-
-      request.onerror = () => {
-        logger.error(`Failed to delete data from ${storeName}`, request.error);
-        reject(request.error);
-      };
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(new Error(`Failed to delete record: ${request.error?.message}`));
     });
   }
 
   /**
-   * Generic method to clear all data from a store
+   * Clear all records from a store
    */
   async clear(storeName: string): Promise<void> {
-    const db = await this.ensureDB();
-    
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction([storeName], 'readwrite');
-      const store = transaction.objectStore(storeName);
+      const store = this.getStore(storeName, 'readwrite');
       const request = store.clear();
 
-      request.onsuccess = () => {
-        logger.info(`Cleared all data from ${storeName}`);
-        resolve();
-      };
-
-      request.onerror = () => {
-        logger.error(`Failed to clear ${storeName}`, request.error);
-        reject(request.error);
-      };
-    });
-  }
-
-  /**
-   * Query data using an index
-   */
-  async queryByIndex<T>(
-    storeName: string,
-    indexName: string,
-    value: any,
-    limit?: number
-  ): Promise<T[]> {
-    const db = await this.ensureDB();
-    
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction([storeName], 'readonly');
-      const store = transaction.objectStore(storeName);
-      const index = store.index(indexName);
-      const request = index.getAll(value, limit);
-
-      request.onsuccess = () => {
-        resolve(request.result || []);
-      };
-
-      request.onerror = () => {
-        logger.error(`Failed to query ${storeName} by index ${indexName}`, request.error);
-        reject(request.error);
-      };
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(new Error(`Failed to clear store: ${request.error?.message}`));
     });
   }
 
   /**
    * Count records in a store
    */
-  async count(storeName: string): Promise<number> {
-    const db = await this.ensureDB();
-    
+  async count(storeName: string, query?: IDBValidKey | IDBKeyRange): Promise<number> {
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction([storeName], 'readonly');
-      const store = transaction.objectStore(storeName);
-      const request = store.count();
+      const store = this.getStore(storeName, 'readonly');
+      const request = store.count(query);
 
-      request.onsuccess = () => {
-        resolve(request.result);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(new Error(`Failed to count records: ${request.error?.message}`));
+    });
+  }
+
+  // ============================================================================
+  // Advanced Operations
+  // ============================================================================
+
+  /**
+   * Execute a transaction with multiple operations
+   */
+  async transaction<T>(
+    storeNames: string[],
+    mode: IDBTransactionMode,
+    callback: (stores: { [key: string]: IDBObjectStore }) => Promise<T>
+  ): Promise<T> {
+    return new Promise((resolve, reject) => {
+      const transaction = this.getTransaction(storeNames, mode);
+      const stores: { [key: string]: IDBObjectStore } = {};
+
+      // Create stores object
+      for (const storeName of storeNames) {
+        stores[storeName] = transaction.objectStore(storeName);
+      }
+
+      transaction.oncomplete = () => {
+        // Transaction completed successfully
       };
 
-      request.onerror = () => {
-        logger.error(`Failed to count records in ${storeName}`, request.error);
-        reject(request.error);
+      transaction.onerror = () => {
+        reject(new Error(`Transaction failed: ${transaction.error?.message}`));
       };
+
+      transaction.onabort = () => {
+        reject(new Error('Transaction aborted'));
+      };
+
+      // Execute callback
+      callback(stores)
+        .then(resolve)
+        .catch(reject);
     });
   }
 
   /**
-   * Bulk insert/update data
+   * Cursor-based iteration over records
    */
-  async bulkPut<T>(storeName: string, data: T[]): Promise<void> {
-    const db = await this.ensureDB();
-    
+  async iterate<T>(
+    storeName: string,
+    callback: (cursor: IDBCursorWithValue, record: T) => boolean | Promise<boolean>,
+    query?: IDBValidKey | IDBKeyRange,
+    direction?: IDBCursorDirection
+  ): Promise<void> {
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction([storeName], 'readwrite');
-      const store = transaction.objectStore(storeName);
-      
-      let completed = 0;
-      const total = data.length;
-      
-      if (total === 0) {
-        resolve();
-        return;
-      }
+      const store = this.getStore(storeName, 'readonly');
+      const request = store.openCursor(query, direction);
 
-      const onComplete = () => {
-        completed++;
-        if (completed === total) {
-          logger.info(`Bulk inserted ${total} records into ${storeName}`);
+      request.onsuccess = async () => {
+        const cursor = request.result;
+        if (cursor) {
+          try {
+            const shouldContinue = await callback(cursor, cursor.value);
+            if (shouldContinue) {
+              cursor.continue();
+            } else {
+              resolve();
+            }
+          } catch (error) {
+            reject(error);
+          }
+        } else {
           resolve();
         }
       };
 
-      data.forEach(item => {
-        const request = store.put(item);
-        request.onsuccess = onComplete;
-        request.onerror = () => {
-          logger.error(`Failed to bulk insert item into ${storeName}`, request.error);
-          reject(request.error);
-        };
-      });
+      request.onerror = () => reject(new Error(`Cursor iteration failed: ${request.error?.message}`));
     });
   }
 
   /**
-   * Search with cursor for complex queries
+   * Batch operations
    */
-  async searchWithCursor<T>(
-    storeName: string,
-    indexName: string | null,
-    query: IDBKeyRange | null,
-    filter?: (item: T) => boolean,
-    limit?: number
-  ): Promise<T[]> {
-    const db = await this.ensureDB();
+  async batch(operations: Array<{
+    type: 'add' | 'put' | 'delete';
+    storeName: string;
+    data?: any;
+    key?: IDBValidKey;
+  }>): Promise<void> {
+    const storeNames = [...new Set(operations.map(op => op.storeName))];
     
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction([storeName], 'readonly');
-      const store = transaction.objectStore(storeName);
-      const source = indexName ? store.index(indexName) : store;
-      const request = source.openCursor(query);
-      
-      const results: T[] = [];
-      let count = 0;
-
-      request.onsuccess = (event) => {
-        const cursor = (event.target as IDBRequest).result;
+    return this.transaction(storeNames, 'readwrite', async (stores) => {
+      const promises = operations.map(op => {
+        const store = stores[op.storeName];
         
-        if (cursor && (!limit || count < limit)) {
-          const item = cursor.value as T;
+        return new Promise<void>((resolve, reject) => {
+          let request: IDBRequest;
           
-          if (!filter || filter(item)) {
-            results.push(item);
-            count++;
+          switch (op.type) {
+            case 'add':
+              request = store.add(op.data);
+              break;
+            case 'put':
+              request = store.put(op.data);
+              break;
+            case 'delete':
+              request = store.delete(op.key!);
+              break;
+            default:
+              reject(new Error(`Unknown operation type: ${op.type}`));
+              return;
           }
           
-          cursor.continue();
-        } else {
-          resolve(results);
-        }
-      };
-
-      request.onerror = () => {
-        logger.error(`Failed to search ${storeName} with cursor`, request.error);
-        reject(request.error);
-      };
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(new Error(`Batch operation failed: ${request.error?.message}`));
+        });
+      });
+      
+      await Promise.all(promises);
     });
+  }
+
+  // ============================================================================
+  // Utility Methods
+  // ============================================================================
+
+  /**
+   * Check if database is initialized
+   */
+  isInitialized(): boolean {
+    return this.db !== null;
   }
 
   /**
@@ -398,30 +381,35 @@ export class IndexedDBManager {
     if (this.db) {
       this.db.close();
       this.db = null;
-      this.initPromise = null;
-      logger.info('IndexedDB connection closed');
     }
   }
 
   /**
    * Delete the entire database
    */
-  static async deleteDatabase(): Promise<void> {
+  static async deleteDatabase(dbName: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.deleteDatabase(DB_NAME);
+      const request = indexedDB.deleteDatabase(dbName);
       
-      request.onsuccess = () => {
-        logger.info('Database deleted successfully');
-        resolve();
-      };
-      
-      request.onerror = () => {
-        logger.error('Failed to delete database', request.error);
-        reject(request.error);
-      };
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(new Error(`Failed to delete database: ${request.error?.message}`));
+      request.onblocked = () => reject(new Error('Database deletion blocked'));
     });
+  }
+
+  /**
+   * Get database info
+   */
+  getInfo(): { name: string; version: number; stores: string[] } | null {
+    if (!this.db) return null;
+    
+    return {
+      name: this.db.name,
+      version: this.db.version,
+      stores: Array.from(this.db.objectStoreNames)
+    };
   }
 }
 
-// Export singleton instance
-export const dbManager = new IndexedDBManager();
+// Legacy exports for backward compatibility
+export { dbManager, STORES } from './legacyCompat';

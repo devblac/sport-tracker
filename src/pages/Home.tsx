@@ -2,7 +2,6 @@ import React from 'react';
 import { Card, CardContent, Button } from '@/components/ui';
 import { StreakCounter } from '@/components/gamification/StreakCounter';
 import { XPBar } from '@/components/gamification/XPBar';
-import { QuickStartWorkout } from '@/components/dashboard/QuickStartWorkout';
 import { ActivitySummary } from '@/components/dashboard/ActivitySummary';
 import { TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -80,13 +79,37 @@ export const Home: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Quick Start Workout */}
-      <QuickStartWorkout />
+      {/* Quick Actions */}
+      <div className="grid grid-cols-2 gap-4">
+        <Button 
+          variant="primary" 
+          size="lg" 
+          fullWidth
+          onClick={() => navigate('/workout')}
+          className="h-20 flex-col py-3"
+        >
+          <span className="text-xl mb-1">🏋️</span>
+          <span className="text-base font-semibold">Start Workout</span>
+          <span className="text-sm opacity-70">Begin training</span>
+        </Button>
+        
+        <Button 
+          variant="outline" 
+          size="lg" 
+          fullWidth
+          onClick={() => navigate('/workout-templates')}
+          className="h-20 flex-col py-3"
+        >
+          <span className="text-xl mb-1">📋</span>
+          <span className="text-base font-semibold">Templates</span>
+          <span className="text-sm opacity-70">Browse & Create</span>
+        </Button>
+      </div>
 
       {/* Activity Summary */}
       <ActivitySummary />
 
-      {/* Quick Actions */}
+      {/* Secondary Actions */}
       <div className="grid grid-cols-2 gap-4">
         <Button 
           variant="outline" 

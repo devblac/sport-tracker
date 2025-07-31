@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Home, TrendingUp, Dumbbell, Users, User } from 'lucide-react';
+import { ConnectionDot } from '@/components/offline/OfflineIndicator';
 import { cn } from '@/utils';
 
 const navigationItems = [
@@ -52,7 +53,9 @@ export const BottomNavigation: React.FC = () => {
       'border-t border-gray-200 dark:border-gray-700',
       'shadow-lg'
     )}>
-      <div className="flex items-center justify-around px-2 py-2">
+      <div className="flex items-center justify-around px-2 py-2 relative">
+        {/* Connection indicator */}
+        <ConnectionDot className="absolute top-2 right-2" />
         {navigationItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;

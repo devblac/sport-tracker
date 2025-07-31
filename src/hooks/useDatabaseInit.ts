@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import DatabaseInitService from '@/services/DatabaseInitService';
+import { getDatabaseService } from '@/db/DatabaseService';
 import { logger } from '@/utils';
 
 interface DatabaseInitState {
@@ -10,6 +11,7 @@ interface DatabaseInitState {
     exerciseCount: number;
     version: string | null;
     sampleDataCount: number;
+    isFallbackMode?: boolean;
   } | null;
 }
 
@@ -26,13 +28,27 @@ export function useDatabaseInit() {
 
   useEffect(() => {
     let isMounted = true;
+    let timeoutId: NodeJS.Timeout;
 
     const initDB = async () => {
       try {
         setState(prev => ({ ...prev, isInitializing: true, error: null }));
 
-        // Initialize database with sample data
-        await DatabaseInitService.initializeDatabase();
+        // Initialize IndexedDB first
+        const service = getDatabaseService();
+        await service.initialize();
+
+        // Add timeout to prevent infinite hang
+        const initPromise = DatabaseInitService.initializeDatabase();
+        const timeoutPromise = new Promise((_, reject) => {
+          timeoutId = setTimeout(() => {
+            reject(new Error('Database initialization timed out after 30 seconds'));
+          }, 30000);
+        });
+
+        // Race between initialization and timeout
+        await Promise.race([initPromise, timeoutPromise]);
+        clearTimeout(timeoutId);
 
         // Get database statistics
         const stats = await DatabaseInitService.getDatabaseStats();
@@ -46,12 +62,14 @@ export function useDatabaseInit() {
               exerciseCount: stats.exerciseCount,
               version: stats.version,
               sampleDataCount: stats.sampleDataCount,
+              isFallbackMode: stats.isFallbackMode,
             },
           });
 
           logger.info('Database initialization hook completed', stats);
         }
       } catch (error) {
+        clearTimeout(timeoutId);
         if (isMounted) {
           const errorMessage = error instanceof Error ? error.message : 'Database initialization failed';
           setState(prev => ({
@@ -69,6 +87,7 @@ export function useDatabaseInit() {
 
     return () => {
       isMounted = false;
+      clearTimeout(timeoutId);
     };
   }, []);
 
@@ -76,6 +95,9 @@ export function useDatabaseInit() {
     setState(prev => ({ ...prev, isInitializing: true, error: null }));
     
     try {
+      // Reinitialize IndexedDB
+      const service = getDatabaseService();
+      await service.initialize();
       await DatabaseInitService.initializeDatabase(true); // Force reinitialize
       const stats = await DatabaseInitService.getDatabaseStats();
       
@@ -87,6 +109,7 @@ export function useDatabaseInit() {
           exerciseCount: stats.exerciseCount,
           version: stats.version,
           sampleDataCount: stats.sampleDataCount,
+          isFallbackMode: stats.isFallbackMode,
         },
       });
     } catch (error) {

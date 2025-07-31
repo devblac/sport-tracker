@@ -2,6 +2,9 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { BottomNavigation } from '@/components/shared/BottomNavigation';
 import { ToastContainer } from '@/components/ui/Toast';
+import { UpdateNotification } from '@/components/offline/UpdateNotification';
+import { OfflineIndicator, SyncFAB } from '@/components/offline/OfflineIndicator';
+import { SyncNotifications } from '@/components/sync/SyncNotifications';
 import { DevTools } from '@/components/DevTools';
 import { cn } from '@/utils';
 
@@ -33,6 +36,18 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       
       {/* Toast Notifications */}
       <ToastContainer />
+      
+      {/* Update Notification */}
+      <UpdateNotification />
+      
+      {/* Offline Indicator */}
+      <OfflineIndicator position="top" />
+      
+      {/* Sync Notifications */}
+      <SyncNotifications />
+      
+      {/* Sync FAB */}
+      <SyncFAB />
       
       {/* DevTools (development only) */}
       <DevTools />

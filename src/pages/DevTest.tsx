@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, Button, Input } from '@/components/ui';
+import { PerformanceDashboard } from '@/components/dev/PerformanceDashboard';
 import { 
   validateUserRegistration, 
   validateUserLogin, 
@@ -16,6 +17,7 @@ import {
 import { UserRole } from '@/types';
 
 export const DevTest: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'validation' | 'performance'>('validation');
   const [testData, setTestData] = useState({
     email: 'test@example.com',
     username: 'testuser',
@@ -62,9 +64,17 @@ export const DevTest: React.FC = () => {
 
   return (
     <div className="space-y-6 p-4">
-      <h1 className="text-2xl font-bold text-foreground">
-        🧪 Validation & Role System Test
-      </h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-foreground">
+          🧪 Validation & Role System Test
+        </h1>
+        <Button 
+          variant="outline" 
+          onClick={() => window.location.href = '/test-data'}
+        >
+          📊 Test Data Generator
+        </Button>
+      </div>
 
       {/* Test Data Input */}
       <Card>
