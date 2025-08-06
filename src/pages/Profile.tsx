@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, Crown, UserPlus, LogOut, User, Shield } from 'lucide-react';
+import { Settings, Crown, UserPlus, LogOut, User, Shield, X, Users, MessageCircle } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, Button } from '@/components/ui';
 import { ThemeSelector } from '@/components/ui/ThemeSelector';
 import { ProfileSettings } from '@/components/profile/ProfileSettings';
@@ -9,6 +9,8 @@ import { useAuthStore } from '@/stores';
 export const Profile: React.FC = () => {
   const { user, logout } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'overview' | 'settings' | 'privacy'>('overview');
+  const [showAddFriends, setShowAddFriends] = useState(false);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
 
   const getUserInitial = () => {
     if (!user) return 'U';
@@ -122,7 +124,11 @@ export const Profile: React.FC = () => {
                     Add Gym Friends
                   </span>
                 </div>
-                <Button variant="ghost" size="sm">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setShowAddFriends(true)}
+                >
                   Add
                 </Button>
               </div>
@@ -141,7 +147,11 @@ export const Profile: React.FC = () => {
               <p className="text-muted-foreground mb-4">
                 Unlock cloud backup, advanced analytics, and exclusive content
               </p>
-              <Button variant="secondary" fullWidth>
+              <Button 
+                variant="secondary" 
+                fullWidth
+                onClick={() => setShowPremiumModal(true)}
+              >
                 Learn More
               </Button>
             </CardContent>
@@ -155,6 +165,110 @@ export const Profile: React.FC = () => {
 
       {activeTab === 'privacy' && (
         <PrivacySettings />
+      )}
+
+      {/* Add Friends Modal */}
+      {showAddFriends && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-background rounded-lg max-w-md w-full max-h-[80vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <h2 className="text-lg font-semibold text-foreground">Add Gym Friends</h2>
+              <button
+                onClick={() => setShowAddFriends(false)}
+                className="p-2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4">
+              <p className="text-muted-foreground mb-4">
+                Connect with friends to share your fitness journey and stay motivated together.
+              </p>
+              <div className="space-y-3">
+                <Button variant="outline" fullWidth>
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Find Friends by Username
+                </Button>
+                <Button variant="outline" fullWidth>
+                  <Users className="w-4 h-4 mr-2" />
+                  Import from Contacts
+                </Button>
+                <Button variant="outline" fullWidth>
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Share Your Profile
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Premium Modal */}
+      {showPremiumModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-background rounded-lg max-w-md w-full p-6">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-primary to-secondary rounded-full flex items-center justify-center mx-auto mb-4">
+                <Crown className="w-8 h-8 text-primary-foreground" />
+              </div>
+              <h2 className="text-2xl font-bold text-foreground mb-2">
+                Upgrade to Premium
+              </h2>
+              <p className="text-muted-foreground mb-6">
+                Unlock advanced features and take your fitness to the next level
+              </p>
+              
+              <div className="space-y-3 mb-6 text-left">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm text-foreground">Cloud backup & sync across devices</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm text-foreground">Advanced analytics & insights</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm text-foreground">Premium workout templates</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm text-foreground">Priority customer support</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm text-foreground">Access to marketplace content</span>
+                </div>
+              </div>
+              
+              <div className="bg-muted p-4 rounded-lg mb-6">
+                <div className="text-2xl font-bold text-foreground">$9.99/month</div>
+                <div className="text-sm text-muted-foreground">or $99.99/year (save 17%)</div>
+              </div>
+              
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowPremiumModal(false)}
+                  className="flex-1"
+                >
+                  Maybe Later
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    setShowPremiumModal(false);
+                    // Navigate to marketplace or payment page
+                    window.location.href = '/marketplace-demo';
+                  }}
+                  className="flex-1"
+                >
+                  Upgrade Now
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

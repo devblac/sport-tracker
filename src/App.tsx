@@ -73,6 +73,36 @@ function App() {
         await DatabaseInitService.forceReset();
         window.location.reload();
       };
+
+      (window as any).clearDB = async () => {
+        try {
+          // Close any existing connections
+          const { getDatabaseService } = await import('@/db/DatabaseService');
+          const service = getDatabaseService();
+          service.close();
+          
+          // Delete the database
+          await new Promise((resolve, reject) => {
+            const deleteReq = indexedDB.deleteDatabase('FitnessAppDB');
+            deleteReq.onsuccess = () => resolve(undefined);
+            deleteReq.onerror = () => reject(deleteReq.error);
+            deleteReq.onblocked = () => {
+              console.warn('Database deletion blocked - close all tabs and try again');
+              reject(new Error('Database deletion blocked'));
+            };
+          });
+          
+          // Clear localStorage
+          localStorage.removeItem('sport-tracker-db-initialized');
+          localStorage.removeItem('sport-tracker-db-version');
+          localStorage.removeItem('sport-tracker-fallback-mode');
+          
+          console.log('Database cleared successfully');
+          window.location.reload();
+        } catch (error) {
+          console.error('Failed to clear database:', error);
+        }
+      };
     }
   }, []);
   

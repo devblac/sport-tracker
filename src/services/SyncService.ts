@@ -78,7 +78,7 @@ export class SyncService {
 
   private async loadSyncQueue() {
     try {
-      const queue = await this.dbManager.getAll('sync_queue');
+      const queue = await this.dbManager.getAll('syncQueue');
       this.syncQueue = queue.map(item => ({
         ...item,
         status: 'pending' // Reset status on app start
@@ -157,7 +157,7 @@ export class SyncService {
     
     // Persist to IndexedDB
     try {
-      await this.dbManager.add('sync_queue', syncOperation);
+      await this.dbManager.add('syncQueue', syncOperation);
     } catch (error) {
       console.error('Failed to persist sync operation:', error);
     }
@@ -172,7 +172,7 @@ export class SyncService {
     this.syncQueue = this.syncQueue.filter(op => op.id !== operationId);
     
     try {
-      await this.dbManager.delete('sync_queue', operationId);
+      await this.dbManager.delete('syncQueue', operationId);
     } catch (error) {
       console.error('Failed to remove sync operation:', error);
     }
@@ -439,7 +439,7 @@ export class SyncService {
 
   private async getLastSyncTimestamp(table: string): Promise<number> {
     try {
-      const metadata = await this.dbManager.get('sync_metadata', table);
+      const metadata = await this.dbManager.get('syncMetadata', table);
       return metadata?.last_sync || 0;
     } catch (error) {
       return 0; // First sync
@@ -459,7 +459,7 @@ export class SyncService {
     } catch (error) {
       // If update fails, try insert
       try {
-        await this.dbManager.add('sync_metadata', metadata);
+        await this.dbManager.add('syncMetadata', metadata);
       } catch (insertError) {
         console.error(`Failed to set sync timestamp for ${table}:`, insertError);
       }
@@ -521,7 +521,10 @@ export class SyncService {
    */
   async getSyncConflicts(): Promise<SyncConflict[]> {
     try {
-      return await this.dbManager.getAll('sync_conflicts');
+      // Temporarily disabled - return empty array
+      console.warn('[SyncService] Conflict resolution temporarily disabled');
+      return [];
+      // return await this.dbManager.getAll('syncConflicts');
     } catch (error) {
       console.error('Failed to get sync conflicts:', error);
       return [];

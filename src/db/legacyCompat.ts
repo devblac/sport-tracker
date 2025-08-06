@@ -37,6 +37,7 @@ export const STORES = {
   PROGRESS_SNAPSHOTS: 'progressSnapshots',
   SYNC_QUEUE: 'syncQueue',
   SYNC_METADATA: 'syncMetadata',
+  SYNC_CONFLICTS: 'syncConflicts',
   APP_SETTINGS: 'appSettings',
   CACHE: 'cache'
 };
@@ -81,6 +82,16 @@ export const dbManager = {
     return service.getManager().getAllByIndex(storeName, indexName, query, count);
   },
 
+  // Alias for getAllByIndex (legacy compatibility)
+  async queryByIndex<T>(
+    storeName: string, 
+    indexName: string, 
+    query?: IDBValidKey | IDBKeyRange, 
+    count?: number
+  ): Promise<T[]> {
+    return this.getAllByIndex(storeName, indexName, query, count);
+  },
+
   async delete(storeName: string, key: IDBValidKey): Promise<void> {
     const service = await ensureInitialized();
     return service.getManager().delete(storeName, key);
@@ -114,6 +125,11 @@ export const dbManager = {
   ): Promise<void> {
     const service = await ensureInitialized();
     return service.getManager().iterate(storeName, callback, query, direction);
+  },
+
+  async bulkPut<T>(storeName: string, records: T[]): Promise<IDBValidKey[]> {
+    const service = await ensureInitialized();
+    return service.getManager().bulkPut(storeName, records);
   },
 
   async batch(operations: Array<{

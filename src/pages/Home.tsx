@@ -109,32 +109,34 @@ export const Home: React.FC = () => {
       {/* Activity Summary */}
       <ActivitySummary />
 
-      {/* Secondary Actions */}
-      <div className="grid grid-cols-2 gap-4">
-        <Button 
-          variant="outline" 
-          size="lg" 
-          fullWidth
-          onClick={() => navigate('/progress')}
-          icon={<TrendingUp className="w-5 h-5" />}
-          className="h-16 flex-col"
-        >
-          <span className="text-base font-semibold">Progress</span>
-          <span className="text-sm opacity-70">Charts & Stats</span>
-        </Button>
-        
-        <Button 
-          variant="outline" 
-          size="lg" 
-          fullWidth
-          onClick={() => navigate('/exercises')}
-          className="h-16 flex-col"
-        >
-          <span className="text-xl mb-1">💪</span>
-          <span className="text-base font-semibold">Exercises</span>
-          <span className="text-sm opacity-70">Learn & Explore</span>
-        </Button>
-      </div>
+      {/* Recent Activity Summary */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-8 h-8 bg-secondary/10 rounded-full flex items-center justify-center">
+              <span className="text-lg">📈</span>
+            </div>
+            <div>
+              <h3 className="font-semibold text-foreground">This Week</h3>
+              <p className="text-sm text-muted-foreground">Your fitness summary</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <div className="text-2xl font-bold text-foreground">3</div>
+              <div className="text-sm text-muted-foreground">Workouts</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-foreground">4.2k</div>
+              <div className="text-sm text-muted-foreground">Volume (lbs)</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-foreground">2h 15m</div>
+              <div className="text-sm text-muted-foreground">Time</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Today's Motivation */}
       <Card variant="glass" className="bg-gradient-to-r from-primary/5 to-secondary/5">

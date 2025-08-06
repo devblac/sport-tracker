@@ -3,6 +3,8 @@
 
 import { challengeService } from './challengeService';
 import { challengeGamificationService, CelebrationData } from './challengeGamificationService';
+import { XPIntegrationService } from './XPIntegrationService';
+import { challengeRewardsManager, RewardCalculationResult } from './challengeRewardsManager';
 import { 
   Challenge, 
   ChallengeParticipant, 
@@ -494,6 +496,189 @@ export class ChallengeIntegrationService {
       .filter(event => event.user_id === userId && event.challenge_id === challengeId);
     
     return userMilestones.reduce((sum, event) => sum + event.bonus_xp, 0);
+  }
+
+  // ============================================================================
+  // XP SYSTEM INTEGRATION - Task 14.3 Implementation
+  // ============================================================================
+
+  /**
+   * Award XP for challenge-related activities through the main XP system
+   */
+  async awardChallengeXP(
+    userId: string,
+    xpAmount: number,
+    source: string,
+    challengeId: string,
+    metadata?: any
+  ): Promise<void> {
+    try {
+      const xpService = XPIntegrationService.getInstance();
+      
+      await xpService.awardCustomXP(userId, {
+        amount: xpAmount,
+        source: `challenge_${source}` as any,
+        description: `Challenge activity: ${source}`,
+        metadata: {
+          challenge_id: challengeId,
+          ...metadata
+        }
+      });
+    } catch (error) {
+      console.error('Failed to award challenge XP:', error);
+    }
+  }
+
+  /**
+   * Complete challenge integration with full XP and rewards
+   */
+  async completeChallenge(
+    challengeId: string,
+    userId: string,
+    participantId: string
+  ): Promise<ChallengeCompletionResult> {
+    try {
+      // Get challenge and participant data
+      const challenge = await challengeService.getChallenge(challengeId);
+      const participant = await this.getParticipantById(participantId);
+      
+      // Calculate comprehensive rewards using the rewards manager
+      const performanceMetrics = challengeRewardsManager.createPerformanceMetrics(
+        challenge,
+        participant,
+        [] // Would pass actual progress records
+      );
+      
+      const rewardResult: RewardCalculationResult = await challengeRewardsManager.calculateRewards(
+        challenge,
+        participant,
+        performanceMetrics
+      );
+
+      // Award XP through the main XP system
+      await this.awardChallengeXP(
+        userId,
+        rewardResult.total_xp,
+        'completion',
+        challengeId,
+        {
+          rank: participant.rank,
+          progress: participant.progress,
+          special_rewards: rewardResult.special_rewards.length
+        }
+      );
+
+      // Award bonus XP for special rewards
+      for (const specialReward of rewardResult.special_rewards) {
+        await this.awardChallengeXP(
+          userId,
+          specialReward.xp_bonus,
+          `special_${specialReward.type}`,
+          challengeId,
+          { reward_name: specialReward.name }
+        );
+      }
+
+      // Create epic celebration
+      const celebration: CelebrationData = {
+        type: 'challenge_completed',
+        title: participant.rank === 1 ? '👑 CHAMPION!' : '🏆 Challenge Complete!',
+        message: `Congratulations! You finished "${challenge.name}" in ${this.getOrdinalRank(participant.rank)} place!`,
+        xp_gained: rewardResult.total_xp,
+        achievements: rewardResult.achievements_unlocked.map(id => ({
+          achievement_id: id,
+          name: this.getAchievementName(id),
+          description: this.getAchievementDescription(id),
+          xp_reward: 100,
+          rarity: 'epic' as const
+        })),
+        visual_effects: {
+          confetti: true,
+          fireworks: participant.rank <= 3,
+          glow: true,
+          sound: participant.rank === 1 ? 'champion_fanfare' : 'victory_fanfare'
+        }
+      };
+
+      return {
+        participant,
+        celebration,
+        rewards: rewardResult.base_rewards,
+        achievements: rewardResult.achievements_unlocked,
+        xp_gained: rewardResult.total_xp,
+        level_gained: await this.checkLevelUp(userId, rewardResult.total_xp),
+        rank_improvement: undefined // Would calculate from historical data
+      };
+    } catch (error) {
+      console.error('Failed to complete challenge integration:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Award milestone XP through the main system
+   */
+  async awardMilestoneXP(
+    userId: string,
+    milestone: ChallengeMilestone
+  ): Promise<void> {
+    await this.awardChallengeXP(
+      userId,
+      milestone.xp_awarded,
+      `milestone_${milestone.milestone_type}`,
+      milestone.challenge_id,
+      { milestone_id: milestone.id }
+    );
+  }
+
+  /**
+   * Award special event XP through the main system
+   */
+  async awardSpecialEventXP(
+    userId: string,
+    specialEvent: SpecialChallengeEvent
+  ): Promise<void> {
+    await this.awardChallengeXP(
+      userId,
+      specialEvent.bonus_xp,
+      `special_event_${specialEvent.type}`,
+      specialEvent.challenge_id,
+      { 
+        event_id: specialEvent.id,
+        event_description: specialEvent.description
+      }
+    );
+  }
+
+  // Helper methods for XP integration
+  private getOrdinalRank(rank: number): string {
+    const suffix = ['th', 'st', 'nd', 'rd'][rank % 10] || 'th';
+    if (rank >= 11 && rank <= 13) return `${rank}th`;
+    return `${rank}${suffix}`;
+  }
+
+  private getAchievementName(achievementId: string): string {
+    const names: Record<string, string> = {
+      'challenge_winner': 'Challenge Champion',
+      'podium_finish': 'Podium Finisher',
+      'challenge_complete': 'Challenge Completer',
+      'perfect_score': 'Perfectionist',
+      'speed_demon': 'Speed Demon',
+      'consistency_master': 'Consistency Master'
+    };
+    return names[achievementId] || 'Special Achievement';
+  }
+
+  private getAchievementDescription(achievementId: string): string {
+    const descriptions: Record<string, string> = {
+      'challenge_winner': 'Won a fitness challenge',
+      'podium_finish': 'Finished in the top 3 of a challenge',
+      'challenge_complete': 'Successfully completed a challenge',
+      'perfect_score': 'Achieved perfect execution',
+      'speed_demon': 'Completed challenge in record time',
+      'consistency_master': 'Maintained perfect consistency'
+    };
+    return descriptions[achievementId] || 'Earned through exceptional performance';
   }
 }
 

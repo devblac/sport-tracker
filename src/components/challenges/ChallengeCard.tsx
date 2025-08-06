@@ -1,262 +1,338 @@
-// ChallengeCard Component - Display individual challenge information
-// Implements requirement 12.2 - Challenge UI components
+/**
+ * ChallengeCard Component
+ * 
+ * Displays a challenge with visual progress, difficulty, and key information.
+ * Implements task 14.2 - ChallengeCard with visual progress
+ */
 
 import React from 'react';
-import { Challenge, ChallengeParticipant } from '../../types/challenges';
+import { Challenge, ChallengeParticipant } from '@/types/challengeModels';
+import { formatDistanceToNow, format } from 'date-fns';
 import { 
-  CHALLENGE_CATEGORIES_INFO, 
-  DIFFICULTY_INFO, 
-  CHALLENGE_STATUS_MESSAGES 
-} from '../../constants/challenges';
+  Trophy, 
+  Users, 
+  Calendar, 
+  Target, 
+  Star,
+  Clock,
+  Award,
+  TrendingUp
+} from 'lucide-react';
 
 interface ChallengeCardProps {
   challenge: Challenge;
-  userParticipant?: ChallengeParticipant;
+  participant?: ChallengeParticipant;
   onJoin?: (challengeId: string) => void;
   onView?: (challengeId: string) => void;
   className?: string;
+  variant?: 'default' | 'compact' | 'featured';
 }
 
 export const ChallengeCard: React.FC<ChallengeCardProps> = ({
   challenge,
-  userParticipant,
+  participant,
   onJoin,
   onView,
-  className = ''
+  className = '',
+  variant = 'default'
 }) => {
-  const categoryInfo = CHALLENGE_CATEGORIES_INFO[challenge.category];
-  const difficultyInfo = DIFFICULTY_INFO[challenge.difficulty_level];
-  
-  // Calculate challenge status
-  const now = new Date();
-  const startDate = new Date(challenge.start_date);
-  const endDate = new Date(challenge.end_date);
-  
-  const getStatus = () => {
-    if (!challenge.is_active) return 'ended';
-    if (startDate > now) return 'not_started';
-    if (endDate < now) return 'ended';
-    if (challenge.max_participants && challenge.participants_count >= challenge.max_participants) return 'full';
-    if (userParticipant?.is_completed) return 'completed';
-    if (userParticipant) return 'joined';
-    
-    const hoursUntilEnd = (endDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-    if (hoursUntilEnd < 24) return 'ending_soon';
-    
-    return 'active';
-  };
-
-  const status = getStatus();
-  const isJoinable = status === 'active' && !userParticipant;
-  const progress = userParticipant?.progress || 0;
+  const isParticipating = !!participant;
+  const isCompleted = participant?.is_completed || false;
+  const progress = participant?.progress || 0;
+  const rank = participant?.rank || 0;
 
   // Calculate time remaining
-  const getTimeRemaining = () => {
-    if (status === 'ended' || status === 'not_started') return null;
-    
-    const diffMs = endDate.getTime() - now.getTime();
-    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    
-    if (days > 0) return `${days}d ${hours}h left`;
-    if (hours > 0) return `${hours}h left`;
-    return 'Ending soon';
+  const now = new Date();
+  const isActive = challenge.status === 'active' && challenge.start_date <= now && challenge.end_date > now;
+  const isUpcoming = challenge.start_date > now;
+  const isExpired = challenge.end_date <= now;
+
+  // Get difficulty styling
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty) {
+      case 'beginner': return 'text-green-600 bg-green-100';
+      case 'intermediate': return 'text-yellow-600 bg-yellow-100';
+      case 'advanced': return 'text-orange-600 bg-orange-100';
+      case 'expert': return 'text-red-600 bg-red-100';
+      case 'legendary': return 'text-purple-600 bg-purple-100';
+      default: return 'text-gray-600 bg-gray-100';
+    }
   };
 
-  const timeRemaining = getTimeRemaining();
+  // Get category icon
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'strength': return <Trophy className="w-4 h-4" />;
+      case 'endurance': return <TrendingUp className="w-4 h-4" />;
+      case 'consistency': return <Calendar className="w-4 h-4" />;
+      case 'volume': return <Target className="w-4 h-4" />;
+      case 'technique': return <Star className="w-4 h-4" />;
+      case 'social': return <Users className="w-4 h-4" />;
+      default: return <Award className="w-4 h-4" />;
+    }
+  };
 
-  return (
-    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105 ${className}`}>
-      {/* Challenge Image/Header */}
-      <div 
-        className="h-32 bg-gradient-to-r from-blue-500 to-purple-600 relative overflow-hidden"
-        style={{ 
-          background: challenge.image_url 
-            ? `url(${challenge.image_url}) center/cover` 
-            : `linear-gradient(135deg, ${categoryInfo.color}40, ${difficultyInfo.color}40)`
-        }}
-      >
-        {/* Category Badge */}
-        <div className="absolute top-3 left-3">
-          <span 
-            className="px-3 py-1 rounded-full text-xs font-semibold text-white shadow-lg"
-            style={{ backgroundColor: categoryInfo.color }}
-          >
-            {categoryInfo.icon} {categoryInfo.name}
-          </span>
-        </div>
+  // Get status styling
+  const getStatusStyling = () => {
+    if (isCompleted) return 'border-green-200 bg-green-50';
+    if (isParticipating) return 'border-blue-200 bg-blue-50';
+    if (isExpired) return 'border-gray-200 bg-gray-50';
+    if (isUpcoming) return 'border-yellow-200 bg-yellow-50';
+    return 'border-gray-200 bg-white hover:bg-gray-50';
+  };
 
-        {/* Difficulty Badge */}
-        <div className="absolute top-3 right-3">
-          <span 
-            className="px-3 py-1 rounded-full text-xs font-semibold text-white shadow-lg"
-            style={{ backgroundColor: difficultyInfo.color }}
-          >
-            {difficultyInfo.name}
-          </span>
-        </div>
+  const baseClasses = `
+    relative rounded-lg border-2 transition-all duration-200 cursor-pointer
+    ${getStatusStyling()}
+    ${className}
+  `;
 
-        {/* Status Badge */}
-        <div className="absolute bottom-3 left-3">
-          <span className={`px-3 py-1 rounded-full text-xs font-semibold shadow-lg ${
-            status === 'active' ? 'bg-green-500 text-white' :
-            status === 'joined' ? 'bg-blue-500 text-white' :
-            status === 'completed' ? 'bg-purple-500 text-white' :
-            status === 'ending_soon' ? 'bg-orange-500 text-white' :
-            status === 'full' ? 'bg-red-500 text-white' :
-            'bg-gray-500 text-white'
-          }`}>
-            {CHALLENGE_STATUS_MESSAGES[status]}
-          </span>
-        </div>
+  const handleCardClick = () => {
+    if (onView) {
+      onView(challenge.id);
+    }
+  };
 
-        {/* Time Remaining */}
-        {timeRemaining && (
-          <div className="absolute bottom-3 right-3">
-            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-black bg-opacity-50 text-white">
-              {timeRemaining}
+  const handleJoinClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onJoin && !isParticipating) {
+      onJoin(challenge.id);
+    }
+  };
+
+  if (variant === 'compact') {
+    return (
+      <div className={`${baseClasses} p-4`} onClick={handleCardClick}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2">
+              {getCategoryIcon(challenge.category)}
+              <h3 className="font-semibold text-sm">{challenge.name}</h3>
+            </div>
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(challenge.difficulty)}`}>
+              {challenge.difficulty}
             </span>
           </div>
-        )}
-      </div>
-
-      {/* Challenge Content */}
-      <div className="p-4">
-        {/* Title and Type */}
-        <div className="flex items-start justify-between mb-2">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white line-clamp-2">
-            {challenge.name}
-          </h3>
-          <span className="ml-2 px-2 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full">
-            {challenge.type}
-          </span>
-        </div>
-
-        {/* Description */}
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">
-          {challenge.description}
-        </p>
-
-        {/* Requirements Preview */}
-        <div className="mb-3">
-          <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
-            Requirements
-          </h4>
-          <div className="space-y-1">
-            {challenge.requirements.slice(0, 2).map((req, index) => (
-              <div key={req.id} className="text-xs text-gray-600 dark:text-gray-300">
-                • {req.description}
+          
+          <div className="flex items-center space-x-2">
+            {isParticipating && (
+              <div className="text-right">
+                <div className="text-xs text-gray-500">Progress</div>
+                <div className="font-semibold text-sm">{Math.round(progress)}%</div>
               </div>
-            ))}
-            {challenge.requirements.length > 2 && (
-              <div className="text-xs text-gray-500 dark:text-gray-400">
-                +{challenge.requirements.length - 2} more requirements
-              </div>
+            )}
+            
+            {!isParticipating && isActive && (
+              <button
+                onClick={handleJoinClick}
+                className="px-3 py-1 bg-primary text-primary-foreground rounded-md text-xs font-medium hover:bg-primary/90"
+              >
+                Join
+              </button>
             )}
           </div>
         </div>
-
-        {/* Progress Bar (if participating) */}
-        {userParticipant && (
-          <div className="mb-3">
-            <div className="flex justify-between items-center mb-1">
-              <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
-                Your Progress
-              </span>
-              <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
-                {Math.round(progress)}%
-              </span>
-            </div>
-            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+        
+        {isParticipating && (
+          <div className="mt-2">
+            <div className="w-full bg-gray-200 rounded-full h-2">
               <div 
-                className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full transition-all duration-300"
+                className="bg-primary h-2 rounded-full transition-all duration-300"
                 style={{ width: `${Math.min(progress, 100)}%` }}
               />
             </div>
-            {userParticipant.rank && (
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Rank #{userParticipant.rank} of {challenge.participants_count}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (variant === 'featured') {
+    return (
+      <div className={`${baseClasses} p-6 shadow-lg`} onClick={handleCardClick}>
+        {challenge.is_featured && (
+          <div className="absolute -top-2 -right-2 bg-yellow-400 text-yellow-900 px-2 py-1 rounded-full text-xs font-bold">
+            FEATURED
+          </div>
+        )}
+        
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            <div className="p-3 rounded-full bg-primary/10">
+              {getCategoryIcon(challenge.category)}
+            </div>
+            <div>
+              <h3 className="text-xl font-bold">{challenge.name}</h3>
+              <p className="text-gray-600 text-sm">{challenge.short_description}</p>
+            </div>
+          </div>
+          
+          <span className={`px-3 py-1 rounded-full text-sm font-medium ${getDifficultyColor(challenge.difficulty)}`}>
+            {challenge.difficulty}
+          </span>
+        </div>
+
+        <p className="text-gray-700 mb-4 line-clamp-2">{challenge.description}</p>
+
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="flex items-center space-x-2 text-sm text-gray-600">
+            <Users className="w-4 h-4" />
+            <span>{challenge.current_participants} participants</span>
+          </div>
+          
+          <div className="flex items-center space-x-2 text-sm text-gray-600">
+            <Clock className="w-4 h-4" />
+            <span>
+              {isActive && `Ends ${formatDistanceToNow(challenge.end_date, { addSuffix: true })}`}
+              {isUpcoming && `Starts ${formatDistanceToNow(challenge.start_date, { addSuffix: true })}`}
+              {isExpired && 'Ended'}
+            </span>
+          </div>
+        </div>
+
+        {isParticipating && (
+          <div className="mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-medium">Your Progress</span>
+              <span className="text-sm text-gray-600">{Math.round(progress)}%</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-3">
+              <div 
+                className="bg-primary h-3 rounded-full transition-all duration-300"
+                style={{ width: `${Math.min(progress, 100)}%` }}
+              />
+            </div>
+            {rank > 0 && (
+              <div className="mt-2 text-sm text-gray-600">
+                Current rank: #{rank}
               </div>
             )}
           </div>
         )}
 
-        {/* Participants and Rewards Info */}
-        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-3">
-          <div className="flex items-center space-x-3">
-            <span>
-              👥 {challenge.participants_count}
-              {challenge.max_participants && ` / ${challenge.max_participants}`}
-            </span>
-            <span>
-              🎁 {challenge.rewards.length} rewards
-            </span>
-          </div>
-          <div className="flex items-center space-x-1">
-            {challenge.tags.slice(0, 2).map(tag => (
-              <span 
-                key={tag}
-                className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-xs"
-              >
-                #{tag}
+        <div className="flex justify-between items-center">
+          <div className="flex space-x-2">
+            {challenge.tags.slice(0, 3).map((tag, index) => (
+              <span key={index} className="px-2 py-1 bg-gray-100 text-gray-700 rounded-md text-xs">
+                {tag}
               </span>
             ))}
           </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex space-x-2">
-          {isJoinable && onJoin && (
+          
+          {!isParticipating && isActive && (
             <button
-              onClick={() => onJoin(challenge.id)}
-              className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white py-2 px-4 rounded-lg font-semibold text-sm hover:from-blue-600 hover:to-purple-700 transition-all duration-200 transform hover:scale-105"
+              onClick={handleJoinClick}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90"
             >
               Join Challenge
             </button>
           )}
           
-          {onView && (
-            <button
-              onClick={() => onView(challenge.id)}
-              className={`${isJoinable ? 'flex-none px-4' : 'flex-1'} border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 py-2 rounded-lg font-semibold text-sm hover:border-blue-500 hover:text-blue-500 transition-all duration-200`}
-            >
-              View Details
-            </button>
+          {isCompleted && (
+            <div className="flex items-center space-x-2 text-green-600">
+              <Trophy className="w-4 h-4" />
+              <span className="font-medium">Completed</span>
+            </div>
           )}
         </div>
+      </div>
+    );
+  }
 
-        {/* Rewards Preview */}
-        {challenge.rewards.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                Top Rewards
-              </span>
-              <div className="flex space-x-1">
-                {challenge.rewards.slice(0, 3).map((reward, index) => (
-                  <div 
-                    key={reward.id}
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs"
-                    style={{ 
-                      backgroundColor: reward.rarity === 'legendary' ? '#FF9800' :
-                                     reward.rarity === 'epic' ? '#9C27B0' :
-                                     reward.rarity === 'rare' ? '#2196F3' : '#9E9E9E'
-                    }}
-                    title={reward.description}
-                  >
-                    {reward.type === 'xp' ? '⚡' :
-                     reward.type === 'badge' ? '🏆' :
-                     reward.type === 'title' ? '👑' :
-                     reward.type === 'premium_content' ? '📚' : '💰'}
-                  </div>
-                ))}
-              </div>
+  // Default variant
+  return (
+    <div className={`${baseClasses} p-5`} onClick={handleCardClick}>
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center space-x-3">
+          <div className="p-2 rounded-lg bg-primary/10">
+            {getCategoryIcon(challenge.category)}
+          </div>
+          <div>
+            <h3 className="font-semibold text-lg">{challenge.name}</h3>
+            <p className="text-gray-600 text-sm">{challenge.category}</p>
+          </div>
+        </div>
+        
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(challenge.difficulty)}`}>
+          {challenge.difficulty}
+        </span>
+      </div>
+
+      <p className="text-gray-700 mb-4 line-clamp-2">{challenge.description}</p>
+
+      <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-1">
+            <Users className="w-4 h-4" />
+            <span>{challenge.current_participants}</span>
+          </div>
+          
+          <div className="flex items-center space-x-1">
+            <Calendar className="w-4 h-4" />
+            <span>{challenge.duration_days}d</span>
+          </div>
+        </div>
+        
+        <div className="text-right">
+          {isActive && (
+            <div className="text-green-600 font-medium">Active</div>
+          )}
+          {isUpcoming && (
+            <div className="text-yellow-600 font-medium">
+              Starts {format(challenge.start_date, 'MMM d')}
             </div>
+          )}
+          {isExpired && (
+            <div className="text-gray-500 font-medium">Ended</div>
+          )}
+        </div>
+      </div>
+
+      {isParticipating && (
+        <div className="mb-4">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm font-medium">Progress</span>
+            <span className="text-sm text-gray-600">{Math.round(progress)}%</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div 
+              className="bg-primary h-2 rounded-full transition-all duration-300"
+              style={{ width: `${Math.min(progress, 100)}%` }}
+            />
+          </div>
+          {rank > 0 && (
+            <div className="mt-1 text-xs text-gray-600">
+              Rank #{rank}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="flex justify-between items-center">
+        <div className="flex space-x-1">
+          {challenge.tags.slice(0, 2).map((tag, index) => (
+            <span key={index} className="px-2 py-1 bg-gray-100 text-gray-700 rounded-md text-xs">
+              {tag}
+            </span>
+          ))}
+        </div>
+        
+        {!isParticipating && isActive && (
+          <button
+            onClick={handleJoinClick}
+            className="px-3 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90"
+          >
+            Join
+          </button>
+        )}
+        
+        {isCompleted && (
+          <div className="flex items-center space-x-1 text-green-600">
+            <Trophy className="w-4 h-4" />
+            <span className="text-sm font-medium">Completed</span>
           </div>
         )}
       </div>
     </div>
   );
 };
-
-export default ChallengeCard;

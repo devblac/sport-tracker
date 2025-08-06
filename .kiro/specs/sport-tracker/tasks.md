@@ -283,19 +283,19 @@
 
 ### 14. Sistema de Challenges Básico
 
-- [ ] 14.1 Implementar modelos de challenges
+- [x] 14.1 Implementar modelos de challenges
   - Crear interfaces Challenge, ChallengeParticipant
   - Implementar tipos de challenges (individual, grupal)
   - Crear sistema de requirements y validación
   - _Requerimientos: 12.1, 12.2_
 
-- [ ] 14.2 Crear componentes de challenges
+- [x] 14.2 Crear componentes de challenges
   - Implementar ChallengeCard con progreso visual
   - Crear ChallengeLeaderboard para rankings
   - Implementar ChallengeJoin flow
   - _Requerimientos: 12.2, 12.3_
 
-- [ ] 14.3 Integrar challenges con gamificación
+- [x] 14.3 Integrar challenges con gamificación
   - Implementar rewards especiales por completar challenges
   - Crear celebraciones épicas para ganadores
   - Integrar challenges con sistema de XP
@@ -305,13 +305,13 @@
 
 ### 15. Sistema de Percentiles y Rankings
 
-- [ ] 15.1 Implementar cálculos de percentiles
+- [x] 15.1 Implementar cálculos de percentiles
   - Crear PercentileCalculator para comparaciones globales
   - Implementar segmentación por edad, género y peso
   - Crear sistema de actualización de percentiles
   - _Requerimientos: 6.3, 6.4_
 
-- [ ] 15.2 Crear componentes de comparación
+- [x] 15.2 Crear componentes de comparación
   - Implementar PercentileDisplay con visualizaciones
   - Crear StrengthComparison charts
   - Implementar GlobalRankings por ejercicio
@@ -347,13 +347,13 @@
 
 ### 18. Marketplace Básico para Trainers
 
-- [ ] 18.1 Implementar sistema de contenido premium
+- [x] 18.1 Implementar sistema de contenido premium
   - Crear modelos para PremiumContent, TrainerProfile
   - Implementar sistema de upload de contenido
   - Crear validación y moderación básica
   - _Requerimientos: 17.1, 17.2, 17.4_
 
-- [ ] 18.2 Crear componentes de marketplace
+- [x] 18.2 Crear componentes de marketplace
   - Implementar ContentMarketplace con búsqueda
   - Crear TrainerProfile con ratings y reviews
   - Implementar PremiumContentPlayer

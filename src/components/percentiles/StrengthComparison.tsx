@@ -1,539 +1,395 @@
-// StrengthComparison Component - Advanced strength comparison charts
-// Implements requirement 15.2 - Strength comparison visualization
+/**
+ * Strength Comparison Component
+ * 
+ * Shows visual comparisons of user strength against different demographic segments
+ * and provides insights into relative performance across exercises.
+ */
 
 import React, { useState, useEffect } from 'react';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, Filler } from 'chart.js';
-import { Bar, Line } from 'react-chartjs-2';
-import type { UserPercentileRanking, PercentileComparison, UserDemographics } from '../../types/percentiles';
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, Filler);
+import { supabasePercentileService, SupabasePercentileResult } from '../../services/SupabasePercentileService';
 
 interface StrengthComparisonProps {
   userId: string;
-  demographics: UserDemographics;
-  exercises: Array<{
-    exercise_id: string;
-    exercise_name: string;
-    user_value: number;
-    unit: string;
-    category: 'powerlifting' | 'bodyweight' | 'cardio';
-  }>;
-  showRelativeStrength?: boolean;
-  className?: string;
+  exerciseIds: string[];
+  exerciseNames: { [key: string]: string };
 }
 
 interface ComparisonData {
-  exercise: string;
+  exerciseId: string;
+  exerciseName: string;
   userValue: number;
-  userPercentile: number;
-  p25: number;
-  p50: number;
-  p75: number;
-  p90: number;
-  strengthLevel: string;
+  percentile: number;
+  segment: string;
+  metric: string;
 }
 
-export const StrengthComparison: React.FC<StrengthComparisonProps> = ({
+interface SegmentComparison {
+  segment: string;
+  averagePercentile: number;
+  exerciseCount: number;
+  strongestExercise: ComparisonData | null;
+  weakestExercise: ComparisonData | null;
+}
+
+const StrengthComparison: React.FC<StrengthComparisonProps> = ({
   userId,
-  demographics,
-  exercises,
-  showRelativeStrength = true,
-  className = ''
+  exerciseIds,
+  exerciseNames
 }) => {
-  const [chartType, setChartType] = useState<'percentile' | 'absolute' | 'relative'>('percentile');
-  const [selectedSegment, setSelectedSegment] = useState<string>('global_all');
   const [comparisonData, setComparisonData] = useState<ComparisonData[]>([]);
+  const [segmentComparisons, setSegmentComparisons] = useState<SegmentComparison[]>([]);
+  const [selectedMetric, setSelectedMetric] = useState<'oneRM' | 'relative_strength'>('oneRM');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    processComparisonData();
-  }, [exercises, selectedSegment]);
+    loadComparisonData();
+  }, [userId, exerciseIds, selectedMetric]);
 
-  const processComparisonData = () => {
-    const data: ComparisonData[] = exercises.map(exercise => {
-      // Generate mock percentile based on user value relative to typical ranges
-      const basePercentiles = getBasePercentiles(exercise.exercise_id);
-      const userPercentile = calculateMockPercentile(exercise.user_value, basePercentiles);
-      
-      // Mock percentile data - in real app would come from percentile service
-      const mockPercentiles = {
-        p25: basePercentiles.p25,
-        p50: basePercentiles.p50,
-        p75: basePercentiles.p75,
-        p90: basePercentiles.p90
-      };
+  const loadComparisonData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-      return {
-        exercise: exercise.exercise_name,
-        userValue: exercise.user_value,
-        userPercentile,
-        ...mockPercentiles,
-        strengthLevel: getStrengthLevel(userPercentile)
-      };
-    });
+      const allData: ComparisonData[] = [];
 
-    setComparisonData(data);
-  };
+      // Load percentile data for each exercise
+      for (const exerciseId of exerciseIds) {
+        try {
+          const percentiles = await supabasePercentileService.getUserExercisePercentiles(
+            userId,
+            exerciseId
+          );
 
-  const getBasePercentiles = (exerciseId: string) => {
-    const baseValues: Record<string, any> = {
-      'squat': { p25: 80, p50: 100, p75: 130, p90: 160 },
-      'bench_press': { p25: 60, p50: 80, p75: 100, p90: 120 },
-      'deadlift': { p25: 100, p50: 130, p75: 160, p90: 200 },
-      'pull_ups': { p25: 5, p50: 8, p75: 12, p90: 18 },
-      'push_ups': { p25: 15, p50: 25, p75: 35, p90: 50 },
-      'running_5k': { p25: 1800, p50: 1500, p75: 1200, p90: 1080 } // seconds (lower is better)
-    };
-    return baseValues[exerciseId] || { p25: 50, p50: 75, p75: 100, p90: 125 };
-  };
-
-  const calculateMockPercentile = (userValue: number, basePercentiles: any): number => {
-    if (userValue <= basePercentiles.p25) return 25;
-    if (userValue <= basePercentiles.p50) return 50;
-    if (userValue <= basePercentiles.p75) return 75;
-    if (userValue <= basePercentiles.p90) return 90;
-    return 95;
-  };
-
-  const getStrengthLevel = (percentile: number): string => {
-    if (percentile >= 90) return 'elite';
-    if (percentile >= 75) return 'advanced';
-    if (percentile >= 50) return 'intermediate';
-    if (percentile >= 25) return 'novice';
-    return 'untrained';
-  };
-
-  const getPercentileChartData = () => {
-    const exercises = comparisonData.map(d => d.exercise);
-    const userPercentiles = comparisonData.map(d => d.userPercentile);
-
-    return {
-      labels: exercises,
-      datasets: [
-        {
-          label: 'Tu Percentil',
-          data: userPercentiles,
-          backgroundColor: userPercentiles.map(p => {
-            if (p >= 90) return 'rgba(147, 51, 234, 0.8)'; // Purple
-            if (p >= 75) return 'rgba(59, 130, 246, 0.8)'; // Blue
-            if (p >= 50) return 'rgba(34, 197, 94, 0.8)'; // Green
-            if (p >= 25) return 'rgba(251, 191, 36, 0.8)'; // Yellow
-            return 'rgba(239, 68, 68, 0.8)'; // Red
-          }),
-          borderColor: userPercentiles.map(p => {
-            if (p >= 90) return 'rgb(147, 51, 234)';
-            if (p >= 75) return 'rgb(59, 130, 246)';
-            if (p >= 50) return 'rgb(34, 197, 94)';
-            if (p >= 25) return 'rgb(251, 191, 36)';
-            return 'rgb(239, 68, 68)';
-          }),
-          borderWidth: 2,
-          borderRadius: 8,
-          borderSkipped: false,
-        }
-      ]
-    };
-  };
-
-  const getAbsoluteChartData = () => {
-    const exercises = comparisonData.map(d => d.exercise);
-
-    return {
-      labels: exercises,
-      datasets: [
-        {
-          label: 'P25 (25º percentil)',
-          data: comparisonData.map(d => d.p25),
-          backgroundColor: 'rgba(239, 68, 68, 0.3)',
-          borderColor: 'rgb(239, 68, 68)',
-          borderWidth: 2,
-          fill: false,
-        },
-        {
-          label: 'P50 (Mediana)',
-          data: comparisonData.map(d => d.p50),
-          backgroundColor: 'rgba(251, 191, 36, 0.3)',
-          borderColor: 'rgb(251, 191, 36)',
-          borderWidth: 2,
-          fill: false,
-        },
-        {
-          label: 'P75 (75º percentil)',
-          data: comparisonData.map(d => d.p75),
-          backgroundColor: 'rgba(34, 197, 94, 0.3)',
-          borderColor: 'rgb(34, 197, 94)',
-          borderWidth: 2,
-          fill: false,
-        },
-        {
-          label: 'P90 (90º percentil)',
-          data: comparisonData.map(d => d.p90),
-          backgroundColor: 'rgba(147, 51, 234, 0.3)',
-          borderColor: 'rgb(147, 51, 234)',
-          borderWidth: 2,
-          fill: false,
-        },
-        {
-          label: 'Tu Rendimiento',
-          data: comparisonData.map(d => d.userValue),
-          backgroundColor: 'rgba(59, 130, 246, 0.8)',
-          borderColor: 'rgb(59, 130, 246)',
-          borderWidth: 3,
-          pointRadius: 8,
-          pointHoverRadius: 10,
-          type: 'line' as const,
-        }
-      ]
-    };
-  };
-
-  const getRelativeChartData = () => {
-    // Calculate relative strength (value / bodyweight) for strength exercises
-    const exercises = comparisonData.map(d => d.exercise);
-    const relativeStrengths = comparisonData.map(d => {
-      if (['squat', 'bench_press', 'deadlift'].some(ex => d.exercise.toLowerCase().includes(ex))) {
-        return d.userValue / demographics.weight;
-      }
-      return d.userValue; // For bodyweight exercises, return absolute value
-    });
-
-    return {
-      labels: exercises,
-      datasets: [
-        {
-          label: 'Fuerza Relativa (kg/peso corporal)',
-          data: relativeStrengths,
-          backgroundColor: 'rgba(168, 85, 247, 0.8)',
-          borderColor: 'rgb(168, 85, 247)',
-          borderWidth: 2,
-          borderRadius: 8,
-          borderSkipped: false,
-        }
-      ]
-    };
-  };
-
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'top' as const,
-        labels: {
-          usePointStyle: true,
-          padding: 20,
-          font: {
-            size: 12
+          const relevantPercentile = percentiles.find(p => p.metric_type === selectedMetric);
+          
+          if (relevantPercentile) {
+            allData.push({
+              exerciseId,
+              exerciseName: exerciseNames[exerciseId] || 'Unknown Exercise',
+              userValue: relevantPercentile.user_value,
+              percentile: relevantPercentile.percentile_value,
+              segment: relevantPercentile.segment?.description || 'General',
+              metric: selectedMetric
+            });
           }
-        }
-      },
-      title: {
-        display: true,
-        text: chartType === 'percentile' ? 'Comparación de Percentiles' :
-              chartType === 'absolute' ? 'Comparación de Valores Absolutos' :
-              'Fuerza Relativa por Ejercicio',
-        font: {
-          size: 16,
-          weight: 'bold' as const
-        },
-        padding: 20
-      },
-      tooltip: {
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        titleColor: 'white',
-        bodyColor: 'white',
-        borderColor: 'rgba(255, 255, 255, 0.2)',
-        borderWidth: 1,
-        cornerRadius: 8,
-        displayColors: true,
-        callbacks: {
-          label: function(context: any) {
-            const label = context.dataset.label || '';
-            const value = context.parsed.y;
-            
-            if (chartType === 'percentile') {
-              return `${label}: ${Math.round(value)}º percentil`;
-            } else if (chartType === 'relative') {
-              return `${label}: ${value.toFixed(2)}x peso corporal`;
-            } else {
-              return `${label}: ${value.toFixed(1)} kg`;
-            }
-          }
+        } catch (exerciseError) {
+          console.warn(`Failed to load data for exercise ${exerciseId}:`, exerciseError);
         }
       }
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        max: chartType === 'percentile' ? 100 : undefined,
-        title: {
-          display: true,
-          text: chartType === 'percentile' ? 'Percentil' :
-                chartType === 'relative' ? 'Múltiplo del Peso Corporal' :
-                'Peso (kg)',
-          font: {
-            size: 14,
-            weight: 'bold' as const
-          }
-        },
-        grid: {
-          color: 'rgba(0, 0, 0, 0.1)',
-          drawBorder: false
-        },
-        ticks: {
-          font: {
-            size: 12
-          },
-          callback: function(value: any) {
-            if (chartType === 'percentile') {
-              return `${value}%`;
-            } else if (chartType === 'relative') {
-              return `${value}x`;
-            } else {
-              return `${value} kg`;
-            }
-          }
+
+      setComparisonData(allData);
+
+      // Calculate segment comparisons
+      const segmentMap = new Map<string, ComparisonData[]>();
+      allData.forEach(data => {
+        if (!segmentMap.has(data.segment)) {
+          segmentMap.set(data.segment, []);
         }
-      },
-      x: {
-        title: {
-          display: true,
-          text: 'Ejercicios',
-          font: {
-            size: 14,
-            weight: 'bold' as const
-          }
-        },
-        grid: {
-          display: false
-        },
-        ticks: {
-          font: {
-            size: 12
-          },
-          maxRotation: 45
-        }
-      }
-    },
-    animation: {
-      duration: 1000,
-      easing: 'easeInOutQuart' as const
+        segmentMap.get(data.segment)!.push(data);
+      });
+
+      const segments: SegmentComparison[] = [];
+      segmentMap.forEach((exercises, segment) => {
+        const averagePercentile = exercises.reduce((sum, ex) => sum + ex.percentile, 0) / exercises.length;
+        const sortedByPercentile = [...exercises].sort((a, b) => b.percentile - a.percentile);
+        
+        segments.push({
+          segment,
+          averagePercentile: Math.round(averagePercentile),
+          exerciseCount: exercises.length,
+          strongestExercise: sortedByPercentile[0] || null,
+          weakestExercise: sortedByPercentile[sortedByPercentile.length - 1] || null
+        });
+      });
+
+      setSegmentComparisons(segments.sort((a, b) => b.averagePercentile - a.averagePercentile));
+
+    } catch (err) {
+      console.error('Failed to load comparison data:', err);
+      setError('Failed to load strength comparison data');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getStrengthLevelSummary = () => {
-    const levelCounts = comparisonData.reduce((acc, data) => {
-      acc[data.strengthLevel] = (acc[data.strengthLevel] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const dominantLevel = Object.entries(levelCounts).reduce((a, b) => 
-      levelCounts[a[0]] > levelCounts[b[0]] ? a : b
-    )[0];
-
-    const levelInfo = {
-      'untrained': { label: 'Sin Entrenar', color: 'text-gray-600', icon: '🌱' },
-      'novice': { label: 'Principiante', color: 'text-blue-600', icon: '🥉' },
-      'intermediate': { label: 'Intermedio', color: 'text-green-600', icon: '🥈' },
-      'advanced': { label: 'Avanzado', color: 'text-purple-600', icon: '🥇' },
-      'elite': { label: 'Elite', color: 'text-yellow-500', icon: '👑' }
-    };
-
-    return {
-      dominantLevel,
-      info: levelInfo[dominantLevel as keyof typeof levelInfo] || levelInfo.novice,
-      distribution: levelCounts
-    };
+  const getPercentileColor = (percentile: number): string => {
+    if (percentile >= 90) return 'bg-green-500';
+    if (percentile >= 75) return 'bg-blue-500';
+    if (percentile >= 50) return 'bg-yellow-500';
+    if (percentile >= 25) return 'bg-orange-500';
+    return 'bg-red-500';
   };
 
-  const strengthSummary = getStrengthLevelSummary();
+  const getPercentileLabel = (percentile: number): string => {
+    if (percentile >= 95) return 'Elite';
+    if (percentile >= 90) return 'Excellent';
+    if (percentile >= 75) return 'Good';
+    if (percentile >= 50) return 'Average';
+    if (percentile >= 25) return 'Below Average';
+    return 'Beginner';
+  };
 
-  const getCurrentChartData = () => {
-    switch (chartType) {
-      case 'percentile':
-        return getPercentileChartData();
-      case 'absolute':
-        return getAbsoluteChartData();
-      case 'relative':
-        return getRelativeChartData();
+  const formatValue = (value: number, metric: string): string => {
+    switch (metric) {
+      case 'oneRM':
+        return `${value.toFixed(1)}kg`;
+      case 'relative_strength':
+        return `${value.toFixed(2)}x BW`;
       default:
-        return getPercentileChartData();
+        return value.toString();
     }
   };
+
+  if (loading) {
+    return (
+      <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <div className="animate-pulse">
+          <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+          <div className="space-y-3">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-4 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+        <div className="text-red-400 mb-2">⚠️</div>
+        <h3 className="text-lg font-medium text-red-900 mb-2">Error Loading Comparison</h3>
+        <p className="text-sm text-red-600">{error}</p>
+      </div>
+    );
+  }
 
   if (comparisonData.length === 0) {
     return (
-      <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 text-center ${className}`}>
-        <div className="text-gray-400 text-4xl mb-4">📊</div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-          No hay datos de comparación
-        </h3>
-        <p className="text-gray-600 dark:text-gray-400">
-          Registra entrenamientos en múltiples ejercicios para ver comparaciones detalladas
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
+        <div className="text-gray-400 mb-2">📊</div>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">No Comparison Data</h3>
+        <p className="text-sm text-gray-600">
+          Complete workouts with the selected exercises to see strength comparisons.
         </p>
       </div>
     );
   }
 
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden ${className}`}>
-      {/* Header */}
-      <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-6 text-white">
-        <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      {/* Header and Controls */}
+      <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <div className="flex justify-between items-start mb-4">
           <div>
-            <h2 className="text-2xl font-bold mb-2">Comparación de Fuerza</h2>
-            <p className="text-blue-100">
-              Análisis detallado de tu rendimiento en múltiples ejercicios
+            <h2 className="text-xl font-bold text-gray-900 mb-2">
+              Strength Comparison Analysis
+            </h2>
+            <p className="text-gray-600">
+              Compare your performance across exercises and demographic segments
             </p>
           </div>
-          <div className="text-right">
-            <div className={`text-3xl ${strengthSummary.info.color.replace('text-', 'text-white ')}`}>
-              {strengthSummary.info.icon}
+          <div className="flex items-center space-x-2">
+            <label className="text-sm font-medium text-gray-700">Metric:</label>
+            <select
+              value={selectedMetric}
+              onChange={(e) => setSelectedMetric(e.target.value as 'oneRM' | 'relative_strength')}
+              className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="oneRM">1RM (Absolute)</option>
+              <option value="relative_strength">Relative Strength</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Overall Performance Summary */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+            <div className="text-2xl font-bold text-blue-600">
+              {Math.round(comparisonData.reduce((sum, d) => sum + d.percentile, 0) / comparisonData.length)}th
             </div>
-            <div className="text-sm text-blue-100">
-              Nivel dominante: {strengthSummary.info.label}
+            <div className="text-sm text-blue-800">Average Percentile</div>
+          </div>
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+            <div className="text-2xl font-bold text-green-600">
+              {Math.max(...comparisonData.map(d => d.percentile))}th
             </div>
+            <div className="text-sm text-green-800">Best Percentile</div>
+          </div>
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 text-center">
+            <div className="text-2xl font-bold text-orange-600">
+              {comparisonData.length}
+            </div>
+            <div className="text-sm text-orange-800">Exercises Tracked</div>
           </div>
         </div>
       </div>
 
-      {/* Controls */}
-      <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex flex-wrap gap-4 items-center justify-between">
-          {/* Chart Type Selector */}
-          <div className="flex items-center space-x-2">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Tipo de gráfico:
-            </label>
-            <select
-              value={chartType}
-              onChange={(e) => setChartType(e.target.value as any)}
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            >
-              <option value="percentile">Percentiles</option>
-              <option value="absolute">Valores Absolutos</option>
-              <option value="relative">Fuerza Relativa</option>
-            </select>
-          </div>
-
-          {/* Segment Selector */}
-          <div className="flex items-center space-x-2">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Comparar con:
-            </label>
-            <select
-              value={selectedSegment}
-              onChange={(e) => setSelectedSegment(e.target.value)}
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            >
-              <option value="global_all">Global (Todos)</option>
-              <option value="age_group">Mi Grupo de Edad</option>
-              <option value="weight_class">Mi Categoría de Peso</option>
-              <option value="experience_level">Mi Nivel de Experiencia</option>
-            </select>
-          </div>
+      {/* Exercise Comparison Chart */}
+      <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          Exercise Performance Comparison
+        </h3>
+        
+        <div className="space-y-4">
+          {comparisonData
+            .sort((a, b) => b.percentile - a.percentile)
+            .map((exercise, index) => (
+              <div key={exercise.exerciseId} className="relative">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center space-x-3">
+                    <span className="text-sm font-medium text-gray-900">
+                      {exercise.exerciseName}
+                    </span>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      exercise.percentile >= 90 ? 'bg-green-100 text-green-800' :
+                      exercise.percentile >= 75 ? 'bg-blue-100 text-blue-800' :
+                      exercise.percentile >= 50 ? 'bg-yellow-100 text-yellow-800' :
+                      exercise.percentile >= 25 ? 'bg-orange-100 text-orange-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {getPercentileLabel(exercise.percentile)}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-4">
+                    <span className="text-sm text-gray-600">
+                      {formatValue(exercise.userValue, exercise.metric)}
+                    </span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {exercise.percentile}th percentile
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Progress Bar */}
+                <div className="w-full bg-gray-200 rounded-full h-3 relative">
+                  <div 
+                    className={`h-3 rounded-full transition-all duration-500 ${getPercentileColor(exercise.percentile)}`}
+                    style={{ width: `${exercise.percentile}%` }}
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-xs font-medium text-white mix-blend-difference">
+                      {exercise.percentile}%
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="text-xs text-gray-500 mt-1">
+                  Compared to: {exercise.segment}
+                </div>
+              </div>
+            ))}
         </div>
       </div>
 
-      {/* Chart */}
-      <div className="p-6">
-        <div className="h-96 mb-6">
-          {chartType === 'absolute' ? (
-            <Line data={getCurrentChartData()} options={chartOptions} />
-          ) : (
-            <Bar data={getCurrentChartData()} options={chartOptions} />
-          )}
-        </div>
-
-        {/* Summary Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Overall Performance */}
-          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-            <h4 className="font-semibold text-gray-900 dark:text-white mb-3">
-              📈 Rendimiento General
-            </h4>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Percentil promedio:</span>
-                <span className="font-semibold text-gray-900 dark:text-white">
-                  {Math.round(comparisonData.reduce((sum, d) => sum + d.userPercentile, 0) / comparisonData.length)}º
+      {/* Segment Analysis */}
+      <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          Demographic Segment Analysis
+        </h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {segmentComparisons.map((segment, index) => (
+            <div key={segment.segment} className="border border-gray-200 rounded-lg p-4">
+              <div className="flex justify-between items-start mb-3">
+                <h4 className="font-medium text-gray-900">{segment.segment}</h4>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  segment.averagePercentile >= 75 ? 'bg-green-100 text-green-800' :
+                  segment.averagePercentile >= 50 ? 'bg-blue-100 text-blue-800' :
+                  'bg-orange-100 text-orange-800'
+                }`}>
+                  {segment.averagePercentile}th avg
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Mejor ejercicio:</span>
-                <span className="font-semibold text-gray-900 dark:text-white">
-                  {comparisonData.reduce((best, current) => 
-                    current.userPercentile > best.userPercentile ? current : best
-                  ).exercise}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Área de mejora:</span>
-                <span className="font-semibold text-gray-900 dark:text-white">
-                  {comparisonData.reduce((worst, current) => 
-                    current.userPercentile < worst.userPercentile ? current : worst
-                  ).exercise}
-                </span>
+              
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Exercises:</span>
+                  <span className="font-medium">{segment.exerciseCount}</span>
+                </div>
+                
+                {segment.strongestExercise && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Strongest:</span>
+                    <span className="font-medium text-green-600">
+                      {segment.strongestExercise.exerciseName} ({segment.strongestExercise.percentile}th)
+                    </span>
+                  </div>
+                )}
+                
+                {segment.weakestExercise && segment.exerciseCount > 1 && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Weakest:</span>
+                    <span className="font-medium text-orange-600">
+                      {segment.weakestExercise.exerciseName} ({segment.weakestExercise.percentile}th)
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
+          ))}
+        </div>
+      </div>
 
-          {/* Strength Level Distribution */}
-          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-            <h4 className="font-semibold text-gray-900 dark:text-white mb-3">
-              🏆 Distribución de Niveles
-            </h4>
-            <div className="space-y-2">
-              {Object.entries(strengthSummary.distribution).map(([level, count]) => {
-                const levelInfo = {
-                  'untrained': { label: 'Sin Entrenar', icon: '🌱' },
-                  'novice': { label: 'Principiante', icon: '🥉' },
-                  'intermediate': { label: 'Intermedio', icon: '🥈' },
-                  'advanced': { label: 'Avanzado', icon: '🥇' },
-                  'elite': { label: 'Elite', icon: '👑' }
-                }[level as keyof typeof strengthSummary.distribution] || { label: level, icon: '📊' };
-
+      {/* Insights and Recommendations */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6">
+        <h3 className="text-lg font-semibold text-blue-900 mb-4">
+          💡 Performance Insights
+        </h3>
+        
+        <div className="space-y-3 text-sm">
+          {comparisonData.length > 0 && (
+            <>
+              {/* Best Performance */}
+              {(() => {
+                const best = comparisonData.reduce((prev, current) => 
+                  prev.percentile > current.percentile ? prev : current
+                );
                 return (
-                  <div key={level} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <span>{levelInfo.icon}</span>
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        {levelInfo.label}
-                      </span>
-                    </div>
-                    <span className="font-semibold text-gray-900 dark:text-white">
-                      {count}
+                  <div className="flex items-start space-x-2">
+                    <span className="text-green-600 mt-0.5">🏆</span>
+                    <span className="text-blue-800">
+                      Your strongest lift is <strong>{best.exerciseName}</strong> at the {best.percentile}th percentile 
+                      ({formatValue(best.userValue, best.metric)})
                     </span>
                   </div>
                 );
-              })}
-            </div>
-          </div>
+              })()}
 
-          {/* Recommendations */}
-          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-            <h4 className="font-semibold text-gray-900 dark:text-white mb-3">
-              💡 Recomendaciones
-            </h4>
-            <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-              {strengthSummary.dominantLevel === 'untrained' && (
-                <div>• Enfócate en la técnica básica</div>
-              )}
-              {strengthSummary.dominantLevel === 'novice' && (
-                <div>• Mantén progresión lineal</div>
-              )}
-              {strengthSummary.dominantLevel === 'intermediate' && (
-                <div>• Considera periodización</div>
-              )}
-              {strengthSummary.dominantLevel === 'advanced' && (
-                <div>• Especialízate en debilidades</div>
-              )}
-              {strengthSummary.dominantLevel === 'elite' && (
-                <div>• Mantén y perfecciona</div>
-              )}
-              <div>• Trabaja ejercicios con menor percentil</div>
-              <div>• Mantén consistencia en entrenamientos</div>
-            </div>
-          </div>
+              {/* Improvement Area */}
+              {(() => {
+                const worst = comparisonData.reduce((prev, current) => 
+                  prev.percentile < current.percentile ? prev : current
+                );
+                return (
+                  <div className="flex items-start space-x-2">
+                    <span className="text-orange-600 mt-0.5">📈</span>
+                    <span className="text-blue-800">
+                      Focus on improving <strong>{worst.exerciseName}</strong> - currently at the {worst.percentile}th percentile
+                    </span>
+                  </div>
+                );
+              })()}
+
+              {/* Balance Assessment */}
+              {(() => {
+                const percentileRange = Math.max(...comparisonData.map(d => d.percentile)) - 
+                                      Math.min(...comparisonData.map(d => d.percentile));
+                return (
+                  <div className="flex items-start space-x-2">
+                    <span className="text-blue-600 mt-0.5">⚖️</span>
+                    <span className="text-blue-800">
+                      Your strength is {percentileRange < 20 ? 'well-balanced' : 
+                                      percentileRange < 40 ? 'moderately balanced' : 'unbalanced'} 
+                      across exercises (range: {percentileRange} percentile points)
+                    </span>
+                  </div>
+                );
+              })()}
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -1,563 +1,370 @@
 /**
  * Percentile Calculator Service
- * Handles calculation of percentiles for user performance comparisons
+ * 
+ * Calculates user performance percentiles for global comparisons.
+ * Supports segmentation by demographics and exercise-specific rankings.
  */
 
-import {
-  UserDemographics,
-  ExercisePerformance,
-  PercentileSegment,
-  PercentileData,
-  UserPercentileRanking,
-  PercentileComparison,
-  StrengthStandards,
-  GlobalRanking,
-  PercentileCalculationResult,
-  DEMOGRAPHIC_SEGMENTS,
-  STRENGTH_LEVEL_THRESHOLDS
-} from '../types/percentiles';
+export interface UserDemographics {
+  age: number;
+  gender: 'male' | 'female' | 'other';
+  weight: number; // in kg
+  experienceLevel: 'beginner' | 'intermediate' | 'advanced' | 'expert';
+}
+
+export interface PerformanceData {
+  exerciseId: string;
+  exerciseName: string;
+  weight: number; // in kg
+  reps: number;
+  estimatedOneRM: number;
+  bodyWeight: number;
+  date: Date;
+  userId: string;
+  demographics: UserDemographics;
+}
+
+export interface PercentileResult {
+  percentile: number; // 0-100
+  rank: number; // actual rank position
+  totalUsers: number;
+  segment: string; // demographic segment description
+  exerciseId: string;
+  metric: 'weight' | 'oneRM' | 'volume' | 'relative_strength';
+  value: number;
+  isPersonalBest: boolean;
+}
+
+export interface PercentileSegment {
+  ageRange: [number, number];
+  gender: string;
+  weightRange: [number, number];
+  experienceLevel?: string;
+  description: string;
+}
 
 export class PercentileCalculator {
-  
+  private performanceData: Map<string, PerformanceData[]> = new Map();
+  private segments: PercentileSegment[] = [];
+
+  constructor() {
+    this.initializeSegments();
+  }
+
   /**
-   * Calculates percentiles for a user's performance across different demographic segments
+   * Initialize demographic segments for percentile calculations
    */
-  static async calculateUserPercentiles(
-    userId: string,
-    demographics: UserDemographics,
-    performances: ExercisePerformance[]
-  ): Promise<PercentileCalculationResult> {
-    const startTime = Date.now();
-    
-    try {
-      const userRankings: UserPercentileRanking[] = [];
-      const comparisons: PercentileComparison[] = [];
-      const updatedSegments: string[] = [];
+  private initializeSegments(): void {
+    this.segments = [
+      // Male segments by age and weight
+      { ageRange: [18, 25], gender: 'male', weightRange: [60, 75], description: 'Men 18-25, 60-75kg' },
+      { ageRange: [18, 25], gender: 'male', weightRange: [75, 90], description: 'Men 18-25, 75-90kg' },
+      { ageRange: [18, 25], gender: 'male', weightRange: [90, 120], description: 'Men 18-25, 90-120kg' },
       
-      for (const performance of performances) {
-        // Find relevant segments for this user
-        const segments = this.findRelevantSegments(demographics);
-        
-        for (const segment of segments) {
-          // Get percentile data for this segment and exercise
-          const percentileData = await this.getPercentileData(segment.id, performance.exercise_id);
-          
-          if (percentileData) {
-            // Calculate user's percentile ranking
-            const ranking = this.calculatePercentileRanking(
-              userId,
-              performance,
-              percentileData,
-              segment,
-              demographics
-            );
-            
-            userRankings.push(ranking);
-            
-            // Create comparison data
-            const comparison = await this.createPercentileComparison(ranking, demographics);
-            comparisons.push(comparison);
-            
-            updatedSegments.push(segment.id);
-          }
-        }
-      }
+      { ageRange: [26, 35], gender: 'male', weightRange: [60, 75], description: 'Men 26-35, 60-75kg' },
+      { ageRange: [26, 35], gender: 'male', weightRange: [75, 90], description: 'Men 26-35, 75-90kg' },
+      { ageRange: [26, 35], gender: 'male', weightRange: [90, 120], description: 'Men 26-35, 90-120kg' },
       
-      const calculationTime = Date.now() - startTime;
+      { ageRange: [36, 50], gender: 'male', weightRange: [60, 75], description: 'Men 36-50, 60-75kg' },
+      { ageRange: [36, 50], gender: 'male', weightRange: [75, 90], description: 'Men 36-50, 75-90kg' },
+      { ageRange: [36, 50], gender: 'male', weightRange: [90, 120], description: 'Men 36-50, 90-120kg' },
+
+      // Female segments by age and weight
+      { ageRange: [18, 25], gender: 'female', weightRange: [45, 60], description: 'Women 18-25, 45-60kg' },
+      { ageRange: [18, 25], gender: 'female', weightRange: [60, 75], description: 'Women 18-25, 60-75kg' },
+      { ageRange: [18, 25], gender: 'female', weightRange: [75, 90], description: 'Women 18-25, 75-90kg' },
       
-      return {
-        success: true,
-        user_rankings: userRankings,
-        comparisons,
-        updated_segments: [...new Set(updatedSegments)],
-        calculation_time_ms: calculationTime
-      };
+      { ageRange: [26, 35], gender: 'female', weightRange: [45, 60], description: 'Women 26-35, 45-60kg' },
+      { ageRange: [26, 35], gender: 'female', weightRange: [60, 75], description: 'Women 26-35, 60-75kg' },
+      { ageRange: [26, 35], gender: 'female', weightRange: [75, 90], description: 'Women 26-35, 75-90kg' },
       
-    } catch (error) {
-      console.error('Error calculating percentiles:', error);
-      return {
-        success: false,
-        user_rankings: [],
-        comparisons: [],
-        updated_segments: [],
-        calculation_time_ms: Date.now() - startTime,
-        errors: [error instanceof Error ? error.message : 'Unknown error']
-      };
-    }
-  }
-  
-  /**
-   * Finds demographic segments relevant to a user
-   */
-  private static findRelevantSegments(demographics: UserDemographics): PercentileSegment[] {
-    const segments: PercentileSegment[] = [];
-    
-    // Age-based segments
-    Object.entries(DEMOGRAPHIC_SEGMENTS).forEach(([key, ageGroup]) => {
-      if ('age_min' in ageGroup && 'age_max' in ageGroup) {
-        if (demographics.age >= ageGroup.age_min && demographics.age <= ageGroup.age_max) {
-          segments.push({
-            id: `age_${key.toLowerCase()}`,
-            name: ageGroup.name,
-            age_min: ageGroup.age_min,
-            age_max: ageGroup.age_max,
-            gender: 'all',
-            sample_size: 1000, // Mock data
-            last_updated: new Date()
-          });
-          
-          // Gender-specific segment
-          segments.push({
-            id: `age_${key.toLowerCase()}_${demographics.gender}`,
-            name: `${ageGroup.name} - ${demographics.gender}`,
-            age_min: ageGroup.age_min,
-            age_max: ageGroup.age_max,
-            gender: demographics.gender,
-            sample_size: 500, // Mock data
-            last_updated: new Date()
-          });
-        }
-      }
-    });
-    
-    // Weight-based segments
-    Object.entries(DEMOGRAPHIC_SEGMENTS).forEach(([key, weightClass]) => {
-      if ('weight_min' in weightClass && 'weight_max' in weightClass) {
-        if (demographics.weight >= weightClass.weight_min && demographics.weight <= weightClass.weight_max) {
-          segments.push({
-            id: `weight_${key.toLowerCase()}`,
-            name: weightClass.name,
-            age_min: 0,
-            age_max: 99,
-            gender: 'all',
-            weight_min: weightClass.weight_min,
-            weight_max: weightClass.weight_max,
-            sample_size: 800, // Mock data
-            last_updated: new Date()
-          });
-          
-          // Gender-specific weight segment
-          segments.push({
-            id: `weight_${key.toLowerCase()}_${demographics.gender}`,
-            name: `${weightClass.name} - ${demographics.gender}`,
-            age_min: 0,
-            age_max: 99,
-            gender: demographics.gender,
-            weight_min: weightClass.weight_min,
-            weight_max: weightClass.weight_max,
-            sample_size: 400, // Mock data
-            last_updated: new Date()
-          });
-        }
-      }
-    });
-    
-    // Experience-based segment
-    segments.push({
-      id: `experience_${demographics.experience_level}`,
-      name: `${demographics.experience_level} level`,
-      age_min: 0,
-      age_max: 99,
-      gender: 'all',
-      experience_level: demographics.experience_level,
-      sample_size: 600, // Mock data
-      last_updated: new Date()
-    });
-    
-    // Global segment
-    segments.push({
-      id: 'global_all',
-      name: 'Global (All Users)',
-      age_min: 0,
-      age_max: 99,
-      gender: 'all',
-      sample_size: 10000, // Mock data
-      last_updated: new Date()
-    });
-    
-    return segments;
-  }
-  
-  /**
-   * Gets percentile data for a specific segment and exercise
-   */
-  private static async getPercentileData(
-    segmentId: string,
-    exerciseId: string
-  ): Promise<PercentileData | null> {
-    // In a real implementation, this would fetch from database
-    // For now, return mock percentile data
-    
-    const mockPercentiles = this.generateMockPercentileData(segmentId, exerciseId);
-    return mockPercentiles;
-  }
-  
-  /**
-   * Generates mock percentile data for testing
-   */
-  private static generateMockPercentileData(segmentId: string, exerciseId: string): PercentileData {
-    // Generate realistic percentile data based on exercise type
-    const baseValues = this.getBaseValuesForExercise(exerciseId);
-    
-    return {
-      segment_id: segmentId,
-      exercise_id: exerciseId,
-      metric_type: 'max_weight',
-      percentiles: {
-        p5: baseValues.base * 0.4,
-        p10: baseValues.base * 0.5,
-        p25: baseValues.base * 0.7,
-        p50: baseValues.base * 1.0,
-        p75: baseValues.base * 1.3,
-        p90: baseValues.base * 1.6,
-        p95: baseValues.base * 1.8,
-        p99: baseValues.base * 2.2
-      },
-      mean: baseValues.base * 1.05,
-      std_deviation: baseValues.base * 0.3,
-      sample_size: Math.floor(Math.random() * 1000) + 500,
-      last_updated: new Date()
-    };
-  }
-  
-  /**
-   * Gets base values for different exercises (for mock data generation)
-   */
-  private static getBaseValuesForExercise(exerciseId: string): { base: number; unit: string } {
-    const exerciseBaseValues: Record<string, { base: number; unit: string }> = {
-      'squat': { base: 100, unit: 'kg' },
-      'bench_press': { base: 80, unit: 'kg' },
-      'deadlift': { base: 120, unit: 'kg' },
-      'pull_ups': { base: 8, unit: 'reps' },
-      'push_ups': { base: 25, unit: 'reps' },
-      'running_5k': { base: 1500, unit: 'seconds' }, // 25 minutes
-      'plank': { base: 120, unit: 'seconds' }
-    };
-    
-    return exerciseBaseValues[exerciseId] || { base: 50, unit: 'kg' };
-  }
-  
-  /**
-   * Calculates a user's percentile ranking for a specific performance
-   */
-  private static calculatePercentileRanking(
-    userId: string,
-    performance: ExercisePerformance,
-    percentileData: PercentileData,
-    segment: PercentileSegment,
-    demographics: UserDemographics
-  ): UserPercentileRanking {
-    
-    const userValue = performance.max_weight; // Using max_weight as primary metric
-    const percentiles = percentileData.percentiles;
-    
-    // Calculate percentile by finding where user value falls
-    let percentile = 0;
-    if (userValue <= percentiles.p5) percentile = 5;
-    else if (userValue <= percentiles.p10) percentile = 10;
-    else if (userValue <= percentiles.p25) percentile = 25;
-    else if (userValue <= percentiles.p50) percentile = 50;
-    else if (userValue <= percentiles.p75) percentile = 75;
-    else if (userValue <= percentiles.p90) percentile = 90;
-    else if (userValue <= percentiles.p95) percentile = 95;
-    else percentile = 99;
-    
-    // More precise calculation using interpolation
-    percentile = this.interpolatePercentile(userValue, percentiles);
-    
-    // Calculate comparison data
-    const betterThanPercentage = percentile;
-    const usersBetterThan = Math.floor((percentile / 100) * segment.sample_size);
-    const usersWorseThan = segment.sample_size - usersBetterThan;
-    
-    // Determine strength level
-    const strengthLevel = this.determineStrengthLevel(percentile);
-    
-    return {
-      user_id: userId,
-      exercise_id: performance.exercise_id,
-      exercise_name: performance.exercise_name,
-      metric_type: 'max_weight',
-      user_value: userValue,
-      percentile,
-      segment,
-      segment_rank: usersBetterThan + 1,
-      total_users_in_segment: segment.sample_size,
-      comparison_data: {
-        better_than_percentage: betterThanPercentage,
-        users_better_than: usersBetterThan,
-        users_worse_than: usersWorseThan
-      },
-      strength_level: strengthLevel,
-      calculated_at: new Date()
-    };
-  }
-  
-  /**
-   * Interpolates percentile value for more precise calculation
-   */
-  private static interpolatePercentile(
-    userValue: number,
-    percentiles: PercentileData['percentiles']
-  ): number {
-    const points = [
-      { percentile: 5, value: percentiles.p5 },
-      { percentile: 10, value: percentiles.p10 },
-      { percentile: 25, value: percentiles.p25 },
-      { percentile: 50, value: percentiles.p50 },
-      { percentile: 75, value: percentiles.p75 },
-      { percentile: 90, value: percentiles.p90 },
-      { percentile: 95, value: percentiles.p95 },
-      { percentile: 99, value: percentiles.p99 }
+      { ageRange: [36, 50], gender: 'female', weightRange: [45, 60], description: 'Women 36-50, 45-60kg' },
+      { ageRange: [36, 50], gender: 'female', weightRange: [60, 75], description: 'Women 36-50, 60-75kg' },
+      { ageRange: [36, 50], gender: 'female', weightRange: [75, 90], description: 'Women 36-50, 75-90kg' },
+
+      // General segments (fallback)
+      { ageRange: [18, 100], gender: 'male', weightRange: [40, 200], description: 'All Men' },
+      { ageRange: [18, 100], gender: 'female', weightRange: [30, 150], description: 'All Women' },
+      { ageRange: [18, 100], gender: 'other', weightRange: [30, 200], description: 'All Users' }
     ];
-    
-    // Find the two points to interpolate between
-    for (let i = 0; i < points.length - 1; i++) {
-      const current = points[i];
-      const next = points[i + 1];
-      
-      if (userValue >= current.value && userValue <= next.value) {
-        // Linear interpolation
-        const ratio = (userValue - current.value) / (next.value - current.value);
-        return current.percentile + ratio * (next.percentile - current.percentile);
+  }
+
+  /**
+   * Add performance data for percentile calculations
+   */
+  addPerformanceData(data: PerformanceData): void {
+    const exerciseData = this.performanceData.get(data.exerciseId) || [];
+    exerciseData.push(data);
+    this.performanceData.set(data.exerciseId, exerciseData);
+  }
+
+  /**
+   * Bulk add performance data
+   */
+  addBulkPerformanceData(dataArray: PerformanceData[]): void {
+    dataArray.forEach(data => this.addPerformanceData(data));
+  }
+
+  /**
+   * Find the best matching demographic segment for a user
+   */
+  private findBestSegment(demographics: UserDemographics): PercentileSegment {
+    // Try to find exact match first
+    for (const segment of this.segments) {
+      if (
+        demographics.age >= segment.ageRange[0] &&
+        demographics.age <= segment.ageRange[1] &&
+        demographics.gender === segment.gender &&
+        demographics.weight >= segment.weightRange[0] &&
+        demographics.weight <= segment.weightRange[1]
+      ) {
+        return segment;
       }
     }
-    
-    // Handle edge cases
-    if (userValue < percentiles.p5) return Math.max(1, (userValue / percentiles.p5) * 5);
-    if (userValue > percentiles.p99) return Math.min(99.9, 99 + (userValue - percentiles.p99) / percentiles.p99);
-    
-    return 50; // Default fallback
+
+    // Fallback to gender-only segment
+    return this.segments.find(s => 
+      s.gender === demographics.gender && 
+      s.ageRange[0] === 18 && 
+      s.ageRange[1] === 100
+    ) || this.segments[this.segments.length - 1];
   }
-  
+
   /**
-   * Determines strength level based on percentile
+   * Filter performance data by demographic segment
    */
-  private static determineStrengthLevel(percentile: number): UserPercentileRanking['strength_level'] {
-    if (percentile >= STRENGTH_LEVEL_THRESHOLDS.ELITE) return 'elite';
-    if (percentile >= STRENGTH_LEVEL_THRESHOLDS.ADVANCED) return 'advanced';
-    if (percentile >= STRENGTH_LEVEL_THRESHOLDS.INTERMEDIATE) return 'intermediate';
-    if (percentile >= STRENGTH_LEVEL_THRESHOLDS.NOVICE) return 'novice';
-    return 'untrained';
-  }
-  
-  /**
-   * Creates comprehensive percentile comparison data
-   */
-  private static async createPercentileComparison(
-    userRanking: UserPercentileRanking,
-    demographics: UserDemographics
-  ): Promise<PercentileComparison> {
-    
-    // Create peer comparisons (mock implementation)
-    const peerComparisons = {
-      same_age_group: { ...userRanking, percentile: userRanking.percentile + Math.random() * 10 - 5 },
-      same_weight_class: { ...userRanking, percentile: userRanking.percentile + Math.random() * 8 - 4 },
-      same_experience: { ...userRanking, percentile: userRanking.percentile + Math.random() * 12 - 6 },
-      global: userRanking
-    };
-    
-    // Calculate improvement suggestions
-    const nextPercentileTarget = Math.min(99, Math.ceil(userRanking.percentile / 10) * 10 + 10);
-    const currentValue = userRanking.user_value;
-    const targetPercentile = nextPercentileTarget;
-    
-    // Estimate value needed for next percentile (mock calculation)
-    const valueNeeded = currentValue * (1 + (targetPercentile - userRanking.percentile) * 0.02);
-    const improvementNeeded = valueNeeded - currentValue;
-    
-    const improvementSuggestions = {
-      next_percentile_target: targetPercentile,
-      value_needed: valueNeeded,
-      estimated_time_to_achieve: this.estimateTimeToImprovement(improvementNeeded, userRanking.exercise_id),
-      training_recommendations: this.getTrainingRecommendations(userRanking.exercise_id, userRanking.strength_level)
-    };
-    
-    return {
-      user_performance: userRanking,
-      peer_comparisons,
-      improvement_suggestions
-    };
-  }
-  
-  /**
-   * Estimates time needed to achieve improvement
-   */
-  private static estimateTimeToImprovement(improvementNeeded: number, exerciseId: string): string {
-    // Simple estimation based on exercise type and improvement needed
-    const improvementRates: Record<string, number> = {
-      'squat': 2.5, // kg per month
-      'bench_press': 1.5,
-      'deadlift': 3.0,
-      'pull_ups': 0.5, // reps per month
-      'push_ups': 2.0
-    };
-    
-    const monthlyRate = improvementRates[exerciseId] || 2.0;
-    const monthsNeeded = Math.ceil(improvementNeeded / monthlyRate);
-    
-    if (monthsNeeded <= 1) return '2-4 semanas';
-    if (monthsNeeded <= 3) return `${monthsNeeded} meses`;
-    if (monthsNeeded <= 6) return `${monthsNeeded} meses`;
-    return '6+ meses';
-  }
-  
-  /**
-   * Gets training recommendations based on exercise and current level
-   */
-  private static getTrainingRecommendations(
-    exerciseId: string,
-    strengthLevel: UserPercentileRanking['strength_level']
-  ): string[] {
-    const recommendations: Record<string, Record<string, string[]>> = {
-      'squat': {
-        'untrained': ['Enfócate en la técnica', 'Entrena 2-3 veces por semana', 'Incrementa peso gradualmente'],
-        'novice': ['Añade variaciones de sentadilla', 'Incluye trabajo de movilidad', 'Considera periodización'],
-        'intermediate': ['Implementa ciclos de fuerza', 'Añade sentadilla frontal', 'Trabaja debilidades específicas'],
-        'advanced': ['Periodización avanzada', 'Técnicas de intensidad', 'Análisis biomecánico'],
-        'elite': ['Periodización competitiva', 'Recuperación optimizada', 'Técnicas especializadas']
-      },
-      'bench_press': {
-        'untrained': ['Domina la técnica básica', 'Fortalece músculos estabilizadores', 'Progresión lineal'],
-        'novice': ['Varía el agarre', 'Incluye press inclinado', 'Trabajo de tríceps'],
-        'intermediate': ['Periodización ondulante', 'Press con pausa', 'Trabajo de debilidades'],
-        'advanced': ['Técnicas de intensidad', 'Análisis de sticking points', 'Periodización conjugada'],
-        'elite': ['Técnicas competitivas', 'Periodización específica', 'Optimización biomecánica']
-      }
-    };
-    
-    const exerciseRecs = recommendations[exerciseId];
-    if (!exerciseRecs) {
-      return ['Entrena consistentemente', 'Progresa gradualmente', 'Mantén buena técnica'];
-    }
-    
-    return exerciseRecs[strengthLevel || 'novice'] || exerciseRecs['novice'];
-  }
-  
-  /**
-   * Updates percentile data for a segment (batch processing)
-   */
-  static async updateSegmentPercentiles(
-    segmentId: string,
-    exerciseId: string,
-    performanceData: ExercisePerformance[]
-  ): Promise<PercentileData> {
-    
-    // Sort performance data by value
-    const sortedData = performanceData
-      .map(p => p.max_weight)
-      .sort((a, b) => a - b);
-    
-    if (sortedData.length === 0) {
-      throw new Error('No performance data provided');
-    }
-    
-    // Calculate percentiles
-    const percentiles = {
-      p5: this.calculatePercentileValue(sortedData, 5),
-      p10: this.calculatePercentileValue(sortedData, 10),
-      p25: this.calculatePercentileValue(sortedData, 25),
-      p50: this.calculatePercentileValue(sortedData, 50),
-      p75: this.calculatePercentileValue(sortedData, 75),
-      p90: this.calculatePercentileValue(sortedData, 90),
-      p95: this.calculatePercentileValue(sortedData, 95),
-      p99: this.calculatePercentileValue(sortedData, 99)
-    };
-    
-    // Calculate mean and standard deviation
-    const mean = sortedData.reduce((sum, val) => sum + val, 0) / sortedData.length;
-    const variance = sortedData.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / sortedData.length;
-    const stdDeviation = Math.sqrt(variance);
-    
-    const percentileData: PercentileData = {
-      segment_id: segmentId,
-      exercise_id: exerciseId,
-      metric_type: 'max_weight',
-      percentiles,
-      mean,
-      std_deviation: stdDeviation,
-      sample_size: sortedData.length,
-      last_updated: new Date()
-    };
-    
-    // In a real implementation, this would save to database
-    console.log('Updated percentile data:', percentileData);
-    
-    return percentileData;
-  }
-  
-  /**
-   * Calculates a specific percentile value from sorted data
-   */
-  private static calculatePercentileValue(sortedData: number[], percentile: number): number {
-    const index = (percentile / 100) * (sortedData.length - 1);
-    const lower = Math.floor(index);
-    const upper = Math.ceil(index);
-    
-    if (lower === upper) {
-      return sortedData[lower];
-    }
-    
-    // Linear interpolation
-    const weight = index - lower;
-    return sortedData[lower] * (1 - weight) + sortedData[upper] * weight;
-  }
-  
-  /**
-   * Gets global rankings for an exercise
-   */
-  static async getGlobalRankings(
-    exerciseId: string,
-    metricType: 'max_weight' | 'max_reps' | 'max_volume' | 'best_time' | 'best_distance',
-    limit: number = 100
-  ): Promise<GlobalRanking> {
-    
-    // Mock global rankings data
-    const mockRankings = Array.from({ length: limit }, (_, i) => ({
-      rank: i + 1,
-      user_id: `user_${i + 1}`,
-      username: `athlete${i + 1}`,
-      display_name: `Athlete ${i + 1}`,
-      value: this.generateMockRankingValue(exerciseId, i + 1),
-      bodyweight: 70 + Math.random() * 40,
-      relative_strength: 0,
-      demographics: {
-        age: 20 + Math.floor(Math.random() * 40),
-        gender: Math.random() > 0.5 ? 'male' : 'female',
-        weight: 70 + Math.random() * 40
-      },
-      verified: Math.random() > 0.7,
-      recorded_at: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000)
-    }));
-    
-    // Calculate relative strength for strength exercises
-    mockRankings.forEach(ranking => {
-      if (['squat', 'bench_press', 'deadlift'].includes(exerciseId)) {
-        ranking.relative_strength = ranking.value / ranking.bodyweight!;
-      }
+  private filterBySegment(
+    exerciseData: PerformanceData[], 
+    segment: PercentileSegment
+  ): PerformanceData[] {
+    return exerciseData.filter(data => {
+      const demo = data.demographics;
+      return (
+        demo.age >= segment.ageRange[0] &&
+        demo.age <= segment.ageRange[1] &&
+        demo.gender === segment.gender &&
+        demo.weight >= segment.weightRange[0] &&
+        demo.weight <= segment.weightRange[1]
+      );
     });
+  }
+
+  /**
+   * Calculate percentile for a specific metric
+   */
+  private calculatePercentile(value: number, values: number[]): number {
+    if (values.length === 0) return 50; // Default to 50th percentile if no data
+
+    const sortedValues = [...values].sort((a, b) => a - b);
+    const rank = sortedValues.filter(v => v < value).length;
     
+    return Math.round((rank / sortedValues.length) * 100);
+  }
+
+  /**
+   * Get metric value from performance data
+   */
+  private getMetricValue(data: PerformanceData, metric: string): number {
+    switch (metric) {
+      case 'weight':
+        return data.weight;
+      case 'oneRM':
+        return data.estimatedOneRM;
+      case 'volume':
+        return data.weight * data.reps;
+      case 'relative_strength':
+        return data.estimatedOneRM / data.bodyWeight;
+      default:
+        return data.weight;
+    }
+  }
+
+  /**
+   * Calculate percentile for user performance
+   */
+  calculatePercentile(
+    exerciseId: string,
+    userValue: number,
+    metric: 'weight' | 'oneRM' | 'volume' | 'relative_strength',
+    userDemographics: UserDemographics,
+    isPersonalBest: boolean = false
+  ): PercentileResult {
+    const exerciseData = this.performanceData.get(exerciseId) || [];
+    const segment = this.findBestSegment(userDemographics);
+    const segmentData = this.filterBySegment(exerciseData, segment);
+
+    // Extract metric values for comparison
+    const metricValues = segmentData.map(data => this.getMetricValue(data, metric));
+    
+    // Calculate percentile
+    const percentile = this.calculatePercentile(userValue, metricValues);
+    
+    // Calculate rank (1-based)
+    const sortedValues = [...metricValues].sort((a, b) => b - a); // Descending for rank
+    const rank = sortedValues.findIndex(v => v <= userValue) + 1;
+
     return {
-      exercise_id: exerciseId,
-      exercise_name: exerciseId.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
-      metric_type: metricType,
-      rankings: mockRankings,
-      total_participants: limit * 10, // Simulate larger population
-      last_updated: new Date()
+      percentile,
+      rank: rank || segmentData.length + 1,
+      totalUsers: segmentData.length,
+      segment: segment.description,
+      exerciseId,
+      metric,
+      value: userValue,
+      isPersonalBest
     };
   }
-  
+
   /**
-   * Generates mock ranking values for testing
+   * Get percentiles for all metrics of an exercise
    */
-  private static generateMockRankingValue(exerciseId: string, rank: number): number {
-    const baseValues = this.getBaseValuesForExercise(exerciseId);
-    const maxValue = baseValues.base * 3; // Elite level
+  getExercisePercentiles(
+    exerciseId: string,
+    userPerformance: PerformanceData
+  ): PercentileResult[] {
+    const metrics: Array<'weight' | 'oneRM' | 'volume' | 'relative_strength'> = [
+      'weight', 'oneRM', 'volume', 'relative_strength'
+    ];
+
+    return metrics.map(metric => {
+      const value = this.getMetricValue(userPerformance, metric);
+      return this.calculatePercentile(
+        exerciseId,
+        value,
+        metric,
+        userPerformance.demographics,
+        false
+      );
+    });
+  }
+
+  /**
+   * Get top performers in a segment
+   */
+  getTopPerformers(
+    exerciseId: string,
+    metric: 'weight' | 'oneRM' | 'volume' | 'relative_strength',
+    segment: PercentileSegment,
+    limit: number = 10
+  ): PerformanceData[] {
+    const exerciseData = this.performanceData.get(exerciseId) || [];
+    const segmentData = this.filterBySegment(exerciseData, segment);
+
+    return segmentData
+      .sort((a, b) => this.getMetricValue(b, metric) - this.getMetricValue(a, metric))
+      .slice(0, limit);
+  }
+
+  /**
+   * Get user's ranking in all segments they qualify for
+   */
+  getUserRankingsAcrossSegments(
+    exerciseId: string,
+    userPerformance: PerformanceData,
+    metric: 'weight' | 'oneRM' | 'volume' | 'relative_strength'
+  ): PercentileResult[] {
+    const userValue = this.getMetricValue(userPerformance, metric);
+    const qualifyingSegments = this.segments.filter(segment => {
+      const demo = userPerformance.demographics;
+      return (
+        demo.age >= segment.ageRange[0] &&
+        demo.age <= segment.ageRange[1] &&
+        demo.gender === segment.gender &&
+        demo.weight >= segment.weightRange[0] &&
+        demo.weight <= segment.weightRange[1]
+      );
+    });
+
+    return qualifyingSegments.map(segment => {
+      const exerciseData = this.performanceData.get(exerciseId) || [];
+      const segmentData = this.filterBySegment(exerciseData, segment);
+      const metricValues = segmentData.map(data => this.getMetricValue(data, metric));
+      
+      const percentile = this.calculatePercentile(userValue, metricValues);
+      const sortedValues = [...metricValues].sort((a, b) => b - a);
+      const rank = sortedValues.findIndex(v => v <= userValue) + 1;
+
+      return {
+        percentile,
+        rank: rank || segmentData.length + 1,
+        totalUsers: segmentData.length,
+        segment: segment.description,
+        exerciseId,
+        metric,
+        value: userValue,
+        isPersonalBest: false
+      };
+    });
+  }
+
+  /**
+   * Update percentiles with new performance data
+   */
+  updatePercentiles(newData: PerformanceData[]): void {
+    this.addBulkPerformanceData(newData);
+  }
+
+  /**
+   * Get statistics for an exercise across all segments
+   */
+  getExerciseStatistics(exerciseId: string): {
+    totalUsers: number;
+    segments: Array<{
+      segment: string;
+      userCount: number;
+      averageWeight: number;
+      averageOneRM: number;
+      topPerformance: number;
+    }>;
+  } {
+    const exerciseData = this.performanceData.get(exerciseId) || [];
     
-    // Higher ranks get higher values (exponential decay)
-    const normalizedRank = (101 - rank) / 100; // Invert rank (1st place = 1.0, 100th = 0.01)
-    const value = maxValue * Math.pow(normalizedRank, 0.5) + Math.random() * 10;
-    
-    return Math.round(value * 10) / 10; // Round to 1 decimal place
+    const segmentStats = this.segments.map(segment => {
+      const segmentData = this.filterBySegment(exerciseData, segment);
+      
+      if (segmentData.length === 0) {
+        return {
+          segment: segment.description,
+          userCount: 0,
+          averageWeight: 0,
+          averageOneRM: 0,
+          topPerformance: 0
+        };
+      }
+
+      const avgWeight = segmentData.reduce((sum, d) => sum + d.weight, 0) / segmentData.length;
+      const avgOneRM = segmentData.reduce((sum, d) => sum + d.estimatedOneRM, 0) / segmentData.length;
+      const topPerformance = Math.max(...segmentData.map(d => d.estimatedOneRM));
+
+      return {
+        segment: segment.description,
+        userCount: segmentData.length,
+        averageWeight: Math.round(avgWeight * 10) / 10,
+        averageOneRM: Math.round(avgOneRM * 10) / 10,
+        topPerformance: Math.round(topPerformance * 10) / 10
+      };
+    }).filter(stat => stat.userCount > 0);
+
+    return {
+      totalUsers: exerciseData.length,
+      segments: segmentStats
+    };
+  }
+
+  /**
+   * Clear all performance data (for testing or reset)
+   */
+  clearData(): void {
+    this.performanceData.clear();
+  }
+
+  /**
+   * Get all available segments
+   */
+  getSegments(): PercentileSegment[] {
+    return [...this.segments];
   }
 }
+
+// Singleton instance
+export const percentileCalculator = new PercentileCalculator();

@@ -233,3 +233,39 @@ export class ChallengeError extends Error {
     this.name = 'ChallengeError';
   }
 }
+// I
+mport comprehensive challenge models for enhanced functionality
+// These provide more detailed interfaces for advanced challenge features
+export type {
+  Challenge as DetailedChallenge,
+  ChallengeParticipant as DetailedChallengeParticipant,
+  ChallengeRequirement as DetailedChallengeRequirement,
+  ChallengeRule,
+  ChallengeReward as DetailedChallengeReward,
+  ChallengeTeam,
+  ChallengeProgressRecord as DetailedChallengeProgressRecord,
+  ChallengeLeaderboardEntry as DetailedChallengeLeaderboardEntry,
+  ChallengeStats as DetailedChallengeStats,
+  ChallengeNotificationSettings,
+  ScoringMethod,
+  RankingFactor,
+  TiebreakerRule,
+  RuleCondition,
+  ChallengeType as DetailedChallengeType,
+  ChallengeCategory as DetailedChallengeCategory,
+  ChallengeDifficulty as DetailedChallengeDifficulty,
+  ChallengeStatus as DetailedChallengeStatus,
+  ParticipantStatus,
+  RequirementType as DetailedRequirementType,
+  RequirementOperator,
+  RewardType as DetailedRewardType,
+  UnlockCondition
+} from './challengeModels';
+
+// Export validation utilities
+export { ChallengeValidator, ChallengeValidationUtils } from '../utils/challengeModelValidation';
+export type { ValidationResult, ValidationError, ValidationWarning } from '../utils/challengeModelValidation';
+
+// Export factory utilities
+export { ChallengeFactory, CHALLENGE_TEMPLATES } from '../utils/challengeFactory';
+export type { ChallengeTemplate } from '../utils/challengeFactory';

@@ -21,7 +21,7 @@ export class WorkoutService {
   async getAllTemplates(): Promise<WorkoutTemplate[]> {
     try {
       await dbManager.init();
-      const templates = await dbManager.getAll<WorkoutTemplate>('workout_templates');
+      const templates = await dbManager.getAll<WorkoutTemplate>('workoutTemplates');
       return templates.map(template => transformWorkoutData(template) as WorkoutTemplate).filter(Boolean);
     } catch (error) {
       console.error('Error getting templates:', error);
@@ -32,7 +32,7 @@ export class WorkoutService {
   async getTemplateById(id: string): Promise<WorkoutTemplate | null> {
     try {
       await dbManager.init();
-      const template = await dbManager.get<WorkoutTemplate>('workout_templates', id);
+      const template = await dbManager.get<WorkoutTemplate>('workoutTemplates', id);
       if (!template) return null;
       
       const transformed = transformWorkoutData(template) as WorkoutTemplate;
@@ -72,7 +72,7 @@ export class WorkoutService {
         return false;
       }
 
-      await dbManager.put('workout_templates', template);
+      await dbManager.put('workoutTemplates', template);
       return true;
     } catch (error) {
       console.error('Error saving template:', error);
@@ -83,7 +83,7 @@ export class WorkoutService {
   async deleteTemplate(id: string): Promise<boolean> {
     try {
       await dbManager.init();
-      await dbManager.delete('workout_templates', id);
+      await dbManager.delete('workoutTemplates', id);
       return true;
     } catch (error) {
       console.error('Error deleting template:', error);
@@ -251,6 +251,32 @@ export class WorkoutService {
     } catch (error) {
       console.error('Error getting recent workouts:', error);
       return [];
+    }
+  }
+
+  // Get the last workout that included a specific exercise (excluding current workout)
+  async getLastWorkoutWithExercise(exerciseId: string, userId: string, excludeWorkoutId?: string): Promise<Workout | null> {
+    try {
+      const userWorkouts = await this.getWorkoutsByUser(userId);
+      
+      // Filter completed workouts that contain the exercise, excluding current workout
+      const workoutsWithExercise = userWorkouts
+        .filter(workout => 
+          workout.status === 'completed' && 
+          workout.id !== excludeWorkoutId &&
+          workout.exercises.some(exercise => exercise.exercise_id === exerciseId)
+        )
+        .sort((a, b) => {
+          // Sort by completion date, most recent first
+          const aDate = a.completed_at ? new Date(a.completed_at).getTime() : 0;
+          const bDate = b.completed_at ? new Date(b.completed_at).getTime() : 0;
+          return bDate - aDate;
+        });
+
+      return workoutsWithExercise.length > 0 ? workoutsWithExercise[0] : null;
+    } catch (error) {
+      console.error('Error getting last workout with exercise:', error);
+      return null;
     }
   }
 }

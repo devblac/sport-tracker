@@ -60,7 +60,7 @@ export class SyncQueue {
   private async initializeDatabase(): Promise<void> {
     try {
       await dbManager.init();
-      // The sync_queue store should be defined in IndexedDBManager
+      // The syncQueue store should be defined in IndexedDBManager
       console.log('[SyncQueue] Database initialized');
     } catch (error) {
       console.error('[SyncQueue] Database initialization failed:', error);
@@ -80,7 +80,7 @@ export class SyncQueue {
     };
 
     try {
-      await dbManager.put('sync_queue', syncOperation);
+      await dbManager.put('syncQueue', syncOperation);
       console.log('[SyncQueue] Operation added:', syncOperation.id);
       
       // Notify listeners
@@ -103,7 +103,7 @@ export class SyncQueue {
    */
   async getPendingOperations(): Promise<SyncOperation[]> {
     try {
-      const allOperations = await dbManager.getAll<SyncOperation>('sync_queue');
+      const allOperations = await dbManager.getAll<SyncOperation>('syncQueue');
       return allOperations
         .filter(op => op.status === 'pending' || op.status === 'failed')
         .sort((a, b) => {
@@ -124,7 +124,7 @@ export class SyncQueue {
    */
   async getOperationsByStatus(status: SyncOperation['status']): Promise<SyncOperation[]> {
     try {
-      const allOperations = await dbManager.getAll<SyncOperation>('sync_queue');
+      const allOperations = await dbManager.getAll<SyncOperation>('syncQueue');
       return allOperations.filter(op => op.status === status);
     } catch (error) {
       console.error('[SyncQueue] Failed to get operations by status:', error);
@@ -141,7 +141,7 @@ export class SyncQueue {
     error?: string
   ): Promise<void> {
     try {
-      const operation = await dbManager.get<SyncOperation>('sync_queue', operationId);
+      const operation = await dbManager.get<SyncOperation>('syncQueue', operationId);
       if (!operation) {
         throw new Error(`Operation not found: ${operationId}`);
       }
@@ -152,7 +152,7 @@ export class SyncQueue {
         error,
       };
 
-      await dbManager.put('sync_queue', updatedOperation);
+      await dbManager.put('syncQueue', updatedOperation);
       this.notifyListeners(updatedOperation);
       
       console.log(`[SyncQueue] Operation ${operationId} status updated to ${status}`);
@@ -168,14 +168,14 @@ export class SyncQueue {
   async cleanupCompletedOperations(olderThanHours: number = 24): Promise<number> {
     try {
       const cutoffTime = Date.now() - (olderThanHours * 60 * 60 * 1000);
-      const allOperations = await dbManager.getAll<SyncOperation>('sync_queue');
+      const allOperations = await dbManager.getAll<SyncOperation>('syncQueue');
       
       const operationsToDelete = allOperations.filter(op => 
         op.status === 'completed' && op.timestamp < cutoffTime
       );
 
       for (const operation of operationsToDelete) {
-        await dbManager.delete('sync_queue', operation.id);
+        await dbManager.delete('syncQueue', operation.id);
       }
 
       console.log(`[SyncQueue] Cleaned up ${operationsToDelete.length} completed operations`);
@@ -293,7 +293,7 @@ export class SyncQueue {
         nextRetryAt: this.calculateNextRetryTime(operation.retryCount + 1),
       };
 
-      await dbManager.put('sync_queue', updatedOperation);
+      await dbManager.put('syncQueue', updatedOperation);
       this.notifyListeners(updatedOperation);
     }
   }
@@ -436,7 +436,7 @@ export class SyncQueue {
     total: number;
   }> {
     try {
-      const allOperations = await dbManager.getAll<SyncOperation>('sync_queue');
+      const allOperations = await dbManager.getAll<SyncOperation>('syncQueue');
       
       const stats = {
         pending: 0,

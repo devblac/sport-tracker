@@ -42,13 +42,32 @@ export function useDatabaseInit() {
         const initPromise = DatabaseInitService.initializeDatabase();
         const timeoutPromise = new Promise((_, reject) => {
           timeoutId = setTimeout(() => {
-            reject(new Error('Database initialization timed out after 30 seconds'));
-          }, 30000);
+            reject(new Error('Database initialization timed out after 20 seconds'));
+          }, 20000);
         });
 
         // Race between initialization and timeout
-        await Promise.race([initPromise, timeoutPromise]);
-        clearTimeout(timeoutId);
+        try {
+          await Promise.race([initPromise, timeoutPromise]);
+          clearTimeout(timeoutId);
+        } catch (error) {
+          clearTimeout(timeoutId);
+          
+          // If initialization fails, try fallback mode
+          if (error instanceof Error && error.message.includes('timed out')) {
+            console.warn('Database initialization timed out, trying fallback mode...');
+            try {
+              // Force fallback mode
+              localStorage.setItem('sport-tracker-fallback-mode', 'true');
+              localStorage.setItem('sport-tracker-db-initialized', 'true');
+              localStorage.setItem('sport-tracker-db-version', '1.0.0');
+            } catch (fallbackError) {
+              console.error('Failed to set fallback mode:', fallbackError);
+            }
+          } else {
+            throw error;
+          }
+        }
 
         // Get database statistics
         const stats = await DatabaseInitService.getDatabaseStats();

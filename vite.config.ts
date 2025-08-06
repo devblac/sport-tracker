@@ -1,223 +1,215 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react-swc'
-import { VitePWA } from 'vite-plugin-pwa'
-import { visualizer } from 'rollup-plugin-visualizer'
-import path from 'path'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
+import path from 'path';
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [
-    react({
-      // Enable React Fast Refresh optimizations
-      plugins: [
-        // Add React compiler optimizations in development
-        ...(process.env.NODE_ENV === 'development' ? [] : [])
-      ]
-    }),
+    react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
-      manifest: {
-        name: 'Fitness Gamificada PWA',
-        short_name: 'FitnessApp',
-        description: 'App de fitness gamificada con funcionalidades sociales offline-first',
-        theme_color: '#0ea5e9',
-        background_color: '#ffffff',
-        display: 'standalone',
-        orientation: 'portrait',
-        scope: '/',
-        start_url: '/',
-        icons: [
-          {
-            src: 'pwa-192x192.png',
-            sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png'
-          }
-        ]
-      },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/api\.fitness-app\.com\/.*/i,
+            urlPattern: /^https:\/\/api\./,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
               expiration: {
                 maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 // 24 hours
-              }
-            }
+                maxAgeSeconds: 60 * 60 * 24, // 24 hours
+              },
+              cacheKeyWillBeUsed: async ({ request }) => {
+                return `${request.url}?v=${Date.now()}`;
+              },
+            },
           },
           {
-            urlPattern: /\.(?:png|jpg|jpeg|svg|gif)$/,
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/,
             handler: 'CacheFirst',
             options: {
               cacheName: 'images-cache',
               expiration: {
                 maxEntries: 200,
-                maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
-              }
-            }
+                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+              },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/fonts\./,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'fonts-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+              },
+            },
+          },
+        ],
+      },
+      manifest: {
+        name: 'FitTracker Pro - Smart Fitness Companion',
+        short_name: 'FitTracker',
+        description: 'Your intelligent fitness companion with gamification, social features, and premium content marketplace',
+        theme_color: '#3b82f6',
+        background_color: '#ffffff',
+        display: 'standalone',
+        orientation: 'portrait',
+        scope: '/',
+        start_url: '/',
+        categories: ['health', 'fitness', 'lifestyle'],
+        screenshots: [
+          {
+            src: '/screenshots/workout-player.png',
+            sizes: '390x844',
+            type: 'image/png',
+            form_factor: 'narrow',
+            label: 'Workout Player - Track your sets and reps in real-time'
+          },
+          {
+            src: '/screenshots/dashboard.png',
+            sizes: '390x844',
+            type: 'image/png',
+            form_factor: 'narrow',
+            label: 'Dashboard - Monitor your progress and streaks'
+          }
+        ],
+        icons: [
+          {
+            src: '/icons/icon-72.png',
+            sizes: '72x72',
+            type: 'image/png',
+            purpose: 'maskable any'
+          },
+          {
+            src: '/icons/icon-96.png',
+            sizes: '96x96',
+            type: 'image/png',
+            purpose: 'maskable any'
+          },
+          {
+            src: '/icons/icon-128.png',
+            sizes: '128x128',
+            type: 'image/png',
+            purpose: 'maskable any'
+          },
+          {
+            src: '/icons/icon-144.png',
+            sizes: '144x144',
+            type: 'image/png',
+            purpose: 'maskable any'
+          },
+          {
+            src: '/icons/icon-152.png',
+            sizes: '152x152',
+            type: 'image/png',
+            purpose: 'maskable any'
+          },
+          {
+            src: '/icons/icon-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'maskable any'
+          },
+          {
+            src: '/icons/icon-384.png',
+            sizes: '384x384',
+            type: 'image/png',
+            purpose: 'maskable any'
+          },
+          {
+            src: '/icons/icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable any'
+          }
+        ],
+        shortcuts: [
+          {
+            name: 'Start Workout',
+            short_name: 'Workout',
+            description: 'Start a new workout session',
+            url: '/workout',
+            icons: [{ src: '/icons/shortcut-workout.png', sizes: '96x96' }]
+          },
+          {
+            name: 'View Progress',
+            short_name: 'Progress',
+            description: 'Check your fitness progress',
+            url: '/progress',
+            icons: [{ src: '/icons/shortcut-progress.png', sizes: '96x96' }]
           }
         ]
-      }
+      },
     }),
-    // Bundle analyzer (only in build mode)
-    process.env.ANALYZE && visualizer({
-      filename: 'dist/stats.html',
-      open: true,
-      gzipSize: true,
-      brotliSize: true,
-    })
-  ].filter(Boolean),
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
   },
-  server: {
-    port: 3000,
-    host: true
-  },
   build: {
     target: 'esnext',
-    sourcemap: false, // Disable sourcemaps in production for smaller bundle
-    rollupOptions: {
-      output: {
-        manualChunks: (id) => {
-          // Vendor chunks
-          if (id.includes('node_modules')) {
-            // React ecosystem
-            if (id.includes('react') || id.includes('react-dom')) {
-              return 'react-vendor';
-            }
-            // Router
-            if (id.includes('react-router')) {
-              return 'router-vendor';
-            }
-            // State management
-            if (id.includes('zustand')) {
-              return 'state-vendor';
-            }
-            // UI libraries
-            if (id.includes('lucide-react') || id.includes('radix-ui')) {
-              return 'ui-vendor';
-            }
-            // Charts and visualization
-            if (id.includes('chart') || id.includes('d3') || id.includes('recharts')) {
-              return 'charts-vendor';
-            }
-            // Date/time libraries
-            if (id.includes('date-fns') || id.includes('moment') || id.includes('dayjs')) {
-              return 'date-vendor';
-            }
-            // Other vendor libraries
-            return 'vendor';
-          }
-          
-          // App chunks by feature
-          if (id.includes('/pages/')) {
-            // Group test pages together
-            if (id.includes('Test') || id.includes('/dev-test') || id.includes('/test-data')) {
-              return 'test-pages';
-            }
-            // Group workout-related pages
-            if (id.includes('Workout') || id.includes('Exercise')) {
-              return 'workout-pages';
-            }
-            // Group social/profile pages
-            if (id.includes('Social') || id.includes('Profile') || id.includes('Progress')) {
-              return 'user-pages';
-            }
-            return 'main-pages';
-          }
-          
-          // Component chunks
-          if (id.includes('/components/')) {
-            // Heavy components
-            if (id.includes('charts') || id.includes('visualization')) {
-              return 'chart-components';
-            }
-            // Workout components
-            if (id.includes('workout') || id.includes('exercise')) {
-              return 'workout-components';
-            }
-            // UI components
-            if (id.includes('/ui/') || id.includes('form') || id.includes('modal')) {
-              return 'ui-components';
-            }
-            return 'components';
-          }
-          
-          // Utils and services
-          if (id.includes('/utils/') || id.includes('/services/')) {
-            return 'utils-services';
-          }
-          
-          // Stores and hooks
-          if (id.includes('/stores/') || id.includes('/hooks/')) {
-            return 'state-hooks';
-          }
-        },
-        // Optimize chunk file names
-        chunkFileNames: (chunkInfo) => {
-          const facadeModuleId = chunkInfo.facadeModuleId ? chunkInfo.facadeModuleId.split('/').pop() : 'chunk';
-          return `assets/[name]-[hash].js`;
-        },
-        entryFileNames: 'assets/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash].[ext]'
-      }
-    },
-    // Optimize build performance
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: true, // Remove console.log in production
+        drop_console: true,
         drop_debugger: true,
-        pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn']
-      }
+      },
     },
-    // Chunk size warnings
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Vendor chunks
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'ui-vendor': ['lucide-react', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
+          
+          // Feature chunks
+          'workout-features': [
+            './src/components/workouts/WorkoutPlayerView',
+            './src/components/workouts/TemplateSelector',
+            './src/components/workouts/ExerciseSelector',
+            './src/services/WorkoutService'
+          ],
+          'marketplace-features': [
+            './src/components/marketplace/ContentMarketplace',
+            './src/components/marketplace/TrainerProfile',
+            './src/services/premiumContentService',
+            './src/services/paymentService'
+          ],
+          'gamification-features': [
+            './src/components/gamification/StreakCounter',
+            './src/components/gamification/XPBar',
+            './src/components/gamification/AchievementCard'
+          ],
+          'social-features': [
+            './src/components/social/SocialFeed',
+            './src/components/social/GymFriendsList'
+          ]
+        },
+      },
+    },
     chunkSizeWarningLimit: 1000,
-    // CSS code splitting
-    cssCodeSplit: true,
-    // Optimize dependencies
-    optimizeDeps: {
-      include: [
-        'react',
-        'react-dom',
-        'react-router-dom',
-        'zustand',
-        'lucide-react'
-      ],
-      exclude: [
-        // Exclude heavy dependencies that should be lazy loaded
-        'chart.js',
-        'recharts',
-        'd3'
-      ]
-    }
   },
-  // Performance optimizations
-  optimizeDeps: {
-    include: [
-      'react',
-      'react-dom',
-      'react-router-dom',
-      'zustand'
-    ]
+  server: {
+    headers: {
+      // Security headers for development
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'X-XSS-Protection': '1; mode=block',
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
+    },
   },
-  // Enable esbuild optimizations
-  esbuild: {
-    // Remove console.log in production
-    drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
-    // Optimize for modern browsers
-    target: 'esnext'
-  }
-})
+  preview: {
+    headers: {
+      // Security headers for preview
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'X-XSS-Protection': '1; mode=block',
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
+      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:;",
+    },
+  },
+});

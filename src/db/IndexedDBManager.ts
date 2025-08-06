@@ -42,20 +42,53 @@ export class IndexedDBManager {
    */
   async initialize(): Promise<void> {
     return new Promise((resolve, reject) => {
+      console.log(`Opening database: ${this.dbName} version ${this.version}`);
+      
       const request = indexedDB.open(this.dbName, this.version);
 
+      // Add timeout to prevent hanging
+      const timeoutId = setTimeout(() => {
+        reject(new Error(`Database initialization timed out after 15 seconds`));
+      }, 15000);
+
       request.onerror = () => {
-        reject(new Error(`Failed to open database: ${request.error?.message}`));
+        clearTimeout(timeoutId);
+        const errorMessage = request.error?.message || 'Unknown database error';
+        console.error(`Database open failed: ${errorMessage}`);
+        reject(new Error(`Failed to open database: ${errorMessage}`));
       };
 
       request.onsuccess = () => {
+        clearTimeout(timeoutId);
         this.db = request.result;
+        console.log(`Database opened successfully: ${this.dbName} version ${this.db.version}`);
+        
+        // Add error handler for the database connection
+        this.db.onerror = (event) => {
+          console.error('Database error:', event);
+        };
+        
         resolve();
       };
 
       request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
-        this.handleUpgrade(db, event.oldVersion, event.newVersion || this.version);
+        console.log(`Database upgrade needed from version ${event.oldVersion} to ${event.newVersion}`);
+        try {
+          const db = (event.target as IDBOpenDBRequest).result;
+          this.handleUpgrade(db, event.oldVersion, event.newVersion || this.version);
+        } catch (upgradeError) {
+          clearTimeout(timeoutId);
+          console.error('Database upgrade failed:', upgradeError);
+          reject(upgradeError);
+        }
+      };
+
+      request.onblocked = () => {
+        console.warn('Database upgrade blocked - another tab may have the database open');
+        // Don't reject immediately, give it some time
+        setTimeout(() => {
+          reject(new Error('Database upgrade blocked by another tab'));
+        }, 5000);
       };
     });
   }
@@ -66,51 +99,66 @@ export class IndexedDBManager {
   private handleUpgrade(db: IDBDatabase, oldVersion: number, newVersion: number): void {
     console.log(`Upgrading database from version ${oldVersion} to ${newVersion}`);
 
-    // Create or update object stores
-    for (const storeSchema of this.schema.stores) {
-      if (!db.objectStoreNames.contains(storeSchema.name)) {
-        // Create new store
-        const store = db.createObjectStore(storeSchema.name, {
-          keyPath: storeSchema.keyPath,
-          autoIncrement: storeSchema.autoIncrement
-        });
-
-        // Create indexes
-        if (storeSchema.indexes) {
-          for (const indexSchema of storeSchema.indexes) {
-            store.createIndex(indexSchema.name, indexSchema.keyPath, {
-              unique: indexSchema.unique,
-              multiEntry: indexSchema.multiEntry
+    try {
+      // Create or update object stores
+      for (const storeSchema of this.schema.stores) {
+        try {
+          if (!db.objectStoreNames.contains(storeSchema.name)) {
+            // Create new store
+            console.log(`Creating new store: ${storeSchema.name}`);
+            const store = db.createObjectStore(storeSchema.name, {
+              keyPath: storeSchema.keyPath,
+              autoIncrement: storeSchema.autoIncrement
             });
-          }
-        }
-      } else {
-        // Update existing store (indexes only, can't modify keyPath)
-        const transaction = db.transaction([storeSchema.name], 'versionchange');
-        const store = transaction.objectStore(storeSchema.name);
 
-        if (storeSchema.indexes) {
-          for (const indexSchema of storeSchema.indexes) {
-            if (!store.indexNames.contains(indexSchema.name)) {
-              store.createIndex(indexSchema.name, indexSchema.keyPath, {
-                unique: indexSchema.unique,
-                multiEntry: indexSchema.multiEntry
-              });
+            // Create indexes
+            if (storeSchema.indexes) {
+              for (const indexSchema of storeSchema.indexes) {
+                try {
+                  store.createIndex(indexSchema.name, indexSchema.keyPath, {
+                    unique: indexSchema.unique,
+                    multiEntry: indexSchema.multiEntry
+                  });
+                } catch (indexError) {
+                  console.warn(`Failed to create index ${indexSchema.name} on store ${storeSchema.name}:`, indexError);
+                }
+              }
+            }
+          } else {
+            // Store exists, check if we need to add new indexes
+            console.log(`Store ${storeSchema.name} already exists, checking indexes...`);
+            
+            // Note: We can't access the store during upgrade in this way
+            // Index updates need to be handled differently
+            if (storeSchema.indexes) {
+              console.log(`Store ${storeSchema.name} has ${storeSchema.indexes.length} indexes defined`);
             }
           }
+        } catch (storeError) {
+          console.error(`Failed to create/update store ${storeSchema.name}:`, storeError);
+          throw storeError;
         }
       }
-    }
 
-    // Remove obsolete stores (if needed)
-    const currentStoreNames = Array.from(db.objectStoreNames);
-    const schemaStoreNames = this.schema.stores.map(s => s.name);
-    
-    for (const storeName of currentStoreNames) {
-      if (!schemaStoreNames.includes(storeName)) {
-        console.warn(`Removing obsolete store: ${storeName}`);
-        db.deleteObjectStore(storeName);
+      // Remove obsolete stores (if needed)
+      const currentStoreNames = Array.from(db.objectStoreNames);
+      const schemaStoreNames = this.schema.stores.map(s => s.name);
+      
+      for (const storeName of currentStoreNames) {
+        if (!schemaStoreNames.includes(storeName)) {
+          console.warn(`Removing obsolete store: ${storeName}`);
+          try {
+            db.deleteObjectStore(storeName);
+          } catch (deleteError) {
+            console.error(`Failed to delete obsolete store ${storeName}:`, deleteError);
+          }
+        }
       }
+
+      console.log(`Database upgrade completed successfully from version ${oldVersion} to ${newVersion}`);
+    } catch (upgradeError) {
+      console.error(`Database upgrade failed from version ${oldVersion} to ${newVersion}:`, upgradeError);
+      throw upgradeError;
     }
   }
 
@@ -318,6 +366,54 @@ export class IndexedDBManager {
       };
 
       request.onerror = () => reject(new Error(`Cursor iteration failed: ${request.error?.message}`));
+    });
+  }
+
+  /**
+   * Bulk put multiple records
+   */
+  async bulkPut<T>(storeName: string, records: T[]): Promise<IDBValidKey[]> {
+    return new Promise((resolve, reject) => {
+      const transaction = this.getTransaction([storeName], 'readwrite');
+      const store = transaction.objectStore(storeName);
+      const results: IDBValidKey[] = [];
+      let completed = 0;
+
+      if (records.length === 0) {
+        resolve([]);
+        return;
+      }
+
+      transaction.oncomplete = () => {
+        resolve(results);
+      };
+
+      transaction.onerror = () => {
+        reject(new Error(`Bulk put transaction failed: ${transaction.error?.message}`));
+      };
+
+      transaction.onabort = () => {
+        reject(new Error('Bulk put transaction aborted'));
+      };
+
+      // Process each record
+      records.forEach((record, index) => {
+        const request = store.put(record);
+        
+        request.onsuccess = () => {
+          results[index] = request.result;
+          completed++;
+          
+          // All requests completed, transaction will auto-complete
+          if (completed === records.length) {
+            // Transaction will complete automatically
+          }
+        };
+        
+        request.onerror = () => {
+          reject(new Error(`Failed to put record at index ${index}: ${request.error?.message}`));
+        };
+      });
     });
   }
 

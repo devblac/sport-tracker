@@ -13,6 +13,7 @@ interface WorkoutContextType {
   updateWorkout: (workout: Workout) => void;
   finishWorkout: () => void;
   pauseWorkout: () => void;
+  cancelWorkout: () => void;
 }
 
 const WorkoutContext = createContext<WorkoutContextType | undefined>(undefined);
@@ -140,6 +141,30 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
     }
   };
 
+  const cancelWorkout = () => {
+    if (activeWorkout && confirm('Are you sure you want to cancel this workout? All progress will be lost.')) {
+      // Mark workout as cancelled
+      const cancelledWorkout = {
+        ...activeWorkout,
+        status: 'cancelled' as const,
+        cancelled_at: new Date(),
+      };
+
+      // Save cancelled workout for history
+      workoutService.saveWorkout(cancelledWorkout);
+
+      // Clear state
+      setActiveWorkout(null);
+      setWorkoutStartTime(null);
+      setIsWorkoutMinimized(false);
+      setElapsedTime(0);
+
+      // Clear localStorage
+      localStorage.removeItem('activeWorkoutId');
+      localStorage.removeItem('workoutStartTime');
+    }
+  };
+
   const value: WorkoutContextType = {
     activeWorkout,
     isWorkoutMinimized,
@@ -151,6 +176,7 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
     updateWorkout,
     finishWorkout,
     pauseWorkout,
+    cancelWorkout,
   };
 
   return (

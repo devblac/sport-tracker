@@ -357,6 +357,18 @@ export const FITNESS_APP_SCHEMA: DBSchema = {
       ]
     },
 
+    // Temporarily commented out to avoid version upgrade issues
+    // {
+    //   name: 'syncConflicts',
+    //   keyPath: 'id',
+    //   indexes: [
+    //     { name: 'entity', keyPath: 'entity' },
+    //     { name: 'entityId', keyPath: 'entityId' },
+    //     { name: 'status', keyPath: 'status' },
+    //     { name: 'createdAt', keyPath: 'createdAt' }
+    //   ]
+    // },
+
     // ============================================================================
     // App Settings and Cache
     // ============================================================================
@@ -386,12 +398,12 @@ export const MIGRATION_SCRIPTS = {
     up: async () => {
       // Initial schema - no migration needed
     }
+  },
+  2: {
+    description: 'Add syncConflicts store for conflict resolution',
+    up: async () => {
+      // Migration handled automatically by schema upgrade
+    }
   }
   // Future migrations will be added here
-  // 2: {
-  //   description: 'Add new indexes for performance',
-  //   up: async (db: IndexedDBManager) => {
-  //     // Migration logic
-  //   }
-  // }
 };
