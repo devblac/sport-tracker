@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Filter, X } from 'lucide-react';
 import { Input, Button, Card, CardContent, Badge } from '@/components/ui';
-import type { ExerciseFilter, ExerciseCategory, BodyPart, Equipment, DifficultyLevel } from '@/types';
+import type { ExerciseFilter, ExerciseCategory, BodyPart, Equipment, DifficultyLevel } from '@/schemas/exercise';
 
 // Import utilities with error handling
 let EXERCISE_CATEGORIES: any = {};

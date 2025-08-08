@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
-import { useUIStore, Toast as ToastType } from '@/stores';
+import { useUIStore } from '@/stores';
+import type { Toast as ToastType } from '@/stores/useUIStore';
 import { cn } from '@/utils';
 
 interface ToastProps {

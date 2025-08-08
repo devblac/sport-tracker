@@ -61,7 +61,8 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
     setIsSaving(true);
     try {
       // Update user profile
-      await updateUserProfile({
+      const { updateProfile } = useAuthStore.getState();
+      updateProfile({
         display_name: formData.display_name,
         bio: formData.bio,
         location: formData.location,

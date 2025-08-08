@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { ExerciseCard } from './ExerciseCard';
 import { Button } from '@/components/ui';
 import { ChevronUp, ChevronDown, Grid, List as ListIcon } from 'lucide-react';
-import type { Exercise } from '@/types';
+import type { Exercise } from '@/schemas/exercise';
 
 // Lazy load react-window to handle potential import issues
 let FixedSizeList: any = null;

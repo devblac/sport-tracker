@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Clock, Dumbbell, Settings, Search, Star, Folder, MoreHorizontal, Grid, List, Eye, EyeOff } from 'lucide-react';
+import { Plus, Clock, Dumbbell, Search, Star, Folder, MoreHorizontal, Grid, List, Eye, EyeOff } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, Button } from '@/components/ui';
 import { TemplateSelector } from '@/components/workouts/TemplateSelector';
 import { TemplateDetail } from '@/components/workouts/TemplateDetail';
@@ -147,28 +147,16 @@ export const Workout: React.FC = () => {
       )}
       
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="flex justify-center">
         <Button 
           variant="primary" 
           size="lg" 
           fullWidth
           onClick={handleCreateEmptyWorkout}
           disabled={isCreating}
-          className="h-16"
+          className="h-16 max-w-md"
         >
           <span className="text-lg font-semibold">START AN EMPTY WORKOUT</span>
-        </Button>
-        
-        <Button 
-          variant="outline" 
-          size="lg" 
-          fullWidth
-          onClick={() => navigate('/workout-templates')}
-          icon={<Settings className="w-5 h-5" />}
-          className="h-16 flex-col"
-        >
-          <span className="text-lg font-semibold">Manage Templates</span>
-          <span className="text-sm opacity-90">Create & Edit</span>
         </Button>
       </div>
       
@@ -181,13 +169,6 @@ export const Workout: React.FC = () => {
               Templates
             </div>
             <div className="flex items-center space-x-2">
-              <button 
-                onClick={() => navigate('/workout-templates/create')}
-                className="p-1 text-muted-foreground hover:text-primary transition-colors"
-                title="Create new template"
-              >
-                <Plus className="w-5 h-5" />
-              </button>
               <button 
                 className="p-1 text-muted-foreground hover:text-green-500 transition-colors"
                 title="Organize templates"

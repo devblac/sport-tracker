@@ -10,7 +10,7 @@ import {
   isEmailAvailable,
 } from '@/utils';
 import { useAuthStore } from '@/stores';
-import { FitnessLevel } from '@/types';
+import type { FitnessLevel } from '@/schemas/user';
 import { logger } from '@/utils';
 
 interface RegisterFormProps {

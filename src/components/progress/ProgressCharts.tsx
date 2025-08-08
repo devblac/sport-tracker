@@ -14,8 +14,8 @@ import {
   Title,
   Tooltip,
   Legend,
-  ChartOptions,
 } from 'chart.js';
+import type { ChartOptions } from 'chart.js';
 import { Bar, Line } from 'react-chartjs-2';
 import type { Workout } from '@/schemas/workout';
 

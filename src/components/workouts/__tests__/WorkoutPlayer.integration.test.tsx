@@ -5,7 +5,8 @@ import { WorkoutPlayer } from '../WorkoutPlayer';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useWorkoutStore } from '@/stores/useWorkoutStore';
 import { useExerciseStore } from '@/stores/useExerciseStore';
-import type { Workout, Exercise } from '@/types';
+import type { Workout } from '@/schemas/workout';
+import type { Exercise } from '@/schemas/exercise';
 
 // Mock stores
 vi.mock('@/stores/useAuthStore');

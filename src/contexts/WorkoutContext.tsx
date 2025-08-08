@@ -13,7 +13,8 @@ interface WorkoutContextType {
   updateWorkout: (workout: Workout) => void;
   finishWorkout: () => void;
   pauseWorkout: () => void;
-  cancelWorkout: () => void;
+  cancelWorkout: (onConfirm?: () => void) => void;
+  performCancelWorkout: () => void;
 }
 
 const WorkoutContext = createContext<WorkoutContextType | undefined>(undefined);
@@ -141,28 +142,43 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
     }
   };
 
-  const cancelWorkout = () => {
-    if (activeWorkout && confirm('Are you sure you want to cancel this workout? All progress will be lost.')) {
-      // Mark workout as cancelled
-      const cancelledWorkout = {
-        ...activeWorkout,
-        status: 'cancelled' as const,
-        cancelled_at: new Date(),
-      };
-
-      // Save cancelled workout for history
-      workoutService.saveWorkout(cancelledWorkout);
-
-      // Clear state
-      setActiveWorkout(null);
-      setWorkoutStartTime(null);
-      setIsWorkoutMinimized(false);
-      setElapsedTime(0);
-
-      // Clear localStorage
-      localStorage.removeItem('activeWorkoutId');
-      localStorage.removeItem('workoutStartTime');
+  const cancelWorkout = (onConfirm?: () => void) => {
+    if (!activeWorkout) return;
+    
+    // If onConfirm callback is provided, use it (for custom modal handling)
+    if (onConfirm) {
+      onConfirm();
+      return;
     }
+    
+    // Fallback to browser confirm for backward compatibility
+    if (confirm('Are you sure you want to cancel this workout? All progress will be lost.')) {
+      performCancelWorkout();
+    }
+  };
+
+  const performCancelWorkout = () => {
+    if (!activeWorkout) return;
+    
+    // Mark workout as cancelled
+    const cancelledWorkout = {
+      ...activeWorkout,
+      status: 'cancelled' as const,
+      cancelled_at: new Date(),
+    };
+
+    // Save cancelled workout for history
+    workoutService.saveWorkout(cancelledWorkout);
+
+    // Clear state
+    setActiveWorkout(null);
+    setWorkoutStartTime(null);
+    setIsWorkoutMinimized(false);
+    setElapsedTime(0);
+
+    // Clear localStorage
+    localStorage.removeItem('activeWorkoutId');
+    localStorage.removeItem('workoutStartTime');
   };
 
   const value: WorkoutContextType = {
@@ -177,6 +193,7 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
     finishWorkout,
     pauseWorkout,
     cancelWorkout,
+    performCancelWorkout,
   };
 
   return (

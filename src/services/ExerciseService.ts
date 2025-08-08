@@ -1,4 +1,4 @@
-import type { Exercise, ExerciseFilter, ExerciseCreate, ExerciseUpdate } from '@/types';
+import type { Exercise, ExerciseFilter, ExerciseCreate, ExerciseUpdate } from '@/schemas/exercise';
 import { dbManager, STORES } from '@/db/IndexedDBManager';
 import { logger } from '@/utils/logger';
 import { 

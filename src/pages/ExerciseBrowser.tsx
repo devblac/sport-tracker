@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ExerciseSearch, ExerciseList } from '@/components/exercises';
 import { exerciseService } from '@/services/ExerciseService';
-import type { Exercise, ExerciseFilter } from '@/types';
+import type { Exercise, ExerciseFilter } from '@/schemas/exercise';
 import { logger } from '@/utils';
 
 export const ExerciseBrowser: React.FC = () => {

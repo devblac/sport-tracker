@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, Badge } from '@/components/ui';
 import { Play, Pause, RotateCcw, AlertTriangle, Info, Target, Lightbulb } from 'lucide-react';
-import type { Exercise } from '@/types';
+import type { Exercise } from '@/schemas/exercise';
 import { 
   getDifficultyDisplay, 
   getEquipmentDisplay, 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { ExerciseCard } from '@/components/exercises';
-import type { Exercise } from '@/types';
+import type { Exercise } from '@/schemas/exercise';
 
 // Sample exercise for testing
 const sampleExercise: Exercise = {

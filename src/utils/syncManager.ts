@@ -3,7 +3,8 @@
  * Handles conflict resolution and coordination between local and remote data
  */
 
-import { syncQueue, SyncOperation } from './syncQueue';
+import { syncQueue } from './syncQueue';
+import type { SyncOperation } from './syncQueue';
 import { dbManager } from '@/db/IndexedDBManager';
 
 export interface ConflictResolution {

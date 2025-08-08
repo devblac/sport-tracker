@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, Badge } from '@/components/ui';
 import { Trophy, Target, Zap, Calendar } from 'lucide-react';
-import type { Exercise } from '@/types';
+import type { Exercise } from '@/schemas/exercise';
 
 interface ExerciseRecordsTabProps {
   exercise: Exercise;

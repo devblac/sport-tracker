@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User, UserProfile, UserSettings } from '@/types';
+import type { User, UserProfile, UserSettings } from '@/schemas/user';
 import { authService } from '@/services/AuthService';
 import { logger } from '@/utils';
 

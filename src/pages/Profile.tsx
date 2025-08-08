@@ -203,6 +203,79 @@ export const Profile: React.FC = () => {
         </div>
       )}
 
+      {/* Add Friends Modal */}
+      {showAddFriends && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-background rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-foreground">Add Gym Friends</h2>
+              <button
+                onClick={() => setShowAddFriends(false)}
+                className="p-2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <button
+                onClick={() => {
+                  setShowAddFriends(false);
+                  // TODO: Implement find friends by username
+                  alert('Find Friends by Username - Coming Soon!');
+                }}
+                className="w-full flex items-center gap-3 p-4 border border-border rounded-lg hover:bg-muted transition-colors"
+              >
+                <Users className="w-5 h-5 text-primary" />
+                <div className="text-left">
+                  <div className="font-medium text-foreground">Find Friends by Username</div>
+                  <div className="text-sm text-muted-foreground">Search for friends using their username</div>
+                </div>
+              </button>
+              
+              <button
+                onClick={() => {
+                  setShowAddFriends(false);
+                  // TODO: Implement import from contacts
+                  alert('Import from Contacts - Coming Soon!');
+                }}
+                className="w-full flex items-center gap-3 p-4 border border-border rounded-lg hover:bg-muted transition-colors"
+              >
+                <MessageCircle className="w-5 h-5 text-primary" />
+                <div className="text-left">
+                  <div className="font-medium text-foreground">Import from Contacts</div>
+                  <div className="text-sm text-muted-foreground">Find friends from your phone contacts</div>
+                </div>
+              </button>
+              
+              <button
+                onClick={() => {
+                  setShowAddFriends(false);
+                  // TODO: Implement share profile
+                  if (navigator.share) {
+                    navigator.share({
+                      title: 'Join me on FitTracker!',
+                      text: 'Let\'s workout together and track our progress!',
+                      url: window.location.origin
+                    });
+                  } else {
+                    navigator.clipboard.writeText(window.location.origin);
+                    alert('Profile link copied to clipboard!');
+                  }
+                }}
+                className="w-full flex items-center gap-3 p-4 border border-border rounded-lg hover:bg-muted transition-colors"
+              >
+                <UserPlus className="w-5 h-5 text-primary" />
+                <div className="text-left">
+                  <div className="font-medium text-foreground">Share Your Profile</div>
+                  <div className="text-sm text-muted-foreground">Invite friends to join you</div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Premium Modal */}
       {showPremiumModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">

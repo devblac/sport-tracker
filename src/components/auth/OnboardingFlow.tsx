@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, Button } from '@/components/ui';
 import { useAuthStore } from '@/stores';
-import { FitnessLevel, DayOfWeek } from '@/types';
+import type { FitnessLevel, DayOfWeek } from '@/schemas/user';
 
 interface OnboardingFlowProps {
   onComplete: () => void;

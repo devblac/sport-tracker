@@ -14,7 +14,7 @@ import {
   hasPermission,
   canUpgradeTo,
 } from '@/utils';
-import { UserRole } from '@/types';
+import type { UserRole } from '@/schemas/user';
 
 export const DevTest: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'validation' | 'performance'>('validation');

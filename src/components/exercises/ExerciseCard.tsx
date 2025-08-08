@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent, Badge } from '@/components/ui';
-import type { Exercise } from '@/types';
+import type { Exercise } from '@/schemas/exercise';
 
 // Import utilities with error handling
 let getDifficultyDisplay: any = (level: number) => `Level ${level}`;

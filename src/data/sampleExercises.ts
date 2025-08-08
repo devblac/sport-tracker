@@ -1,4 +1,4 @@
-import type { ExerciseCreate } from '@/types';
+import type { ExerciseCreate } from '@/schemas/exercise';
 
 /**
  * Sample exercise data for initial database population

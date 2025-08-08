@@ -1,4 +1,4 @@
-import type { User, UserLogin, UserRegistration } from '@/types';
+import type { User, UserLogin, UserRegistration } from '@/schemas/user';
 import { validateUserLogin, validateUserRegistration } from '@/utils/userValidation';
 import { storage, logger } from '@/utils';
 

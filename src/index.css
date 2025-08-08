@@ -43,6 +43,46 @@
     --error: 0 84% 60%;
   }
 
+  .halloween-light {
+    /* Halloween theme - Light version with OKLCH colors */
+    --background: oklch(1.0000 0 0);
+    --foreground: oklch(0.2101 0.0318 264.6645);
+    --card: oklch(0.9846 0.0017 247.8389);
+    --card-foreground: oklch(0.2101 0.0318 264.6645);
+    --popover: oklch(1.0000 0 0);
+    --popover-foreground: oklch(0.2101 0.0318 264.6645);
+    --primary: oklch(0.6461 0.1943 41.1158);
+    --primary-foreground: oklch(1.0000 0 0);
+    --secondary: oklch(0.4955 0.2369 301.9241);
+    --secondary-foreground: oklch(1.0000 0 0);
+    --muted: oklch(0.9670 0.0029 264.5419);
+    --muted-foreground: oklch(0.5510 0.0234 264.3637);
+    --accent: oklch(0.9676 0.0199 308.2319);
+    --accent-foreground: oklch(0.4383 0.1983 303.7241);
+    --destructive: oklch(0.5771 0.2152 27.3250);
+    --destructive-foreground: oklch(1.0000 0 0);
+    --border: oklch(0.9276 0.0058 264.5313);
+    --input: oklch(0.9276 0.0058 264.5313);
+    --ring: oklch(0.7576 0.1590 55.9344);
+    --chart-1: oklch(0.6461 0.1943 41.1158);
+    --chart-2: oklch(0.4955 0.2369 301.9241);
+    --chart-3: oklch(0.5771 0.2152 27.3250);
+    --chart-4: oklch(0.3729 0.0306 259.7328);
+    --chart-5: oklch(0.5510 0.0234 264.3637);
+    --sidebar: oklch(0.9846 0.0017 247.8389);
+    --sidebar-foreground: oklch(0.2101 0.0318 264.6645);
+    --sidebar-primary: oklch(0.6461 0.1943 41.1158);
+    --sidebar-primary-foreground: oklch(1.0000 0 0);
+    --sidebar-accent: oklch(0.9676 0.0199 308.2319);
+    --sidebar-accent-foreground: oklch(0.4383 0.1983 303.7241);
+    --sidebar-border: oklch(0.9276 0.0058 264.5313);
+    --sidebar-ring: oklch(0.7576 0.1590 55.9344);
+    /* Legacy support */
+    --success: 142 76% 36%;
+    --warning: 38 92% 50%;
+    --error: 0 84% 60%;
+  }
+
   .dark {
     /* Dark theme - Professional dark with blue accents */
     --background: 20 14.2857% 4.1176%;
@@ -84,43 +124,83 @@
   }
 
   .oled {
-    /* OLED theme - Pure black with high contrast */
-    --background: 0 0 0;            /* Pure black */
-    --foreground: 255 255 255;      /* Pure white text */
-    --card: 0 0 0;                  /* Pure black cards */
-    --card-foreground: 255 255 255; /* Pure white text */
-    --primary: 34 197 94;           /* Bright green (green-500) */
-    --primary-foreground: 0 0 0;
-    --secondary: 168 85 247;        /* Purple (purple-500) */
-    --secondary-foreground: 0 0 0;
-    --muted: 23 23 23;              /* Very dark gray */
-    --muted-foreground: 163 163 163; /* Light gray text */
-    --border: 64 64 64;             /* Dark gray borders */
-    --input: 23 23 23;              /* Very dark inputs */
-    --ring: 34 197 94;              /* Green focus rings */
-    --success: 34 197 94;           /* Green-500 */
-    --warning: 245 158 11;          /* Amber-500 */
-    --error: 239 68 68;             /* Red-500 */
+    /* OLED theme - Your exact HSL values (Dark variant) */
+    --background: 0 0% 0%;
+    --foreground: 0 0% 96.0784%;
+    --card: 0 0% 5.0980%;
+    --card-foreground: 0 0% 96.0784%;
+    --popover: 0 0% 7.8431%;
+    --popover-foreground: 0 0% 96.0784%;
+    --primary: 180 100% 50%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 308.7958 100% 62.5490%;
+    --secondary-foreground: 0 0% 0%;
+    --muted: 0 0% 36.0784%;
+    --muted-foreground: 0 0% 63.9216%;
+    --accent: 112.7273 100% 67.6471%;
+    --accent-foreground: 0 0% 0%;
+    --destructive: 0 100% 62.5490%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 32.9412%;
+    --input: 0 0% 10.1961%;
+    --ring: 180 100% 50%;
+    --chart-1: 180 100% 50%;
+    --chart-2: 308.7958 100% 62.5490%;
+    --chart-3: 112.7273 100% 67.6471%;
+    --chart-4: 0 0% 80%;
+    --chart-5: 0 0% 52.1569%;
+    --sidebar: 0 0% 5.0980%;
+    --sidebar-foreground: 0 0% 96.0784%;
+    --sidebar-primary: 180 100% 50%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 112.7273 100% 67.6471%;
+    --sidebar-accent-foreground: 0 0% 0%;
+    --sidebar-border: 0 0% 32.9412%;
+    --sidebar-ring: 180 100% 50%;
+    /* Legacy support */
+    --success: 142 76% 46%;
+    --warning: 38 92% 60%;
+    --error: 0 84% 70%;
   }
 
   .halloween {
-    /* Halloween theme - Orange and purple with dark background */
-    --background: 17 12 23;         /* Very dark purple */
-    --foreground: 251 146 60;       /* Orange text (orange-400) */
-    --card: 30 27 75;               /* Dark purple cards */
-    --card-foreground: 251 146 60;  /* Orange text on cards */
-    --primary: 249 115 22;          /* Bright orange (orange-500) */
-    --primary-foreground: 17 12 23;
-    --secondary: 147 51 234;        /* Purple (purple-600) */
-    --secondary-foreground: 251 146 60;
-    --muted: 55 48 163;             /* Purple muted */
-    --muted-foreground: 196 181 253; /* Light purple text */
-    --border: 109 40 217;           /* Purple borders */
-    --input: 55 48 163;             /* Purple inputs */
-    --ring: 249 115 22;             /* Orange focus rings */
-    --success: 34 197 94;           /* Green-500 */
-    --warning: 245 158 11;          /* Amber-500 */
-    --error: 239 68 68;             /* Red-500 */
+    /* Halloween theme - Your exact HSL values (Dark variant) */
+    --background: 240 12.0000% 4.9020%;
+    --foreground: 0 0% 94.1176%;
+    --card: 240 5.4545% 10.7843%;
+    --card-foreground: 0 0% 94.1176%;
+    --popover: 240 4.6154% 12.7451%;
+    --popover-foreground: 0 0% 94.1176%;
+    --primary: 18.8060 88.5463% 55.4902%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 275.7143 58.3333% 57.6471%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 240 2.7027% 36.2745%;
+    --muted-foreground: 240 2.9586% 66.8627%;
+    --accent: 0 73.6000% 49.0196%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 73.6000% 49.0196%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 7.3684% 18.6275%;
+    --input: 240 7.3684% 18.6275%;
+    --ring: 18.8060 88.5463% 55.4902%;
+    --chart-1: 18.8060 88.5463% 55.4902%;
+    --chart-2: 275.7143 58.3333% 57.6471%;
+    --chart-3: 0 73.6000% 49.0196%;
+    --chart-4: 0 0% 94.1176%;
+    --chart-5: 240 2.2222% 55.8824%;
+    --sidebar: 240 5.4545% 10.7843%;
+    --sidebar-foreground: 0 0% 94.1176%;
+    --sidebar-primary: 18.8060 88.5463% 55.4902%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 73.6000% 49.0196%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 240 7.3684% 18.6275%;
+    --sidebar-ring: 18.8060 88.5463% 55.4902%;
+    /* Legacy support */
+    --success: 142 76% 46%;
+    --warning: 38 92% 60%;
+    --error: 0 84% 70%;
   }
 
   * {

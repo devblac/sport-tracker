@@ -1,4 +1,4 @@
-import { UserRole } from '@/schemas/user';
+import type { UserRole } from '@/schemas/user';
 
 // Role hierarchy (higher number = more permissions)
 const ROLE_HIERARCHY: Record<UserRole, number> = {

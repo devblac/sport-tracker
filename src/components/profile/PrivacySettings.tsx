@@ -50,7 +50,8 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
 
     setIsSaving(true);
     try {
-      await updateUserSettings({
+      const { updateSettings } = useAuthStore.getState();
+      updateSettings({
         privacy: settings
       });
     } catch (error) {

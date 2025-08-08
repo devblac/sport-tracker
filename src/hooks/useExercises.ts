@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { exerciseService } from '@/services/ExerciseService';
-import type { Exercise, ExerciseFilter } from '@/types';
+import type { Exercise, ExerciseFilter } from '@/schemas/exercise';
 import { logger } from '@/utils';
 
 interface UseExercisesState {

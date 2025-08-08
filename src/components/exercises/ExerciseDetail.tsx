@@ -5,7 +5,7 @@ import { ExerciseAboutTab } from './ExerciseAboutTab';
 import { ExerciseHistoryTab } from './ExerciseHistoryTab';
 import { ExerciseChartsTab } from './ExerciseChartsTab';
 import { ExerciseRecordsTab } from './ExerciseRecordsTab';
-import type { Exercise } from '@/types';
+import type { Exercise } from '@/schemas/exercise';
 import { getDifficultyDisplay, EXERCISE_CATEGORIES } from '@/utils';
 
 interface ExerciseDetailProps {

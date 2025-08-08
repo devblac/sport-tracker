@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui';
 import { BarChart3, LineChart, PieChart } from 'lucide-react';
-import type { Exercise } from '@/types';
+import type { Exercise } from '@/schemas/exercise';
 
 interface ExerciseChartsTabProps {
   exercise: Exercise;

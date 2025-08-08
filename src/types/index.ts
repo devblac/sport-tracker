@@ -1,4 +1,4 @@
-import type { Gamification } from '@/schemas';
+import type { Gamification } from '@/schemas/user';
 
 // Re-export user types from schemas (with validation)
 export type {

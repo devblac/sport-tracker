@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { syncQueue, SyncOperation } from '@/utils/syncQueue';
-import { syncManager, SyncResult, SyncConflict } from '@/utils/syncManager';
+import { syncQueue } from '@/utils/syncQueue';
+import type { SyncOperation } from '@/utils/syncQueue';
+import { syncManager } from '@/utils/syncManager';
+import type { SyncResult, SyncConflict } from '@/utils/syncManager';
 
 export interface SyncState {
   isOnline: boolean;
