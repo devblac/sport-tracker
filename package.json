@@ -43,6 +43,7 @@
     "immer": "^10.1.1",
     "isomorphic-dompurify": "^2.16.0",
     "lucide-react": "^0.525.0",
+    "posthog-js": "^1.259.0",
     "react": "^19.1.0",
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.1.0",

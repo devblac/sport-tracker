@@ -145,12 +145,7 @@ export const useUIStore = create<UIState>()(
 if (typeof window !== 'undefined') {
   window.addEventListener('online', () => {
     useUIStore.getState().setOfflineStatus(false);
-    useUIStore.getState().showToast({
-      type: 'success',
-      title: 'You are back online',
-      message: 'Syncing your data...',
-      duration: 3000,
-    });
+    // Removed annoying "Back online" toast - sync happens silently
   });
 
   window.addEventListener('offline', () => {

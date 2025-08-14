@@ -2,12 +2,22 @@ import { dbManager } from '@/db/IndexedDBManager';
 import type { Workout, WorkoutTemplate } from '@/schemas/workout';
 import { validateWorkout, validateWorkoutTemplate, transformWorkoutData } from '@/utils/workoutValidation';
 import { SAMPLE_WORKOUT_TEMPLATES } from '@/data/sampleWorkouts';
+import { QueryOptimizer } from './QueryOptimizer';
+import { PrefetchManager } from './PrefetchManager';
+import { CacheManager } from './CacheManager';
+import { leagueManager } from './LeagueManager';
 
 export class WorkoutService {
   private static instance: WorkoutService;
+  private queryOptimizer: QueryOptimizer;
+  private prefetchManager: PrefetchManager;
+  private cacheManager: CacheManager;
 
   private constructor() {
     // Use the singleton dbManager instance
+    this.queryOptimizer = QueryOptimizer.getInstance();
+    this.prefetchManager = PrefetchManager.getInstance();
+    this.cacheManager = CacheManager.getInstance();
   }
 
   public static getInstance(): WorkoutService {
@@ -17,12 +27,38 @@ export class WorkoutService {
     return WorkoutService.instance;
   }
 
-  // Template Management
+  // Template Management with Advanced Caching
   async getAllTemplates(): Promise<WorkoutTemplate[]> {
     try {
-      await dbManager.init();
-      const templates = await dbManager.getAll<WorkoutTemplate>('workoutTemplates');
-      return templates.map(template => transformWorkoutData(template) as WorkoutTemplate).filter(Boolean);
+      // Record behavior for prefetch learning
+      this.prefetchManager.recordBehavior({
+        userId: 'current_user',
+        action: 'getAllTemplates',
+        resource: 'workoutTemplates:getAll',
+        context: { operation: 'getAll' }
+      });
+
+      // Use optimized query with caching
+      const result = await this.queryOptimizer.getAll<WorkoutTemplate>(
+        'workoutTemplates',
+        undefined,
+        {
+          useCache: true,
+          cacheStrategy: 'templates',
+          cacheTTL: 12 * 60 * 60 * 1000, // 12 hours
+          prefetch: ['workoutTemplates:popular', 'workoutTemplates:recent']
+        }
+      );
+
+      const templates = result.data.map(template => 
+        transformWorkoutData(template) as WorkoutTemplate
+      ).filter(Boolean);
+
+      // TODO: Re-enable prefetching once QueryOptimizer is properly integrated
+      // const templateIds = templates.slice(0, 5).map(t => `workoutTemplates:${t.id}`);
+      // await this.queryOptimizer.prefetchRelated(templateIds);
+
+      return templates;
     } catch (error) {
       console.error('Error getting templates:', error);
       return [];
@@ -277,6 +313,56 @@ export class WorkoutService {
     } catch (error) {
       console.error('Error getting last workout with exercise:', error);
       return null;
+    }
+  }
+
+  // Template Usage Tracking
+  async updateTemplateUsage(templateId: string): Promise<void> {
+    try {
+      await dbManager.init();
+      const template = await dbManager.get<WorkoutTemplate>('workoutTemplates', templateId);
+      if (template) {
+        const updatedTemplate = {
+          ...template,
+          last_used: new Date(),
+          times_used: (template.times_used || 0) + 1
+        };
+        await dbManager.update('workoutTemplates', templateId, updatedTemplate);
+      }
+    } catch (error) {
+      console.error('Error updating template usage:', error);
+    }
+  }
+
+  async getTemplate(templateId: string): Promise<WorkoutTemplate | null> {
+    return this.getTemplateById(templateId);
+  }
+
+  async updateTemplateFromWorkout(templateId: string, workout: Workout): Promise<void> {
+    try {
+      await dbManager.init();
+      const template = await dbManager.get<WorkoutTemplate>('workoutTemplates', templateId);
+      if (template) {
+        const updatedTemplate = {
+          ...template,
+          exercises: workout.exercises.map(exercise => ({
+            ...exercise,
+            // Convert workout exercise back to template format
+            sets: exercise.sets.map(set => ({
+              id: set.id,
+              set_number: set.set_number,
+              type: set.type,
+              weight: set.weight,
+              reps: set.reps,
+              planned_rest_time: set.planned_rest_time
+            }))
+          })),
+          updated_at: new Date()
+        };
+        await dbManager.update('workoutTemplates', templateId, updatedTemplate);
+      }
+    } catch (error) {
+      console.error('Error updating template from workout:', error);
     }
   }
 }

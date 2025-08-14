@@ -246,27 +246,52 @@ export const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({
   );
 };
 
-// Connection status dot for navigation bars
+// Subtle connection status indicator - only shows when there are issues
 export const ConnectionDot: React.FC<{ className?: string }> = ({ className = '' }) => {
   const { isOnline } = useOffline();
   const { queueSize, isSyncing } = useSync();
 
+  // Only show indicator when there's something to communicate
+  // Top 0.001% approach: Invisible when everything is working perfectly
+  const shouldShow = !isOnline || isSyncing || queueSize > 0;
+  
+  if (!shouldShow) return null;
+
   const getStatus = () => {
-    if (!isOnline) return { color: 'bg-red-500', pulse: false };
-    if (isSyncing) return { color: 'bg-blue-500', pulse: true };
-    if (queueSize > 0) return { color: 'bg-yellow-500', pulse: false };
-    return { color: 'bg-green-500', pulse: false };
+    if (!isOnline) return { 
+      color: 'bg-red-500', 
+      pulse: false, 
+      tooltip: 'Offline - changes will sync when connected' 
+    };
+    if (isSyncing) return { 
+      color: 'bg-blue-500', 
+      pulse: true, 
+      tooltip: 'Syncing changes...' 
+    };
+    if (queueSize > 0) return { 
+      color: 'bg-amber-500', 
+      pulse: false, 
+      tooltip: `${queueSize} changes pending sync` 
+    };
+    return { color: 'bg-green-500', pulse: false, tooltip: 'Connected' };
   };
 
   const status = getStatus();
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative group ${className}`} title={status.tooltip}>
+      {/* Subtle indicator - smaller and less prominent */}
       <div 
-        className={`w-2 h-2 rounded-full ${status.color} ${
+        className={`w-1.5 h-1.5 rounded-full ${status.color} ${
           status.pulse ? 'animate-pulse' : ''
-        }`} 
+        } opacity-75 hover:opacity-100 transition-opacity`} 
       />
+      
+      {/* Tooltip on hover - only for desktop */}
+      <div className="absolute bottom-full right-0 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 hidden sm:block">
+        {status.tooltip}
+      </div>
+      
       {!isOnline && (
         <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
           <X className="w-1.5 h-1.5 text-white" />

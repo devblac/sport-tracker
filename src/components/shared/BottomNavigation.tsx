@@ -54,8 +54,8 @@ export const BottomNavigation: React.FC = () => {
       'shadow-lg'
     )}>
       <div className="flex items-center justify-around px-2 py-2 relative">
-        {/* Connection indicator */}
-        <ConnectionDot className="absolute top-2 right-2" />
+        {/* Subtle connection indicator - only shows when needed */}
+        <ConnectionDot className="absolute top-1 right-1" />
         {navigationItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;

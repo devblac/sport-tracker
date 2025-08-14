@@ -4,6 +4,7 @@ import { useWorkout } from '@/contexts/WorkoutContext';
 import { useExercises } from '@/hooks/useExercises';
 import { ExerciseSelector } from './ExerciseSelector';
 import { WorkoutService } from '@/services/WorkoutService';
+import { SmartWeightSuggestion } from '@/components/recommendations/SmartWeightSuggestion';
 import type { SetData, WorkoutExercise } from '@/schemas/workout';
 
 export const WorkoutPlayerView: React.FC = () => {
@@ -410,6 +411,21 @@ const ExerciseSection: React.FC<ExerciseSectionProps> = ({
           </div>
         </div>
 
+        {/* Smart Weight Suggestion - only show for first set */}
+        {exercise.sets.length > 0 && (
+          <SmartWeightSuggestion
+            exerciseId={exercise.exercise_id}
+            targetReps={exercise.sets[0]?.reps || 8}
+            currentSetNumber={1}
+            currentWeight={exercise.sets[0]?.weight}
+            onWeightSelect={(weight) => {
+              const updatedSet = { ...exercise.sets[0], weight };
+              onSetComplete(exerciseIndex, 0, updatedSet);
+            }}
+            className="mb-3"
+          />
+        )}
+
         {/* STRONG-style Table Header */}
         <div className="grid grid-cols-5 gap-2 mb-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
           <div className="text-center">SET</div>
@@ -470,6 +486,9 @@ const SetRow: React.FC<SetRowProps> = ({
   const [reps, setReps] = useState(set.reps.toString());
   const [showTypeMenu, setShowTypeMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   // Sync local state with set data when it changes
@@ -491,6 +510,58 @@ const SetRow: React.FC<SetRowProps> = ({
       return () => document.removeEventListener('keydown', handleEscape);
     }
   }, [showTypeMenu]);
+
+  // Touch/Mouse handlers for swipe-to-delete
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setStartX(e.touches[0].clientX);
+    setIsDragging(true);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setStartX(e.clientX);
+    setIsDragging(true);
+    e.preventDefault();
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging) return;
+    const currentX = e.touches[0].clientX;
+    const diff = startX - currentX;
+    if (diff > 0) {
+      setSwipeOffset(Math.min(diff, 80));
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    const currentX = e.clientX;
+    const diff = startX - currentX;
+    if (diff > 0) {
+      setSwipeOffset(Math.min(diff, 80));
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    if (swipeOffset > 40) {
+      // Trigger delete
+      onRemoveSet(exerciseIndex, setIndex);
+    } else {
+      // Snap back
+      setSwipeOffset(0);
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    if (swipeOffset > 40) {
+      // Trigger delete
+      onRemoveSet(exerciseIndex, setIndex);
+    } else {
+      // Snap back
+      setSwipeOffset(0);
+    }
+  };
 
   const handleComplete = () => {
     const updatedSet: SetData = {
@@ -538,91 +609,138 @@ const SetRow: React.FC<SetRowProps> = ({
 
   return (
     <>
-      <div className={`grid grid-cols-5 gap-2 p-2 rounded-lg border ${rowBg}`}>
-        {/* Set Number with Type Menu */}
-        <div className="flex items-center justify-center relative">
-          <button
-            ref={buttonRef}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (buttonRef.current) {
-                const rect = buttonRef.current.getBoundingClientRect();
-                setMenuPosition({
-                  top: rect.bottom + 4,
-                  left: rect.left
-                });
-              }
-              setShowTypeMenu(!showTypeMenu);
-            }}
-            className={`font-medium ${getSetTypeColor(set.type)} hover:bg-gray-200 dark:hover:bg-gray-600 rounded px-2 py-1 transition-colors`}
+      <div className="relative overflow-hidden">
+        {/* Delete Background */}
+        {swipeOffset > 0 && (
+          <div 
+            className="absolute inset-0 bg-red-500 flex items-center justify-end pr-4 rounded-lg"
+            style={{ transform: `translateX(${80 - swipeOffset}px)` }}
           >
-            {getSetTypeDisplay(set.type, set.set_number)}
-          </button>
-        </div>
+            <div className="text-white flex items-center space-x-2">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              <span className="font-medium">🗑️</span>
+            </div>
+          </div>
+        )}
+
+        {/* Main Set Row */}
+        <div 
+          className={`grid grid-cols-5 gap-2 p-2 rounded-lg border ${rowBg} transition-transform duration-200`}
+          style={{ transform: `translateX(-${swipeOffset}px)` }}
+        >
+          {/* Set Number with Type Menu */}
+          <div 
+            className="flex items-center justify-center relative"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onMouseDown={handleMouseDown}
+            onMouseMove={isDragging ? handleMouseMove : undefined}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+          >
+            <button
+              ref={buttonRef}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (buttonRef.current) {
+                  const rect = buttonRef.current.getBoundingClientRect();
+                  setMenuPosition({
+                    top: rect.bottom + 4,
+                    left: rect.left
+                  });
+                }
+                setShowTypeMenu(!showTypeMenu);
+              }}
+              className={`font-medium ${getSetTypeColor(set.type)} hover:bg-gray-200 dark:hover:bg-gray-600 rounded px-2 py-1 transition-colors`}
+            >
+              {getSetTypeDisplay(set.type, set.set_number)}
+            </button>
+          </div>
 
         {/* Previous */}
         <div className="flex items-center justify-center text-xs text-gray-500 dark:text-gray-400">
           {previousSet ? `${previousSet.weight} × ${previousSet.reps}` : '-'}
         </div>
 
-        {/* Weight Input */}
-        <div className="flex items-center justify-center">
-          <input
-            type="number"
-            value={weight}
-            onChange={(e) => setWeight(e.target.value)}
-            onBlur={() => {
-              const updatedSet: SetData = {
-                ...set,
-                weight: parseFloat(weight) || 0,
-                reps: parseInt(reps) || 0,
-              };
-              onSetComplete(exerciseIndex, setIndex, updatedSet);
-            }}
-            className="w-full text-center text-sm font-mono bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white dark:focus:bg-gray-700 rounded px-1 py-1"
-            step="0.5"
-            placeholder="0"
-            inputMode="decimal"
-          />
-        </div>
-
-        {/* Reps Input */}
-        <div className="flex items-center justify-center">
-          <input
-            type="number"
-            value={reps}
-            onChange={(e) => setReps(e.target.value)}
-            onBlur={() => {
-              const updatedSet: SetData = {
-                ...set,
-                weight: parseFloat(weight) || 0,
-                reps: parseInt(reps) || 0,
-              };
-              onSetComplete(exerciseIndex, setIndex, updatedSet);
-            }}
-            className="w-full text-center text-sm font-mono bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white dark:focus:bg-gray-700 rounded px-1 py-1"
-            min="0"
-            placeholder="0"
-            inputMode="numeric"
-          />
-        </div>
-
-        {/* Completion Checkbox */}
-        <div className="flex items-center justify-center">
-          <button
-            onClick={handleComplete}
-            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
-              isCompleted
-                ? 'bg-green-500 border-green-500 text-white hover:bg-green-600'
-                : 'border-gray-300 dark:border-gray-600 hover:border-green-500'
-            }`}
-          >
-            {isCompleted && (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
+          {/* Weight Input */}
+          <div className="flex items-center justify-center relative group">
+            <input
+              type="number"
+              value={weight}
+              onChange={(e) => setWeight(e.target.value)}
+              onFocus={(e) => e.target.select()} // Auto-select all text on focus
+              onBlur={() => {
+                const updatedSet: SetData = {
+                  ...set,
+                  weight: parseFloat(weight) || 0,
+                  reps: parseInt(reps) || 0,
+                };
+                onSetComplete(exerciseIndex, setIndex, updatedSet);
+              }}
+              className="w-full text-center text-sm font-mono bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white dark:focus:bg-gray-700 rounded px-1 py-1"
+              step="0.5"
+              placeholder="0"
+              inputMode="decimal"
+            />
+            
+            {/* Smart suggestion indicator */}
+            {setIndex === 0 && (
+              <div className="absolute -top-1 -right-1 w-2 h-2 bg-purple-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" 
+                   title="AI suggestion available" />
             )}
-          </button>
+          </div>
+
+          {/* Reps Input */}
+          <div className="flex items-center justify-center">
+            <input
+              type="number"
+              value={reps}
+              onChange={(e) => setReps(e.target.value)}
+              onFocus={(e) => e.target.select()} // Auto-select all text on focus
+              onBlur={() => {
+                const updatedSet: SetData = {
+                  ...set,
+                  weight: parseFloat(weight) || 0,
+                  reps: parseInt(reps) || 0,
+                };
+                onSetComplete(exerciseIndex, setIndex, updatedSet);
+              }}
+              className="w-full text-center text-sm font-mono bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white dark:focus:bg-gray-700 rounded px-1 py-1"
+              min="0"
+              placeholder="0"
+              inputMode="numeric"
+            />
+          </div>
+
+          {/* Completion Checkbox */}
+          <div 
+            className="flex items-center justify-center"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onMouseDown={handleMouseDown}
+            onMouseMove={isDragging ? handleMouseMove : undefined}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+          >
+            <button
+              onClick={handleComplete}
+              className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                isCompleted
+                  ? 'bg-green-500 border-green-500 text-white hover:bg-green-600'
+                  : 'border-gray-300 dark:border-gray-600 hover:border-green-500'
+              }`}
+            >
+              {isCompleted && (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 

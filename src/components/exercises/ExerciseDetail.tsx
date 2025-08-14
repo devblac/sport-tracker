@@ -5,6 +5,7 @@ import { ExerciseAboutTab } from './ExerciseAboutTab';
 import { ExerciseHistoryTab } from './ExerciseHistoryTab';
 import { ExerciseChartsTab } from './ExerciseChartsTab';
 import { ExerciseRecordsTab } from './ExerciseRecordsTab';
+import { PlateauBreaker } from '@/components/recommendations/PlateauBreaker';
 import type { Exercise } from '@/schemas/exercise';
 import { getDifficultyDisplay, EXERCISE_CATEGORIES } from '@/utils';
 
@@ -138,11 +139,12 @@ export const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
 
       {/* Tabs */}
       <Tabs defaultValue="about" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="about">About</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
           <TabsTrigger value="charts">Charts</TabsTrigger>
           <TabsTrigger value="records">Records</TabsTrigger>
+          <TabsTrigger value="plateau">Plateau</TabsTrigger>
         </TabsList>
         
         <TabsContent value="about" className="mt-4">
@@ -159,6 +161,17 @@ export const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
         
         <TabsContent value="records" className="mt-4">
           <ExerciseRecordsTab exercise={exercise} />
+        </TabsContent>
+        
+        <TabsContent value="plateau" className="mt-4">
+          <PlateauBreaker 
+            exerciseId={exercise.id}
+            exerciseName={exercise.name}
+            onApplyStrategy={(strategy) => {
+              console.log('Applied plateau strategy:', strategy);
+              // TODO: Implement strategy application logic
+            }}
+          />
         </TabsContent>
       </Tabs>
     </div>

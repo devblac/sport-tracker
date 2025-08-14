@@ -81,7 +81,7 @@ export const SyncNotifications: React.FC = () => {
       const notification: SyncNotification = {
         id: `connection-${Date.now()}`,
         type: isOnline ? 'online' : 'offline',
-        title: isOnline ? 'Back Online' : 'You\'re Offline',
+        title: isOnline ? 'Connected' : 'You\'re Offline',
         message: isOnline 
           ? 'Connection restored. Syncing pending changes...'
           : 'Working offline. Changes will sync when connection is restored.',

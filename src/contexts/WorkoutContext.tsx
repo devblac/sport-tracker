@@ -105,7 +105,7 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
     workoutService.saveWorkout(workout);
   };
 
-  const finishWorkout = () => {
+  const finishWorkout = async () => {
     if (activeWorkout) {
       const completedWorkout = {
         ...activeWorkout,
@@ -115,7 +115,25 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
       };
 
       // Save final workout
-      workoutService.saveWorkout(completedWorkout);
+      await workoutService.saveWorkout(completedWorkout);
+
+      // Update template usage if workout was created from template
+      if (activeWorkout.template_id) {
+        await workoutService.updateTemplateUsage(activeWorkout.template_id);
+        
+        // Check if workout was modified from original template
+        const originalTemplate = await workoutService.getTemplate(activeWorkout.template_id);
+        if (originalTemplate && hasWorkoutBeenModified(activeWorkout, originalTemplate)) {
+          // Ask user if they want to update the template
+          const shouldUpdateTemplate = confirm(
+            'You made changes to this workout.\n\nWould you like to update the original template with your changes?'
+          );
+          
+          if (shouldUpdateTemplate) {
+            await workoutService.updateTemplateFromWorkout(activeWorkout.template_id, activeWorkout);
+          }
+        }
+      }
     }
 
     // Clear state
@@ -127,6 +145,26 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
     // Clear localStorage
     localStorage.removeItem('activeWorkoutId');
     localStorage.removeItem('workoutStartTime');
+  };
+
+  // Helper function to check if workout was modified from template
+  const hasWorkoutBeenModified = (workout: Workout, template: any): boolean => {
+    // Check if exercises were added
+    if (workout.exercises.length !== template.exercises.length) {
+      return true;
+    }
+    
+    // Check if sets were added to any exercise
+    for (let i = 0; i < workout.exercises.length; i++) {
+      const workoutExercise = workout.exercises[i];
+      const templateExercise = template.exercises[i];
+      
+      if (workoutExercise.sets.length !== templateExercise.sets.length) {
+        return true;
+      }
+    }
+    
+    return false;
   };
 
   const pauseWorkout = () => {

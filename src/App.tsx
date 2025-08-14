@@ -10,6 +10,11 @@ import { useAuthStore } from '@/stores';
 import { useStoreInitialization, useApiInterceptors, useDatabaseInit } from '@/hooks';
 import { useOffline } from '@/hooks/useOffline';
 import { logger } from '@/utils';
+import { CacheMonitor } from '@/components/performance/CacheMonitor';
+import { ExperimentDashboard } from '@/components/experiments/ExperimentDashboard';
+import { BackupDashboard } from '@/components/backup/BackupDashboard';
+import { EmergencyRecovery } from '@/components/backup/EmergencyRecovery';
+import { RealTimeNotifications } from '@/components/realtime/RealTimeNotifications';
 // Lazy load pages for better performance
 const Home = React.lazy(() => import('@/pages/Home').then(m => ({ default: m.Home })));
 const Progress = React.lazy(() => import('@/pages/Progress').then(m => ({ default: m.Progress })));
@@ -235,11 +240,22 @@ function App() {
                     <Route path="/social-posts-test" element={<SocialPostsTestPage />} />
                     <Route path="/database-test" element={<DatabaseTestPage />} />
                     <Route path="/social-feed-test" element={<SocialFeedTestPage />} />
+                    <Route path="/experiment-dashboard" element={<ExperimentDashboard />} />
+                    <Route path="/backup-dashboard" element={<BackupDashboard />} />
                   </Routes>
                 </React.Suspense>
                 
                 {/* Global Workout Overlay */}
                 <WorkoutOverlay />
+                
+                {/* Cache Performance Monitor */}
+                <CacheMonitor />
+                
+                {/* Emergency Recovery */}
+                <EmergencyRecovery className="fixed top-4 left-4 right-4 z-50" />
+                
+                {/* Real-Time Notifications - Temporarily disabled to fix infinite loop */}
+                {/* <RealTimeNotifications position="top-right" maxNotifications={5} /> */}
               </AppLayout>
             </Router>
           )}
