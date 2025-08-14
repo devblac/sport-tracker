@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { leagueManager, League, LeagueGroup, UserLeagueStats, GlobalLeaderboard } from '@/services/LeagueManager';
+import { leagueManager } from '@/services/LeagueManager';
+import type { League, LeagueGroup, UserLeagueStats, GlobalLeaderboard } from '@/types/league';
 import { useAuthStore } from '@/stores';
 import { analyticsManager } from '@/services/AnalyticsManager';
 

@@ -7,68 +7,13 @@ import { dbManager } from '@/db/IndexedDBManager';
 import { analyticsManager } from './AnalyticsManager';
 import { realTimeManager } from './RealTimeManager';
 import { logger } from '@/utils';
-
-export interface League {
-  id: string;
-  name: string;
-  level: number; // 1-10 (Bronze to Diamond)
-  icon: string;
-  color: string;
-  description: string;
-  minPoints: number;
-  maxPoints: number;
-}
-
-export interface LeagueParticipant {
-  userId: string;
-  username: string;
-  avatar?: string;
-  currentPoints: number;
-  weeklyPoints: number;
-  position: number;
-  trend: 'up' | 'down' | 'stable';
-  isFriend: boolean;
-  isCurrentUser: boolean;
-  joinedAt: number;
-}
-
-export interface LeagueGroup {
-  id: string;
-  leagueId: string;
-  weekNumber: number;
-  year: number;
-  participants: LeagueParticipant[];
-  startDate: number;
-  endDate: number;
-  status: 'active' | 'completed' | 'pending';
-  promotionZone: number[]; // Top 5 positions
-  relegationZone: number[]; // Bottom 5 positions
-}
-
-export interface UserLeagueStats {
-  userId: string;
-  currentLeague: string;
-  currentGroup: string;
-  totalPoints: number;
-  weeklyPoints: number;
-  position: number;
-  promotions: number;
-  relegations: number;
-  weeksInCurrentLeague: number;
-  bestLeague: string;
-  achievements: string[];
-}
-
-export interface GlobalLeaderboard {
-  userId: string;
-  username: string;
-  avatar?: string;
-  totalPoints: number;
-  currentLeague: string;
-  globalRank: number;
-  countryRank?: number;
-  weeklyPoints: number;
-}
+import type { 
+  League, 
+  LeagueParticipant, 
+  LeagueGroup, 
+  UserLeagueStats, 
+  GlobalLeaderboard 
+} from '@/types/league';
 
 export class LeagueManager {
   private static instance: LeagueManager;
@@ -347,12 +292,12 @@ export class LeagueManager {
         relegationZone: [16, 17, 18, 19, 20]
       };
 
-      await dbManager.set('leagueGroups', groupId, leagueGroup);
+      await dbManager.put('leagueGroups', leagueGroup);
       
       // Update user stats with new group
       for (const user of groups[i]) {
         user.currentGroup = groupId;
-        await dbManager.set('userLeagueStats', user.userId, user);
+        await dbManager.put('userLeagueStats', user);
       }
     }
   }
@@ -396,7 +341,7 @@ export class LeagueManager {
       await this.updateGroupPositions(userStats.currentGroup);
 
       // Save updated stats
-      await dbManager.set('userLeagueStats', userId, userStats);
+      await dbManager.put('userLeagueStats', userStats);
 
       // Emit real-time update
       realTimeManager.emit('league_update', {
@@ -496,12 +441,12 @@ export class LeagueManager {
       userStats.weeklyPoints = 0;
       userStats.weeksInCurrentLeague++;
 
-      await dbManager.set('userLeagueStats', participant.userId, userStats);
+      await dbManager.put('userLeagueStats', userStats);
     }
 
     // Mark group as completed
     group.status = 'completed';
-    await dbManager.set('leagueGroups', group.id, group);
+    await dbManager.put('leagueGroups', group);
   }
 
   // Helper methods
@@ -530,7 +475,7 @@ export class LeagueManager {
       achievements: []
     };
 
-    await dbManager.set('userLeagueStats', userId, stats);
+    await dbManager.put('userLeagueStats', stats);
     return stats;
   }
 
@@ -560,7 +505,7 @@ export class LeagueManager {
         participant.position = index + 1;
       });
 
-      await dbManager.set('leagueGroups', groupId, group);
+      await dbManager.put('leagueGroups', group);
     } catch (error) {
       logger.error('Error updating group positions', error);
     }
@@ -598,11 +543,11 @@ export class LeagueManager {
 
 export const leagueManager = LeagueManager.getInstance();
 
-// Export all interfaces for external use
-export type {
-  League,
-  LeagueParticipant,
-  LeagueGroup,
-  UserLeagueStats,
-  GlobalLeaderboard
-};
+// Re-export types for convenience
+export type { 
+  League, 
+  LeagueParticipant, 
+  LeagueGroup, 
+  UserLeagueStats, 
+  GlobalLeaderboard 
+} from '@/types/league';

@@ -8,7 +8,7 @@ import type { DBSchema } from './IndexedDBManager';
 
 export const FITNESS_APP_SCHEMA: DBSchema = {
   name: 'FitnessAppDB',
-  version: 1,
+  version: 2,
   stores: [
     // ============================================================================
     // Core Exercise Data
@@ -370,6 +370,35 @@ export const FITNESS_APP_SCHEMA: DBSchema = {
     // },
 
     // ============================================================================
+    // League System (Duolingo-style competitive leagues)
+    // ============================================================================
+    {
+      name: 'userLeagueStats',
+      keyPath: 'userId',
+      indexes: [
+        { name: 'currentLeague', keyPath: 'currentLeague' },
+        { name: 'currentGroup', keyPath: 'currentGroup' },
+        { name: 'totalPoints', keyPath: 'totalPoints' },
+        { name: 'weeklyPoints', keyPath: 'weeklyPoints' },
+        { name: 'position', keyPath: 'position' }
+      ]
+    },
+
+    {
+      name: 'leagueGroups',
+      keyPath: 'id',
+      indexes: [
+        { name: 'leagueId', keyPath: 'leagueId' },
+        { name: 'weekNumber', keyPath: 'weekNumber' },
+        { name: 'year', keyPath: 'year' },
+        { name: 'status', keyPath: 'status' },
+        { name: 'startDate', keyPath: 'startDate' },
+        { name: 'endDate', keyPath: 'endDate' },
+        { name: 'leagueId_weekNumber_year', keyPath: ['leagueId', 'weekNumber', 'year'] }
+      ]
+    },
+
+    // ============================================================================
     // App Settings and Cache
     // ============================================================================
     {
@@ -400,9 +429,10 @@ export const MIGRATION_SCRIPTS = {
     }
   },
   2: {
-    description: 'Add syncConflicts store for conflict resolution',
+    description: 'Add league system tables for competitive fitness leagues',
     up: async () => {
       // Migration handled automatically by schema upgrade
+      // New stores: userLeagueStats, leagueGroups
     }
   }
   // Future migrations will be added here

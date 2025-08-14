@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Trophy, TrendingUp, TrendingDown, Minus, Crown, Medal, Users, Globe } from 'lucide-react';
+import { Trophy, TrendingUp, TrendingDown, Minus, Crown, Medal, Users, Globe, ChevronUp, ChevronDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -7,15 +7,16 @@ import { leagueManager } from '@/services/LeagueManager';
 import type { League, LeagueGroup, LeagueParticipant, GlobalLeaderboard } from '@/types/league';
 import { useAuthStore } from '@/stores';
 
-interface LeagueViewProps {
+interface LeagueViewDuolingoProps {
   className?: string;
 }
 
-export const LeagueView: React.FC<LeagueViewProps> = ({ className = '' }) => {
-  const [activeTab, setActiveTab] = useState<'my-league' | 'global' | 'friends'>('my-league');
+export const LeagueViewDuolingo: React.FC<LeagueViewDuolingoProps> = ({ className = '' }) => {
+  const [activeTab, setActiveTab] = useState<'my-league' | 'global'>('my-league');
   const [myLeagueGroup, setMyLeagueGroup] = useState<LeagueGroup | null>(null);
   const [globalLeaderboard, setGlobalLeaderboard] = useState<GlobalLeaderboard[]>([]);
-  const [leagues, setLeagues] = useState<League[]>([]);
+  const [currentLeague, setCurrentLeague] = useState<League | null>(null);
+  const [allLeagues, setAllLeagues] = useState<League[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuthStore();
 
@@ -28,17 +29,23 @@ export const LeagueView: React.FC<LeagueViewProps> = ({ className = '' }) => {
 
     setLoading(true);
     try {
+      // Load all leagues first
+      const leagues = leagueManager.getAllLeagues();
+      setAllLeagues(leagues);
+
       // Load user's league group
       const userGroup = await leagueManager.getUserLeagueGroup(user.id);
       setMyLeagueGroup(userGroup);
 
+      // Find current league
+      if (userGroup) {
+        const league = leagues.find(l => l.id === userGroup.leagueId);
+        setCurrentLeague(league || null);
+      }
+
       // Load global leaderboard
       const global = await leagueManager.getGlobalLeaderboard(50);
       setGlobalLeaderboard(global);
-
-      // Load all leagues
-      const allLeagues = leagueManager.getAllLeagues();
-      setLeagues(allLeagues);
     } catch (error) {
       console.error('Error loading league data:', error);
     } finally {
@@ -63,53 +70,89 @@ export const LeagueView: React.FC<LeagueViewProps> = ({ className = '' }) => {
     }
   };
 
-  const getCurrentLeague = () => {
-    if (!myLeagueGroup) return null;
-    return leagues.find(l => l.id === myLeagueGroup.leagueId);
+  const getLeagueProgress = () => {
+    if (!currentLeague || !allLeagues.length) return null;
+    
+    const currentLevel = currentLeague.level;
+    const totalLevels = allLeagues.length;
+    
+    return {
+      current: currentLevel,
+      total: totalLevels,
+      canPromote: currentLevel < totalLevels,
+      canRelegate: currentLevel > 1,
+      nextLeague: allLeagues.find(l => l.level === currentLevel + 1),
+      prevLeague: allLeagues.find(l => l.level === currentLevel - 1)
+    };
   };
 
   const renderMyLeague = () => {
-    if (!myLeagueGroup || !user) {
+    if (!myLeagueGroup || !user || !currentLeague) {
       return (
         <div className="text-center py-8">
           <Trophy className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500">Join your first workout to enter the leagues!</p>
+          <p className="text-gray-500 dark:text-gray-400">Join your first workout to enter the leagues!</p>
         </div>
       );
     }
 
-    const currentLeague = getCurrentLeague();
     const userParticipant = myLeagueGroup.participants.find(p => p.userId === user.id);
     const timeLeft = Math.max(0, myLeagueGroup.endDate - Date.now());
     const daysLeft = Math.ceil(timeLeft / (1000 * 60 * 60 * 24));
+    const progress = getLeagueProgress();
 
     return (
       <div className="space-y-6">
-        {/* League Header */}
+        {/* Current League Header */}
         <Card>
           <CardHeader className="text-center">
             <div className="flex items-center justify-center space-x-3 mb-2">
-              <span className="text-4xl">{currentLeague?.icon}</span>
+              <span className="text-4xl">{currentLeague.icon}</span>
               <div>
-                <CardTitle className="text-2xl" style={{ color: currentLeague?.color }}>
-                  {currentLeague?.name} League
+                <CardTitle className="text-2xl" style={{ color: currentLeague.color }}>
+                  {currentLeague.name} League
                 </CardTitle>
-                <p className="text-sm text-gray-500">{currentLeague?.description}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{currentLeague.description}</p>
               </div>
             </div>
+            
+            {/* League Progress Indicator */}
+            {progress && (
+              <div className="flex items-center justify-center space-x-2 mt-4">
+                {progress.canRelegate && (
+                  <div className="flex items-center space-x-1 text-red-500">
+                    <ChevronDown className="w-4 h-4" />
+                    <span className="text-xs">{progress.prevLeague?.name}</span>
+                  </div>
+                )}
+                
+                <div className="flex items-center space-x-1 px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full">
+                  <span className="text-sm font-medium">{progress.current}</span>
+                  <span className="text-xs text-gray-500">of</span>
+                  <span className="text-sm font-medium">{progress.total}</span>
+                </div>
+                
+                {progress.canPromote && (
+                  <div className="flex items-center space-x-1 text-green-500">
+                    <ChevronUp className="w-4 h-4" />
+                    <span className="text-xs">{progress.nextLeague?.name}</span>
+                  </div>
+                )}
+              </div>
+            )}
             
             <div className="flex items-center justify-center space-x-6 mt-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">{userParticipant?.weeklyPoints || 0}</div>
-                <div className="text-xs text-gray-500">Weekly Points</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Weekly Points</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-purple-600">#{userParticipant?.position || '-'}</div>
-                <div className="text-xs text-gray-500">Position</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Position</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-orange-600">{daysLeft}</div>
-                <div className="text-xs text-gray-500">Days Left</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Days Left</div>
               </div>
             </div>
           </CardHeader>
@@ -123,11 +166,21 @@ export const LeagueView: React.FC<LeagueViewProps> = ({ className = '' }) => {
                 <TrendingUp className="w-6 h-6 text-green-600 mx-auto mb-1" />
                 <div className="text-sm font-medium text-green-700 dark:text-green-300">Promotion Zone</div>
                 <div className="text-xs text-green-600 dark:text-green-400">Top 5 advance</div>
+                {progress?.nextLeague && (
+                  <div className="text-xs text-green-500 mt-1">
+                    → {progress.nextLeague.icon} {progress.nextLeague.name}
+                  </div>
+                )}
               </div>
               <div className="text-center p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
                 <TrendingDown className="w-6 h-6 text-red-600 mx-auto mb-1" />
                 <div className="text-sm font-medium text-red-700 dark:text-red-300">Relegation Zone</div>
                 <div className="text-xs text-red-600 dark:text-red-400">Bottom 5 drop</div>
+                {progress?.prevLeague && (
+                  <div className="text-xs text-red-500 mt-1">
+                    → {progress.prevLeague.icon} {progress.prevLeague.name}
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
@@ -139,6 +192,9 @@ export const LeagueView: React.FC<LeagueViewProps> = ({ className = '' }) => {
             <CardTitle className="flex items-center space-x-2">
               <Users className="w-5 h-5" />
               <span>League Standings</span>
+              <Badge variant="outline" className="ml-auto">
+                {myLeagueGroup.participants.length} players
+              </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -173,14 +229,14 @@ export const LeagueView: React.FC<LeagueViewProps> = ({ className = '' }) => {
                             className="w-8 h-8 rounded-full"
                           />
                         ) : (
-                          <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                            <span className="text-xs font-bold">
+                          <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center">
+                            <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
                               {participant.username.charAt(0).toUpperCase()}
                             </span>
                           </div>
                         )}
                         <div>
-                          <div className="font-medium text-sm">
+                          <div className="font-medium text-sm text-gray-900 dark:text-gray-100">
                             {participant.username}
                             {isCurrentUser && <Badge variant="secondary" className="ml-2 text-xs">You</Badge>}
                             {participant.isFriend && <Badge variant="outline" className="ml-2 text-xs">Friend</Badge>}
@@ -191,8 +247,8 @@ export const LeagueView: React.FC<LeagueViewProps> = ({ className = '' }) => {
                     
                     <div className="flex items-center space-x-3">
                       <div className="text-right">
-                        <div className="font-bold text-sm">{participant.weeklyPoints}</div>
-                        <div className="text-xs text-gray-500">points</div>
+                        <div className="font-bold text-sm text-gray-900 dark:text-gray-100">{participant.weeklyPoints}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">points</div>
                       </div>
                       {getTrendIcon(participant.trend)}
                     </div>
@@ -218,7 +274,7 @@ export const LeagueView: React.FC<LeagueViewProps> = ({ className = '' }) => {
         <CardContent className="p-0">
           <div className="space-y-1">
             {globalLeaderboard.map((player, index) => {
-              const league = leagues.find(l => l.id === player.currentLeague);
+              const league = allLeagues.find(l => l.id === player.currentLeague);
               const isCurrentUser = player.userId === user?.id;
               
               return (
@@ -240,14 +296,14 @@ export const LeagueView: React.FC<LeagueViewProps> = ({ className = '' }) => {
                           className="w-8 h-8 rounded-full"
                         />
                       ) : (
-                        <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                          <span className="text-xs font-bold">
+                        <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center">
+                          <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
                             {player.username.charAt(0).toUpperCase()}
                           </span>
                         </div>
                       )}
                       <div>
-                        <div className="font-medium text-sm">
+                        <div className="font-medium text-sm text-gray-900 dark:text-gray-100">
                           {player.username}
                           {isCurrentUser && <Badge variant="secondary" className="ml-2 text-xs">You</Badge>}
                         </div>
@@ -260,8 +316,8 @@ export const LeagueView: React.FC<LeagueViewProps> = ({ className = '' }) => {
                   </div>
                   
                   <div className="text-right">
-                    <div className="font-bold text-sm">{player.totalPoints.toLocaleString()}</div>
-                    <div className="text-xs text-gray-500">total points</div>
+                    <div className="font-bold text-sm text-gray-900 dark:text-gray-100">{player.totalPoints.toLocaleString()}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">total points</div>
                   </div>
                 </div>
               );
@@ -272,28 +328,14 @@ export const LeagueView: React.FC<LeagueViewProps> = ({ className = '' }) => {
     );
   };
 
-  const renderFriendsLeague = () => {
-    return (
-      <Card>
-        <CardContent className="text-center py-8">
-          <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500 mb-4">Friends league coming soon!</p>
-          <p className="text-sm text-gray-400">
-            Compete directly with your friends across all leagues
-          </p>
-        </CardContent>
-      </Card>
-    );
-  };
-
   if (loading) {
     return (
       <div className={`space-y-4 ${className}`}>
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
+          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
           <div className="space-y-3">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-16 bg-gray-200 rounded"></div>
+              <div key={i} className="h-16 bg-gray-200 dark:bg-gray-700 rounded"></div>
             ))}
           </div>
         </div>
@@ -323,21 +365,11 @@ export const LeagueView: React.FC<LeagueViewProps> = ({ className = '' }) => {
           <Globe className="w-4 h-4 mr-2" />
           Global
         </Button>
-        <Button
-          variant={activeTab === 'friends' ? 'default' : 'ghost'}
-          size="sm"
-          onClick={() => setActiveTab('friends')}
-          className="flex-1"
-        >
-          <Users className="w-4 h-4 mr-2" />
-          Friends
-        </Button>
       </div>
 
       {/* Tab Content */}
       {activeTab === 'my-league' && renderMyLeague()}
       {activeTab === 'global' && renderGlobalLeaderboard()}
-      {activeTab === 'friends' && renderFriendsLeague()}
     </div>
   );
 };

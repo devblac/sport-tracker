@@ -36,8 +36,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const availableThemes = [
     { value: 'light' as Theme, label: 'Light', description: 'Clean light theme with subtle blue accents' },
     { value: 'dark' as Theme, label: 'Dark', description: 'Professional dark theme with blue accents' },
-    { value: 'oled' as Theme, label: 'OLED', description: 'Pure black theme with high contrast colors' },
-    { value: 'halloween' as Theme, label: 'Halloween', description: 'Spooky orange and purple theme' },
+    // Temporarily hidden - not working properly
+    // { value: 'oled' as Theme, label: 'OLED', description: 'Pure black theme with high contrast colors' },
+    // { value: 'halloween' as Theme, label: 'Halloween', description: 'Spooky orange and purple theme' },
     { value: 'system' as Theme, label: 'System', description: 'Follow your device settings' },
   ];
 
@@ -72,6 +73,10 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       
       if (theme === 'system') {
         newActualTheme = getSystemTheme();
+      } else if (theme === 'oled' || theme === 'halloween') {
+        // Fallback for hidden themes - switch to dark
+        newActualTheme = 'dark';
+        setTheme('dark'); // Update the stored theme as well
       } else {
         newActualTheme = theme;
       }
@@ -108,7 +113,8 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   };
 
   const toggleTheme = () => {
-    const themeOrder: Theme[] = ['light', 'dark', 'oled', 'halloween', 'system'];
+    // Only include working themes
+    const themeOrder: Theme[] = ['light', 'dark', 'system'];
     const currentIndex = themeOrder.indexOf(theme);
     const nextIndex = (currentIndex + 1) % themeOrder.length;
     setTheme(themeOrder[nextIndex]);

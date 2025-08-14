@@ -1,12 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserPlus, Heart, MessageCircle, Users, Zap, Search, X, Trophy } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, Button } from '@/components/ui';
-import { LeagueView } from '@/components/social/LeagueView';
+import { LeagueViewDuolingo } from '@/components/social/LeagueViewDuolingo';
+import { LeagueTest } from '@/components/social/LeagueTest';
+import { LeagueUnavailable } from '@/components/social/LeagueUnavailable';
+import { getLeagueAccessStatus } from '@/utils/leagueEligibility';
+import { useAuthStore } from '@/stores';
 
 export const Social: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'feed' | 'leagues' | 'friends'>('leagues');
+  const [activeTab, setActiveTab] = useState<'feed' | 'leagues' | 'friends'>('feed'); // Default to feed instead of leagues
   const [showAddFriends, setShowAddFriends] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [leagueAccess, setLeagueAccess] = useState<any>(null);
+  const { user } = useAuthStore();
+
+  useEffect(() => {
+    // Check league access status
+    const totalRegisteredUsers = 25; // This would come from your user service
+    const userWorkoutCount = 1; // This would come from user's workout history
+    
+    const accessStatus = getLeagueAccessStatus(user, totalRegisteredUsers, userWorkoutCount);
+    setLeagueAccess(accessStatus);
+    
+    // If leagues are available and user was trying to access them, switch to leagues tab
+    if (accessStatus.canAccess && activeTab === 'leagues') {
+      // Keep leagues tab active
+    } else if (!accessStatus.canAccess && activeTab === 'leagues') {
+      // Switch to feed tab if leagues aren't available
+      setActiveTab('feed');
+    }
+  }, [user, activeTab]);
 
   const handleAddFriend = (username: string) => {
     // TODO: Implement actual friend request functionality
@@ -22,20 +45,23 @@ export const Social: React.FC = () => {
       
       {/* Tab Navigation */}
       <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
-        <Button
-          variant={activeTab === 'leagues' ? 'default' : 'ghost'}
-          size="sm"
-          onClick={() => setActiveTab('leagues')}
-          className="flex-1"
-        >
-          <Trophy className="w-4 h-4 mr-2" />
-          Leagues
-        </Button>
+        {/* Only show Leagues tab if user has access */}
+        {leagueAccess?.canAccess && (
+          <Button
+            variant={activeTab === 'leagues' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setActiveTab('leagues')}
+            className="flex-1"
+          >
+            <Trophy className="w-4 h-4 mr-2" />
+            Leagues
+          </Button>
+        )}
         <Button
           variant={activeTab === 'feed' ? 'default' : 'ghost'}
           size="sm"
           onClick={() => setActiveTab('feed')}
-          className="flex-1"
+          className={leagueAccess?.canAccess ? 'flex-1' : 'flex-1'}
         >
           <Zap className="w-4 h-4 mr-2" />
           Feed
@@ -52,10 +78,27 @@ export const Social: React.FC = () => {
       </div>
       
       {/* Tab Content */}
-      {activeTab === 'leagues' && <LeagueView />}
+      {activeTab === 'leagues' && (
+        <div className="space-y-6">
+          {/* Only show test component in development */}
+          {process.env.NODE_ENV === 'development' && <LeagueTest />}
+          <LeagueViewDuolingo />
+        </div>
+      )}
       
       {activeTab === 'feed' && (
         <div className="space-y-6">
+          {/* Show League Unavailable message if leagues aren't accessible */}
+          {leagueAccess && !leagueAccess.canAccess && leagueAccess.message && (
+            <LeagueUnavailable
+              title={leagueAccess.message.title}
+              message={leagueAccess.message.message}
+              action={leagueAccess.message.action}
+              currentUsers={leagueAccess.eligibilityResult.currentUsers}
+              minimumUsers={leagueAccess.eligibilityResult.minimumUsers}
+            />
+          )}
+
           {/* Activity Feed */}
           <Card>
             <CardHeader>
