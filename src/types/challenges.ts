@@ -233,8 +233,8 @@ export class ChallengeError extends Error {
     this.name = 'ChallengeError';
   }
 }
-// I
-mport comprehensive challenge models for enhanced functionality
+
+// Import comprehensive challenge models for enhanced functionality
 // These provide more detailed interfaces for advanced challenge features
 export type {
   Challenge as DetailedChallenge,

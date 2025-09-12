@@ -57,38 +57,8 @@ export type {
   WorkoutFilter,
 } from '@/schemas/workout';
 
-// Workout Types
-export interface Workout {
-  id: string;
-  user_id: string;
-  name: string;
-  exercises: WorkoutExercise[];
-  is_template: boolean;
-  is_completed: boolean;
-  template_id?: string;
-  started_at?: Date;
-  completed_at?: Date;
-  duration?: number;
-  total_volume: number;
-  notes?: string;
-}
-
-export interface WorkoutExercise {
-  exercise_id: string;
-  order: number;
-  sets: SetData[];
-  rest_time: number;
-  notes?: string;
-}
-
-export interface SetData {
-  weight: number;
-  reps: number;
-  rpe?: number;
-  type: 'normal' | 'failure' | 'dropset' | 'warmup';
-  completed: boolean;
-  completed_at?: Date;
-}
+// Additional workout types not in schemas
+export * from './workout';
 
 // Gamification Types
 export interface Achievement {

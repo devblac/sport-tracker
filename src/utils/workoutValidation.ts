@@ -35,9 +35,9 @@ export function validateWorkout(data: unknown): ValidationResult<Workout> {
         data: result.data,
       };
     } else {
-      const errors = result.error.errors.map(err => 
+      const errors = result.error.issues?.map(err => 
         `${err.path.join('.')}: ${err.message}`
-      );
+      ) || ['Workout validation failed'];
       
       logger.warn('Workout validation failed', { errors, data });
       
@@ -68,9 +68,9 @@ export function validateWorkoutCreate(data: unknown): ValidationResult<WorkoutCr
         data: result.data,
       };
     } else {
-      const errors = result.error.errors.map(err => 
+      const errors = result.error.issues?.map(err => 
         `${err.path.join('.')}: ${err.message}`
-      );
+      ) || ['Workout creation validation failed'];
       
       logger.warn('Workout creation validation failed', { errors, data });
       
@@ -101,9 +101,9 @@ export function validateWorkoutTemplate(data: unknown): ValidationResult<Workout
         data: result.data,
       };
     } else {
-      const errors = result.error.errors.map(err => 
+      const errors = result.error.issues?.map(err => 
         `${err.path.join('.')}: ${err.message}`
-      );
+      ) || ['Workout template validation failed'];
       
       logger.warn('Workout template validation failed', { errors, data });
       
@@ -134,9 +134,9 @@ export function validateWorkoutUpdate(data: unknown): ValidationResult<WorkoutUp
         data: result.data,
       };
     } else {
-      const errors = result.error.errors.map(err => 
+      const errors = result.error.issues?.map(err => 
         `${err.path.join('.')}: ${err.message}`
-      );
+      ) || ['Workout update validation failed'];
       
       logger.warn('Workout update validation failed', { errors, data });
       
@@ -167,9 +167,9 @@ export function validateSetData(data: unknown): ValidationResult<SetData> {
         data: result.data,
       };
     } else {
-      const errors = result.error.errors.map(err => 
+      const errors = result.error.issues?.map(err => 
         `${err.path.join('.')}: ${err.message}`
-      );
+      ) || ['Set data validation failed'];
       
       logger.warn('Set data validation failed', { errors, data });
       
@@ -200,9 +200,9 @@ export function validateSetCreate(data: unknown): ValidationResult<SetCreate> {
         data: result.data,
       };
     } else {
-      const errors = result.error.errors.map(err => 
+      const errors = result.error.issues?.map(err => 
         `${err.path.join('.')}: ${err.message}`
-      );
+      ) || ['Set creation validation failed'];
       
       logger.warn('Set creation validation failed', { errors, data });
       
@@ -233,9 +233,9 @@ export function validateWorkoutFilter(data: unknown): ValidationResult<WorkoutFi
         data: result.data,
       };
     } else {
-      const errors = result.error.errors.map(err => 
+      const errors = result.error.issues?.map(err => 
         `${err.path.join('.')}: ${err.message}`
-      );
+      ) || ['Workout filter validation failed'];
       
       logger.warn('Workout filter validation failed', { errors, data });
       
@@ -258,8 +258,8 @@ export function validateWorkoutFilter(data: unknown): ValidationResult<WorkoutFi
  */
 export function transformWorkoutData(rawData: any): Workout | null {
   try {
-    // Handle date strings
-    const dateFields = ['scheduled_date', 'started_at', 'completed_at', 'paused_at', 'created_at', 'updated_at'];
+    // Handle date strings (including template-specific fields)
+    const dateFields = ['scheduled_date', 'started_at', 'completed_at', 'paused_at', 'created_at', 'updated_at', 'last_used'];
     dateFields.forEach(field => {
       if (rawData[field] && typeof rawData[field] === 'string') {
         rawData[field] = new Date(rawData[field]);
@@ -295,6 +295,52 @@ export function transformWorkoutData(rawData: any): Workout | null {
     return validation.success ? validation.data! : null;
   } catch (error) {
     logger.error('Workout data transformation failed', error);
+    return null;
+  }
+}
+
+/**
+ * Transform raw template data to ensure proper types
+ */
+export function transformTemplateData(rawData: any): WorkoutTemplate | null {
+  try {
+    // Handle date strings (including template-specific fields)
+    const dateFields = ['scheduled_date', 'started_at', 'completed_at', 'paused_at', 'created_at', 'updated_at', 'last_used'];
+    dateFields.forEach(field => {
+      if (rawData[field] && typeof rawData[field] === 'string') {
+        rawData[field] = new Date(rawData[field]);
+      }
+    });
+
+    // Handle nested exercise dates
+    if (rawData.exercises && Array.isArray(rawData.exercises)) {
+      rawData.exercises.forEach((exercise: any) => {
+        if (exercise.started_at && typeof exercise.started_at === 'string') {
+          exercise.started_at = new Date(exercise.started_at);
+        }
+        if (exercise.completed_at && typeof exercise.completed_at === 'string') {
+          exercise.completed_at = new Date(exercise.completed_at);
+        }
+        
+        // Handle set dates
+        if (exercise.sets && Array.isArray(exercise.sets)) {
+          exercise.sets.forEach((set: any) => {
+            const setDateFields = ['completed_at', 'started_at', 'ended_at'];
+            setDateFields.forEach(field => {
+              if (set[field] && typeof set[field] === 'string') {
+                set[field] = new Date(set[field]);
+              }
+            });
+          });
+        }
+      });
+    }
+    
+    // Validate as template and return
+    const validation = validateWorkoutTemplate(rawData);
+    return validation.success ? validation.data! : null;
+  } catch (error) {
+    logger.error('Template data transformation failed', error);
     return null;
   }
 }

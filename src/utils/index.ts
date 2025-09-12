@@ -263,3 +263,6 @@ export * from './exerciseCategories';
 // Export workout utilities
 export * from './workoutValidation';
 export * from './workoutCalculations';
+
+// Export media utilities
+export * from './exerciseMediaUtils';

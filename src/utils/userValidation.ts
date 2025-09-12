@@ -29,19 +29,56 @@ export interface ValidationResult<T> {
  */
 const validateData = <T>(schema: z.ZodSchema<T>, data: unknown): ValidationResult<T> => {
   try {
+    // Add debug logging
+    logger.info('Validating data', { 
+      dataType: typeof data,
+      dataKeys: data && typeof data === 'object' ? Object.keys(data) : 'not an object',
+      data: data && typeof data === 'object' ? JSON.stringify(data) : data
+    });
+    
     const result = schema.parse(data);
     return {
       success: true,
       data: result,
     };
   } catch (error) {
+    // Log the full error for debugging
+    logger.error('Validation error caught', { 
+      error,
+      errorType: error?.constructor?.name,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      hasErrors: error && 'errors' in error,
+      errorsType: error && 'errors' in error ? typeof error.errors : 'no errors property',
+      // Add more detailed error info for ZodError
+      zodErrorDetails: error instanceof z.ZodError ? {
+        issues: error.issues,
+        formErrors: error.formErrors,
+        message: error.message
+      } : 'not a ZodError'
+    });
+    
     if (error instanceof z.ZodError) {
-      const errors = error.errors.map(err => {
-        const path = err.path.join('.');
-        return path ? `${path}: ${err.message}` : err.message;
-      });
+      // Safely handle the issues array (ZodError uses 'issues', not 'errors')
+      let errors: string[] = ['Validation error occurred'];
       
-      logger.warn('Validation failed', { errors, data });
+      try {
+        if (error.issues && Array.isArray(error.issues)) {
+          errors = error.issues.map(issue => {
+            const path = Array.isArray(issue.path) ? issue.path.join('.') : '';
+            const message = issue.message || 'Validation error';
+            return path ? `${path}: ${message}` : message;
+          });
+        }
+      } catch (mappingError) {
+        logger.error('Error processing validation issues', mappingError);
+        errors = ['Error processing validation details'];
+      }
+      
+      logger.warn('Validation failed', { 
+        errors, 
+        data: typeof data === 'object' ? JSON.stringify(data) : data,
+        errorDetails: error.message 
+      });
       
       return {
         success: false,
@@ -49,10 +86,13 @@ const validateData = <T>(schema: z.ZodSchema<T>, data: unknown): ValidationResul
       };
     }
     
-    logger.error('Unexpected validation error', error);
+    // Handle other types of errors
+    const errorMessage = error instanceof Error ? error.message : 'Unknown validation error';
+    logger.error('Unexpected validation error', { error: errorMessage, data });
+    
     return {
       success: false,
-      errors: ['Validation failed due to unexpected error'],
+      errors: [errorMessage],
     };
   }
 };
@@ -68,7 +108,15 @@ export const validateUser = (data: unknown): ValidationResult<User> => {
  * Validate user registration data
  */
 export const validateUserRegistration = (data: unknown): ValidationResult<UserRegistration> => {
-  return validateData(UserRegistrationSchema, data);
+  try {
+    return validateData(UserRegistrationSchema, data);
+  } catch (error) {
+    logger.error('Critical error in validateUserRegistration', error);
+    return {
+      success: false,
+      errors: ['Registration validation failed. Please check your input and try again.'],
+    };
+  }
 };
 
 /**
