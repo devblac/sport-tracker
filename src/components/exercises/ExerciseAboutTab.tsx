@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Card, CardContent, Badge } from '@/components/ui';
-import { Play, Pause, RotateCcw, AlertTriangle, Info, Target, Lightbulb } from 'lucide-react';
+import { AlertTriangle, Info, Target, Lightbulb } from 'lucide-react';
+import { ExerciseGifPlayer } from './ExerciseGifPlayer';
+import { MuscleDiagramViewer } from './MuscleDiagramViewer';
 import type { Exercise } from '@/schemas/exercise';
 import { 
   getDifficultyDisplay, 
@@ -16,66 +18,32 @@ interface ExerciseAboutTabProps {
 }
 
 export const ExerciseAboutTab: React.FC<ExerciseAboutTabProps> = ({ exercise }) => {
-  const [isGifPlaying, setIsGifPlaying] = useState(true);
   const categoryInfo = EXERCISE_CATEGORIES[exercise.category] || { name: exercise.category, icon: '💪' };
   const equipmentInfo = EQUIPMENT_CATEGORIES[exercise.equipment] || { name: exercise.equipment, icon: '🏋️' };
-
-  const toggleGif = () => {
-    setIsGifPlaying(!isGifPlaying);
-  };
 
   return (
     <div className="space-y-6">
       {/* Exercise Media */}
-      {exercise.gif_url && (
-        <Card>
-          <CardContent className="p-4">
-            <div className="relative">
-              <div className="aspect-video bg-muted rounded-lg overflow-hidden flex items-center justify-center">
-                {exercise.gif_url ? (
-                  <img
-                    src={exercise.gif_url}
-                    alt={`${exercise.name} demonstration`}
-                    className="w-full h-full object-cover"
-                    style={{ 
-                      animationPlayState: isGifPlaying ? 'running' : 'paused' 
-                    }}
-                  />
-                ) : (
-                  <div className="text-center text-muted-foreground">
-                    <div className="text-4xl mb-2">🎬</div>
-                    <p>Animation not available</p>
-                  </div>
-                )}
-              </div>
-              
-              {/* GIF Controls */}
-              <div className="absolute bottom-2 right-2 flex gap-2">
-                <button
-                  onClick={toggleGif}
-                  className="bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-colors"
-                >
-                  {isGifPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                </button>
-                <button
-                  onClick={() => {
-                    // Force GIF restart by changing src
-                    const img = document.querySelector(`img[alt="${exercise.name} demonstration"]`) as HTMLImageElement;
-                    if (img) {
-                      const src = img.src;
-                      img.src = '';
-                      img.src = src;
-                    }
-                  }}
-                  className="bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-colors"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Exercise GIF */}
+        {exercise.gif_url && (
+          <ExerciseGifPlayer 
+            exercise={exercise}
+            autoPlay={true}
+            showControls={true}
+            showFullscreenButton={true}
+          />
+        )}
+        
+        {/* Muscle Diagram */}
+        {exercise.muscle_diagram_url && (
+          <MuscleDiagramViewer 
+            exercise={exercise}
+            showControls={true}
+            interactive={true}
+          />
+        )}
+      </div>
 
       {/* Exercise Information */}
       <Card>
@@ -263,7 +231,7 @@ export const ExerciseAboutTab: React.FC<ExerciseAboutTabProps> = ({ exercise }) 
       )}
 
       {/* Safety Notes */}
-      {(exercise.safety_notes.length > 0 || exercise.contraindications.length > 0) && (
+      {((exercise.safety_notes && exercise.safety_notes.length > 0) || (exercise.contraindications && exercise.contraindications.length > 0)) && (
         <Card className="border-orange-200 dark:border-orange-800">
           <CardContent className="p-4">
             <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
@@ -271,7 +239,7 @@ export const ExerciseAboutTab: React.FC<ExerciseAboutTabProps> = ({ exercise }) 
               Safety Information
             </h3>
             
-            {exercise.safety_notes.length > 0 && (
+            {exercise.safety_notes && exercise.safety_notes.length > 0 && (
               <div className="mb-4">
                 <p className="text-sm font-medium text-foreground mb-2">Safety Notes</p>
                 <ul className="space-y-1">
@@ -285,7 +253,7 @@ export const ExerciseAboutTab: React.FC<ExerciseAboutTabProps> = ({ exercise }) 
               </div>
             )}
             
-            {exercise.contraindications.length > 0 && (
+            {exercise.contraindications && exercise.contraindications.length > 0 && (
               <div>
                 <p className="text-sm font-medium text-foreground mb-2">Contraindications</p>
                 <ul className="space-y-1">

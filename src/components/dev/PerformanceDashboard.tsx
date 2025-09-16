@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui';
-import { performanceMonitor } from '@/utils/performance';
+import { PerformanceMonitor } from '@/utils/performance';
 import { bundleAnalyzer } from '@/utils/bundleAnalyzer';
 import { Activity, Zap, Package, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 
@@ -25,7 +25,7 @@ export const PerformanceDashboard: React.FC = () => {
     const loadPerformanceData = async () => {
       try {
         // Get performance summary
-        const summary = performanceMonitor.getSummary();
+        const summary = PerformanceMonitor.getSummary();
         
         // Get bundle analysis
         const bundle = await bundleAnalyzer.analyzeBundlePerformance();
@@ -286,7 +286,7 @@ export const PerformanceDashboard: React.FC = () => {
                 if (window.performance && window.performance.clearResourceTimings) {
                   window.performance.clearResourceTimings();
                 }
-                performanceMonitor.clearMetrics();
+                PerformanceMonitor.clearMetrics();
               }}
               className="px-3 py-2 bg-secondary text-secondary-foreground rounded text-sm hover:bg-secondary/90"
             >
@@ -294,7 +294,7 @@ export const PerformanceDashboard: React.FC = () => {
             </button>
             <button
               onClick={() => {
-                const data = performanceMonitor.exportMetrics();
+                const data = PerformanceMonitor.exportMetrics();
                 const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -320,7 +320,7 @@ export const usePerformanceMonitoring = () => {
 
   React.useEffect(() => {
     const updateMetrics = () => {
-      const summary = performanceMonitor.getSummary();
+      const summary = PerformanceMonitor.getSummary();
       setMetrics(summary);
     };
 

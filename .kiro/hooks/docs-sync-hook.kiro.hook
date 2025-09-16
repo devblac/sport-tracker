@@ -1,0 +1,25 @@
+{
+  "enabled": true,
+  "name": "Documentation Sync",
+  "description": "Monitors TypeScript source files and configuration files for changes and automatically updates project documentation in README.md and docs folder with current feature status and completion percentages",
+  "version": "1",
+  "when": {
+    "type": "userTriggered",
+    "patterns": [
+      "src/**/*.ts",
+      "src/**/*.tsx",
+      "*.ts",
+      "*.tsx",
+      "package.json",
+      "tsconfig.json",
+      "vite.config.ts",
+      "capacitor.config.ts",
+      "tailwind.config.js",
+      "eslint.config.js"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Analyze the changed TypeScript source files and configuration files in this Sport Tracker fitness gamified PWA to update the project documentation. Update README.md with properly formatted markdown that includes:\n\n1. **Completed Features** (100% done) - List the most important fully implemented Sport Tracker features first\n2. **In Progress Features** - List Sport Tracker features that are partially complete with specific completion percentages (e.g., \"Workout Tracking System - 75%\", \"Gamification & XP System - 60%\", \"Social Features & Friend System - 40%\")\n3. **Planned Features** - Sport Tracker features not yet started (0%)\n\nFocus on Sport Tracker specific functionality including:\n- Workout tracking and exercise database\n- Gamification system (XP, levels, achievements, streaks)\n- Social features (friends, leaderboards, sharing)\n- PWA capabilities and offline functionality\n- Real-time workout player\n- Progress analytics and charts\n- Multi-language support\n- Supabase integration and authentication\n\nAlso update any relevant documentation in the /docs folder if it exists. Ensure the documentation reflects the current state of the Sport Tracker codebase by analyzing:\n- Workout and fitness components in src/components/\n- Sport Tracker pages in src/pages/\n- Fitness services and API integrations in src/services/\n- Gamification and social stores in src/stores/\n- PWA and Capacitor configuration completeness\n\nFormat the README.md with proper markdown structure, clear headings, and organize Sport Tracker features by importance and completion status. Include brief descriptions of what each fitness/gamification feature does and its current implementation status in the context of this fitness tracking application."
+  }
+}

@@ -115,17 +115,18 @@ export class TestDataGenerator {
 
     return {
       id: `set-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      exercise_id: exerciseId,
+      // exercise_id: exerciseId,
       set_number: setIndex + 1,
       type: isWarmup ? 'warmup' : 'normal',
       weight: Math.max(20, weight),
       reps: Math.max(1, Math.min(20, reps)),
       rest_time: restTime,
       rpe: isWarmup ? undefined : this.randomBetween(6, 9),
-      completed: true,
       started_at: new Date(),
       ended_at: new Date(),
       completed_at: new Date(),
+      completed: true,
+      skipped: false,
     };
   }
 
@@ -153,7 +154,7 @@ export class TestDataGenerator {
 
     return {
       id: `exercise-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      exercise_id: exerciseId,
+      // exercise_id: exerciseId,
       order: exerciseIndex + 1,
       sets,
       notes: Math.random() > 0.8 ? 'Felt strong today!' : undefined,
@@ -161,9 +162,7 @@ export class TestDataGenerator {
       target_reps: targetReps,
       target_weight: baseWeight,
       rest_time: this.randomBetween(120, 180),
-      completed: true,
       started_at: new Date(),
-      ended_at: new Date(),
       completed_at: new Date(),
     };
   }
@@ -513,7 +512,7 @@ export class TestDataGenerator {
       consistency_bonus: `Consistency bonus (+${amount} XP)`
     };
     
-    return descriptions[source] || `XP awarded (+${amount} XP)`;
+    return (descriptions as any)[source] || `XP awarded (+${amount} XP)`;
   }
 
   /**

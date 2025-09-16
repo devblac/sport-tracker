@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, UserProfile, UserSettings } from '@/schemas/user';
-import { authService } from '@/services/AuthService';
+import { supabaseAuthService } from '@/services/supabaseAuthService';
+import { syncService } from '@/services/syncService';
 import { logger } from '@/utils';
 
 interface AuthState {
@@ -14,12 +15,12 @@ interface AuthState {
   // Actions
   login: (email: string, password: string) => Promise<void>;
   loginAsGuest: () => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   register: (email: string, username: string, password: string) => Promise<void>;
   updateProfile: (profile: Partial<UserProfile>) => void;
   updateSettings: (settings: Partial<UserSettings>) => void;
   clearError: () => void;
-  initializeAuth: () => void;
+  initializeAuth: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -40,7 +41,7 @@ export const useAuthStore = create<AuthState>()(
         }));
 
         try {
-          const response = await authService.login({ email, password });
+          const response = await supabaseAuthService.login({ email, password });
           
           set((state) => ({
             ...state,
@@ -48,6 +49,11 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             isLoading: false,
           }));
+
+          // Trigger sync for registered users
+          if (response.user.role !== 'guest') {
+            syncService.syncNow();
+          }
 
           logger.info('User logged in successfully', { userId: response.user.id });
         } catch (error) {
@@ -58,12 +64,16 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
           }));
           logger.error('Login failed', error);
+          
+          // Re-throw error for form handling, but ensure state is set first
+          await new Promise(resolve => setTimeout(resolve, 0));
+          throw error;
         }
       },
 
       loginAsGuest: () => {
         try {
-          const guestUser = authService.createGuestUser();
+          const guestUser = supabaseAuthService.createGuestUser();
           
           set((state) => ({
             ...state,
@@ -81,10 +91,14 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      logout: () => {
+      logout: async () => {
         const { user } = get();
         
-        authService.logout();
+        try {
+          await supabaseAuthService.logout();
+        } catch (error) {
+          logger.error('Logout error', error);
+        }
         
         set((state) => ({
           ...state,
@@ -103,7 +117,7 @@ export const useAuthStore = create<AuthState>()(
         }));
 
         try {
-          const response = await authService.register({
+          const response = await supabaseAuthService.register({
             email,
             username,
             password,
@@ -134,31 +148,42 @@ export const useAuthStore = create<AuthState>()(
         const { user } = get();
         if (!user) return;
 
-        // Update in AuthService storage
-        authService.updateUserProfile(profile);
+        // Update via Supabase auth service (handles both local and cloud)
+        supabaseAuthService.updateUserProfile(profile).then(() => {
+          const updatedUser = {
+            ...user,
+            profile: {
+              ...user.profile,
+              ...profile,
+            },
+          };
 
-        const updatedUser = {
-          ...user,
-          profile: {
-            ...user.profile,
-            ...profile,
-          },
-        };
+          set((state) => ({
+            ...state,
+            user: updatedUser,
+          }));
 
-        set((state) => ({
-          ...state,
-          user: updatedUser,
-        }));
+          // Queue for sync if registered user
+          if (user.role !== 'guest') {
+            syncService.queueForSync('profile', 'update', profile, user.id);
+          }
 
-        logger.info('User profile updated', { userId: user.id, updates: profile });
+          logger.info('User profile updated', { userId: user.id, updates: profile });
+        }).catch(error => {
+          logger.error('Profile update failed', error);
+          set((state) => ({
+            ...state,
+            error: 'Failed to update profile',
+          }));
+        });
       },
 
       updateSettings: (settings) => {
         const { user } = get();
         if (!user) return;
 
-        // Update in AuthService storage
-        authService.updateUserSettings(settings);
+        // Update via Supabase auth service (local storage)
+        supabaseAuthService.updateUserSettings(settings);
 
         const updatedUser = {
           ...user,
@@ -183,10 +208,12 @@ export const useAuthStore = create<AuthState>()(
         }));
       },
 
-      initializeAuth: () => {
+      initializeAuth: async () => {
         try {
-          const storedUser = authService.getCurrentUser();
-          const isAuthenticated = authService.isAuthenticated();
+          // Initialize Supabase auth state
+          await supabaseAuthService.initializeAuth();
+          const storedUser = supabaseAuthService.getCurrentUser();
+          const isAuthenticated = await supabaseAuthService.isAuthenticated();
 
           if (storedUser && isAuthenticated) {
             set((state) => ({
@@ -195,10 +222,13 @@ export const useAuthStore = create<AuthState>()(
               isAuthenticated: true,
             }));
 
+            // Start sync for registered users
+            if (storedUser.role !== 'guest') {
+              syncService.syncNow();
+            }
+
             logger.info('Auth initialized from storage', { userId: storedUser.id });
           } else {
-            // Clear any invalid stored data
-            authService.logout();
             set((state) => ({
               ...state,
               user: null,
@@ -220,8 +250,11 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'sport-tracker-auth-storage',
-      // Don't persist auth state in Zustand since AuthService handles persistence
-      partialize: () => ({}),
+      // Persist essential auth state
+      partialize: (state) => ({
+        user: state.user,
+        isAuthenticated: state.isAuthenticated,
+      }),
     }
   )
 );

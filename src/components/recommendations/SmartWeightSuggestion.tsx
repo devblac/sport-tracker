@@ -9,6 +9,7 @@ interface SmartWeightSuggestionProps {
   currentSetNumber: number;
   currentWeight?: number;
   onWeightSelect: (weight: number) => void;
+  onWeightSelectAll?: (weight: number) => void; // Apply to all sets
   className?: string;
 }
 
@@ -18,6 +19,7 @@ export const SmartWeightSuggestion: React.FC<SmartWeightSuggestionProps> = ({
   currentSetNumber,
   currentWeight,
   onWeightSelect,
+  onWeightSelectAll,
   className = ''
 }) => {
   const { recommendation, loading, error } = useWeightRecommendation(
@@ -87,12 +89,23 @@ export const SmartWeightSuggestion: React.FC<SmartWeightSuggestionProps> = ({
                 {recommendation.suggestedWeight}kg
               </span>
               {isDifferentFromCurrent && (
-                <button
-                  onClick={() => onWeightSelect(recommendation.suggestedWeight)}
-                  className="px-2 py-1 text-xs bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors"
-                >
-                  Use
-                </button>
+                <div className="flex space-x-1">
+                  <button
+                    onClick={() => onWeightSelect(recommendation.suggestedWeight)}
+                    className="px-2 py-1 text-xs bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors"
+                  >
+                    Use
+                  </button>
+                  {onWeightSelectAll && (
+                    <button
+                      onClick={() => onWeightSelectAll(recommendation.suggestedWeight)}
+                      className="px-2 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
+                      title="Apply to all sets"
+                    >
+                      All
+                    </button>
+                  )}
+                </div>
               )}
             </div>
             <div className="text-xs text-gray-600 dark:text-gray-400">
@@ -131,20 +144,40 @@ export const SmartWeightSuggestion: React.FC<SmartWeightSuggestionProps> = ({
             </div>
 
             {/* Quick weight adjustments */}
-            <div className="flex items-center space-x-2 pt-2">
-              <span className="text-xs text-gray-500">Quick adjust:</span>
-              {[-2.5, -1.25, 1.25, 2.5].map(adjustment => {
-                const adjustedWeight = recommendation.suggestedWeight + adjustment;
-                return (
-                  <button
-                    key={adjustment}
-                    onClick={() => onWeightSelect(adjustedWeight)}
-                    className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                  >
-                    {adjustment > 0 ? '+' : ''}{adjustment}
-                  </button>
-                );
-              })}
+            <div className="space-y-2 pt-2">
+              <div className="flex items-center space-x-2">
+                <span className="text-xs text-gray-500">Quick adjust (first set):</span>
+                {[-2.5, -1.25, 1.25, 2.5].map(adjustment => {
+                  const adjustedWeight = recommendation.suggestedWeight + adjustment;
+                  return (
+                    <button
+                      key={adjustment}
+                      onClick={() => onWeightSelect(adjustedWeight)}
+                      className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      {adjustment > 0 ? '+' : ''}{adjustment}
+                    </button>
+                  );
+                })}
+              </div>
+              
+              {onWeightSelectAll && (
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs text-gray-500">Apply to all sets:</span>
+                  {[-2.5, -1.25, 1.25, 2.5].map(adjustment => {
+                    const adjustedWeight = recommendation.suggestedWeight + adjustment;
+                    return (
+                      <button
+                        key={`all-${adjustment}`}
+                        onClick={() => onWeightSelectAll(adjustedWeight)}
+                        className="px-2 py-1 text-xs bg-purple-100 dark:bg-purple-800 text-purple-700 dark:text-purple-300 rounded hover:bg-purple-200 dark:hover:bg-purple-700 transition-colors"
+                      >
+                        {adjustment > 0 ? '+' : ''}{adjustment}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>

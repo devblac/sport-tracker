@@ -3,7 +3,7 @@
  * Implements task 14.1 - Sistema de requirements y validación
  */
 
-import {
+import type {
   Challenge,
   ChallengeParticipant,
   ChallengeRequirement,
@@ -16,7 +16,7 @@ import {
   ChallengeDifficulty,
   RequirementType,
   RewardType
-} from '../types/challengeModels';
+} from '@/types';
 
 // Validation result interface
 export interface ValidationResult {

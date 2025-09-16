@@ -24,7 +24,16 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
   showArchived = false,
   hideExamples = false,
 }) => {
-  const { templates, loading, error } = useWorkoutTemplates();
+  const { 
+    templates, 
+    loading, 
+    error, 
+    archiveTemplate, 
+    unarchiveTemplate, 
+    renameTemplate, 
+    duplicateTemplate, 
+    deleteTemplate 
+  } = useWorkoutTemplates();
   const { getExerciseByIdSync } = useExercises();
   const [internalSearchQuery, setInternalSearchQuery] = useState('');
   const [activeContextMenu, setActiveContextMenu] = useState<string | null>(null);
@@ -45,6 +54,11 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
   }, [activeContextMenu]);
 
   const filteredTemplates = useMemo(() => {
+    console.log('TemplateSelector - Raw templates:', templates.length);
+    console.log('TemplateSelector - showArchived:', showArchived);
+    console.log('TemplateSelector - hideExamples:', hideExamples);
+    console.log('TemplateSelector - searchQuery:', searchQuery);
+    
     let filtered = templates;
     
     // Apply search filter
@@ -53,25 +67,46 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
         template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         template.description?.toLowerCase().includes(searchQuery.toLowerCase())
       );
+      console.log('After search filter:', filtered.length);
     }
     
     // Apply archived filter
     if (!showArchived) {
-      filtered = filtered.filter(template => !template.is_archived);
+      const beforeArchiveFilter = filtered.length;
+      filtered = filtered.filter(template => {
+        const isArchived = template.is_archived === true;
+        console.log(`Template ${template.name}: is_archived = ${template.is_archived}, filtering out: ${isArchived}`);
+        return !isArchived;
+      });
+      console.log(`After archive filter: ${beforeArchiveFilter} -> ${filtered.length}`);
     }
     
-    // Apply examples filter
+    // Apply examples filter (hide default/system templates)
     if (hideExamples) {
-      filtered = filtered.filter(template => !template.is_example);
+      const beforeExamplesFilter = filtered.length;
+      filtered = filtered.filter(template => 
+        template.user_id !== 'system' && 
+        template.created_by !== 'system' &&
+        !template.is_example
+      );
+      console.log(`After examples filter: ${beforeExamplesFilter} -> ${filtered.length}`);
     }
     
+    console.log('Final filtered templates:', filtered.length);
     return filtered;
   }, [templates, searchQuery, showArchived, hideExamples]);
 
-  const formatLastUsed = (date?: Date) => {
+  const formatLastUsed = (date?: Date | string) => {
     if (!date) return '';
+    
+    // Convert string to Date if necessary
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    
+    // Check if date is valid
+    if (isNaN(dateObj.getTime())) return '';
+    
     const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffTime = Math.abs(now.getTime() - dateObj.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
     if (diffDays === 1) return '1 day ago';
@@ -97,31 +132,60 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
     });
   };
 
-  const handleTemplateAction = (action: string, template: WorkoutTemplate) => {
+  const handleTemplateAction = async (action: string, template: WorkoutTemplate) => {
     setActiveContextMenu(null);
     
     switch (action) {
       case 'edit':
         // Navigate to edit template
         console.log('Edit template:', template.id);
+        // TODO: Navigate to template editor
         break;
+        
       case 'rename':
         const newName = prompt('Enter new name:', template.name);
-        if (newName && newName !== template.name) {
-          console.log('Rename template:', template.id, 'to:', newName);
-          // TODO: Implement rename functionality
+        if (newName && newName.trim() !== template.name) {
+          const success = await renameTemplate(template.id, newName.trim());
+          if (success) {
+            alert('Template renamed successfully!');
+          } else {
+            alert('Failed to rename template. Please try again.');
+          }
         }
         break;
+        
       case 'archive':
-        if (confirm(`Archive template "${template.name}"?`)) {
-          console.log('Archive template:', template.id);
-          // TODO: Implement archive functionality
+        if (confirm(`Archive template "${template.name}"? You can unarchive it later.`)) {
+          const success = await archiveTemplate(template.id);
+          if (success) {
+            alert('Template archived successfully!');
+          } else {
+            alert('Failed to archive template. Please try again.');
+          }
         }
         break;
-      case 'duplicate':
-        console.log('Duplicate template:', template.id);
-        // TODO: Implement duplicate functionality
+        
+      case 'unarchive':
+        const success = await unarchiveTemplate(template.id);
+        if (success) {
+          alert('Template unarchived successfully!');
+        } else {
+          alert('Failed to unarchive template. Please try again.');
+        }
         break;
+        
+      case 'duplicate':
+        const duplicateName = prompt('Enter name for the copy:', `${template.name} (Copy)`);
+        if (duplicateName && duplicateName.trim()) {
+          const newTemplateId = await duplicateTemplate(template.id, duplicateName.trim());
+          if (newTemplateId) {
+            alert('Template duplicated successfully!');
+          } else {
+            alert('Failed to duplicate template. Please try again.');
+          }
+        }
+        break;
+        
       case 'share':
         if (navigator.share) {
           navigator.share({
@@ -134,10 +198,15 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
           alert('Template link copied to clipboard!');
         }
         break;
+        
       case 'delete':
         if (confirm(`Delete template "${template.name}"? This action cannot be undone.`)) {
-          console.log('Delete template:', template.id);
-          // TODO: Implement delete functionality
+          const success = await deleteTemplate(template.id);
+          if (success) {
+            alert('Template deleted successfully!');
+          } else {
+            alert('Failed to delete template. Please try again.');
+          }
         }
         break;
     }
@@ -198,6 +267,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
           const exercisePreview = getExercisePreview(template);
           const lastUsed = formatLastUsed(template.last_used);
           
+
           return (
             <div
               key={template.id}
@@ -257,18 +327,33 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                           </svg>
                           Rename
                         </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleTemplateAction('archive', template);
-                          }}
-                          className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8l4 4 4-4m6 5l-3 3-3-3" />
-                          </svg>
-                          Archive
-                        </button>
+                        {template.is_archived ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleTemplateAction('unarchive', template);
+                            }}
+                            className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l3-3 3 3m-6-5l3-3 3 3" />
+                            </svg>
+                            Unarchive
+                          </button>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleTemplateAction('archive', template);
+                            }}
+                            className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8l4 4 4-4m6 5l-3 3-3-3" />
+                            </svg>
+                            Archive
+                          </button>
+                        )}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();

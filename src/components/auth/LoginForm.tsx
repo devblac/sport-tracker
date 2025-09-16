@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Mail, Lock, Loader2 } from 'lucide-react';
+import { Mail, Lock, Loader2 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, Button, Input } from '@/components/ui';
 import { validateUserLogin, isValidEmail } from '@/utils';
 import { useAuthStore } from '@/stores';
@@ -22,7 +22,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { login, isLoading, error: authError, clearError } = useAuthStore();
@@ -68,6 +67,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Prevent double submission
+    if (isSubmitting || isLoading) {
+      return;
+    }
+    
+    // Clear previous errors
+    setErrors({});
+    clearError();
+    
     // Validate all fields
     validateField('email', formData.email);
     validateField('password', formData.password);
@@ -93,11 +101,20 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     
     try {
       await login(formData.email, formData.password);
-      logger.info('User logged in successfully', { email: formData.email });
-      onSuccess?.();
+      
+      // Login successful - the auth store will handle state updates
+      // and the parent component will handle navigation
+      logger.info('Login successful, triggering success callback');
+      
+      // Small delay to ensure state is updated
+      setTimeout(() => {
+        onSuccess?.();
+        setIsSubmitting(false);
+      }, 100);
+      
     } catch (error) {
+      // Login failed - error is already set in auth store
       logger.error('Login failed', error);
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -144,21 +161,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
                 id="password"
-                type={showPassword ? 'text' : 'password'}
+                type="password"
                 placeholder="Enter your password"
                 value={formData.password}
                 onChange={(e) => handleInputChange('password', e.target.value)}
-                className={`pl-10 pr-10 ${errors.password ? 'border-destructive' : ''}`}
+                className={`pl-10 ${errors.password ? 'border-destructive' : ''}`}
                 disabled={isLoading || isSubmitting}
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                disabled={isLoading || isSubmitting}
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
             </div>
             {errors.password && (
               <p className="text-sm text-destructive">{errors.password}</p>
@@ -206,7 +215,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             <span className="w-full border-t border-border" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">Or</span>
+            <span className="bg-card px-3 py-1 text-muted-foreground">Or</span>
           </div>
         </div>
 

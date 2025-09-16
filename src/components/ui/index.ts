@@ -21,3 +21,10 @@ export { ToastContainer, ToastItem } from './Toast';
 export { Badge } from './Badge';
 
 export { Tabs, TabsList, TabsTrigger, TabsContent } from './Tabs';
+
+export { LazyImage, ExerciseGif, MuscleDiagram, ExerciseThumbnail } from './LazyImage';
+
+export { FeatureGate, FeatureCheck, useFeatureAccess } from './FeatureGate';
+
+export { Switch } from './Switch';
+export type { SwitchProps } from './Switch';

@@ -3,7 +3,7 @@
  * Implements task 14.1 - Challenge creation helpers and templates
  */
 
-import {
+import type {
   Challenge,
   ChallengeParticipant,
   ChallengeRequirement,
@@ -15,8 +15,8 @@ import {
   ChallengeDifficulty,
   RequirementType,
   ScoringMethod,
-  ParticipantStatus
-} from '../types/challengeModels';
+  ParticipantStatus,
+} from '@/types';
 
 // Challenge template interface
 export interface ChallengeTemplate {
@@ -32,7 +32,6 @@ export interface ChallengeTemplate {
 }
 
 export class ChallengeFactory {
-  
   /**
    * Create a new challenge from a template
    */
@@ -56,66 +55,67 @@ export class ChallengeFactory {
       name: template.name,
       description: template.description,
       short_description: this.generateShortDescription(template.description),
-      
+
       // Classification
       type: options.type,
       category: template.category,
       difficulty: template.difficulty,
       difficulty_level: this.getDifficultyLevel(template.difficulty),
-      
+
       // Timing
       start_date: options.startDate,
       end_date: endDate,
       duration_days: template.duration_days,
-      
+
       // Requirements and scoring
       requirements: template.requirements.map(req => ({
         ...req,
         id: this.generateId(),
-        challenge_id: challengeId
+        challenge_id: challengeId,
       })),
-      rules: template.rules?.map(rule => ({
-        ...rule,
-        id: this.generateId(),
-        challenge_id: challengeId
-      })) || [],
+      rules:
+        template.rules?.map(rule => ({
+          ...rule,
+          id: this.generateId(),
+          challenge_id: challengeId,
+        })) || [],
       scoring_method: this.getDefaultScoringMethod(template.category),
-      
+
       // Participation
       max_participants: options.maxParticipants,
       min_participants: options.type === 'team' ? 4 : 1,
       current_participants: 0,
       is_public: options.isPublic ?? true,
       requires_approval: false,
-      
+
       // Rewards
       rewards: template.rewards.map(reward => ({
         ...reward,
         id: this.generateId(),
-        challenge_id: challengeId
+        challenge_id: challengeId,
       })),
-      
+
       // Metadata
       created_by: options.createdBy,
       created_at: now,
       updated_at: now,
       status: 'draft',
-      
+
       // Visual and content
       tags: template.tags,
-      
+
       // Special properties
       is_featured: false,
       is_special_event: false,
-      
+
       // Team properties
       team_size: options.type === 'team' ? 4 : undefined,
       allow_team_creation: options.type === 'team',
-      
+
       // Social features
       allow_comments: true,
       allow_sharing: true,
-      leaderboard_visible: true
+      leaderboard_visible: true,
     };
 
     return challenge;
@@ -150,17 +150,17 @@ export class ChallengeFactory {
         weight: req.weight || 1,
         is_mandatory: req.is_mandatory ?? true,
         allows_partial_credit: req.allows_partial_credit ?? true,
-        verification_required: req.verification_required ?? false
+        verification_required: req.verification_required ?? false,
       })),
       rewards: this.getDefaultRewards(options.difficulty),
-      tags: [options.category, options.difficulty]
+      tags: [options.category, options.difficulty],
     };
 
     return this.createFromTemplate(template, {
       type: 'individual',
       startDate: options.startDate,
       createdBy: options.createdBy,
-      isPublic: true
+      isPublic: true,
     });
   }
 
@@ -187,7 +187,7 @@ export class ChallengeFactory {
       startDate: options.startDate,
       durationDays: options.durationDays,
       createdBy: options.createdBy,
-      requirements: options.requirements
+      requirements: options.requirements,
     });
 
     // Modify for team challenge
@@ -214,35 +214,35 @@ export class ChallengeFactory {
       id: this.generateId(),
       challenge_id: options.challengeId,
       user_id: options.userId,
-      
+
       // Participation details
       joined_at: new Date(),
       status: 'active' as ParticipantStatus,
-      
+
       // Progress tracking
       progress: 0,
       current_score: 0,
       max_possible_score: 100,
-      
+
       // Performance metrics
       rank: 0,
       percentile: 0,
-      
+
       // Completion tracking
       requirements_completed: 0,
       requirements_total: 0,
       is_completed: false,
-      
+
       // Team information
       team_id: options.teamId,
       team_role: options.teamRole || 'member',
-      
+
       // Social features
       is_public: true,
       allow_messages: true,
-      
+
       // Metadata
-      last_activity_at: new Date()
+      last_activity_at: new Date(),
     };
   }
 
@@ -261,41 +261,42 @@ export class ChallengeFactory {
       challenge_id: options.challengeId,
       name: options.name,
       description: options.description,
-      
+
       // Team composition
       captain_id: options.captainId,
       member_ids: [options.captainId],
       max_members: options.maxMembers,
       current_members: 1,
-      
+
       // Team performance
       total_score: 0,
       average_score: 0,
       rank: 0,
-      
+
       // Team settings
       is_public: true,
       requires_approval: false,
       allow_invites: true,
-      
+
       // Metadata
       created_at: new Date(),
-      updated_at: new Date()
+      updated_at: new Date(),
     };
   }
 
   // Predefined challenge templates
   static getStrengthChallengeTemplate(): ChallengeTemplate {
     return {
-      name: "30-Day Strength Builder",
-      description: "Build strength across major compound movements over 30 days. Perfect for intermediate lifters looking to push their limits.",
+      name: '30-Day Strength Builder',
+      description:
+        'Build strength across major compound movements over 30 days. Perfect for intermediate lifters looking to push their limits.',
       category: 'strength',
       difficulty: 'intermediate',
       duration_days: 30,
       requirements: [
         {
-          name: "Squat Progress",
-          description: "Increase your squat 1RM by 10 lbs",
+          name: 'Squat Progress',
+          description: 'Increase your squat 1RM by 10 lbs',
           type: 'exercise_weight',
           target_value: 10,
           operator: 'greater_equal',
@@ -304,11 +305,11 @@ export class ChallengeFactory {
           weight: 0.3,
           is_mandatory: true,
           allows_partial_credit: true,
-          verification_required: false
+          verification_required: false,
         },
         {
-          name: "Bench Press Progress",
-          description: "Increase your bench press 1RM by 5 lbs",
+          name: 'Bench Press Progress',
+          description: 'Increase your bench press 1RM by 5 lbs',
           type: 'exercise_weight',
           target_value: 5,
           operator: 'greater_equal',
@@ -317,11 +318,11 @@ export class ChallengeFactory {
           weight: 0.3,
           is_mandatory: true,
           allows_partial_credit: true,
-          verification_required: false
+          verification_required: false,
         },
         {
-          name: "Deadlift Progress",
-          description: "Increase your deadlift 1RM by 15 lbs",
+          name: 'Deadlift Progress',
+          description: 'Increase your deadlift 1RM by 15 lbs',
           type: 'exercise_weight',
           target_value: 15,
           operator: 'greater_equal',
@@ -330,46 +331,47 @@ export class ChallengeFactory {
           weight: 0.4,
           is_mandatory: true,
           allows_partial_credit: true,
-          verification_required: false
-        }
+          verification_required: false,
+        },
       ],
       rewards: [
         {
-          name: "Strength Builder Badge",
-          description: "Awarded for completing the strength challenge",
+          name: 'Strength Builder Badge',
+          description: 'Awarded for completing the strength challenge',
           type: 'badge',
           value: 'strength_builder',
           unlock_condition: 'completion',
           is_unique: false,
           is_transferable: false,
-          rarity: 'uncommon'
+          rarity: 'uncommon',
         },
         {
-          name: "Strength XP Bonus",
-          description: "XP reward for strength gains",
+          name: 'Strength XP Bonus',
+          description: 'XP reward for strength gains',
           type: 'xp',
           value: 500,
           unlock_condition: 'completion',
           is_unique: false,
           is_transferable: false,
-          rarity: 'common'
-        }
+          rarity: 'common',
+        },
       ],
-      tags: ['strength', 'powerlifting', '30-day', 'intermediate']
+      tags: ['strength', 'powerlifting', '30-day', 'intermediate'],
     };
   }
 
   static getConsistencyChallengeTemplate(): ChallengeTemplate {
     return {
-      name: "21-Day Consistency Challenge",
-      description: "Build the habit of consistent training. Work out at least 4 times per week for 3 weeks straight.",
+      name: '21-Day Consistency Challenge',
+      description:
+        'Build the habit of consistent training. Work out at least 4 times per week for 3 weeks straight.',
       category: 'consistency',
       difficulty: 'beginner',
       duration_days: 21,
       requirements: [
         {
-          name: "Weekly Workout Frequency",
-          description: "Complete at least 4 workouts per week",
+          name: 'Weekly Workout Frequency',
+          description: 'Complete at least 4 workouts per week',
           type: 'workout_count',
           target_value: 12, // 4 workouts × 3 weeks
           operator: 'greater_equal',
@@ -378,11 +380,11 @@ export class ChallengeFactory {
           weight: 0.7,
           is_mandatory: true,
           allows_partial_credit: true,
-          verification_required: false
+          verification_required: false,
         },
         {
-          name: "Streak Maintenance",
-          description: "Maintain at least a 7-day workout streak",
+          name: 'Streak Maintenance',
+          description: 'Maintain at least a 7-day workout streak',
           type: 'streak_days',
           target_value: 7,
           operator: 'greater_equal',
@@ -390,46 +392,47 @@ export class ChallengeFactory {
           weight: 0.3,
           is_mandatory: false,
           allows_partial_credit: false,
-          verification_required: false
-        }
+          verification_required: false,
+        },
       ],
       rewards: [
         {
-          name: "Consistency Champion",
-          description: "Badge for completing the consistency challenge",
+          name: 'Consistency Champion',
+          description: 'Badge for completing the consistency challenge',
           type: 'badge',
           value: 'consistency_champion',
           unlock_condition: 'completion',
           is_unique: false,
           is_transferable: false,
-          rarity: 'common'
+          rarity: 'common',
         },
         {
-          name: "Habit Builder XP",
-          description: "XP for building consistent habits",
+          name: 'Habit Builder XP',
+          description: 'XP for building consistent habits',
           type: 'xp',
           value: 300,
           unlock_condition: 'completion',
           is_unique: false,
           is_transferable: false,
-          rarity: 'common'
-        }
+          rarity: 'common',
+        },
       ],
-      tags: ['consistency', 'habit', '21-day', 'beginner']
+      tags: ['consistency', 'habit', '21-day', 'beginner'],
     };
   }
 
   static getVolumeChallengeTemplate(): ChallengeTemplate {
     return {
-      name: "Volume Crusher - 1 Million Pounds",
-      description: "Lift a total of 1 million pounds across all exercises in 60 days. A true test of dedication and volume capacity.",
+      name: 'Volume Crusher - 1 Million Pounds',
+      description:
+        'Lift a total of 1 million pounds across all exercises in 60 days. A true test of dedication and volume capacity.',
       category: 'volume',
       difficulty: 'advanced',
       duration_days: 60,
       requirements: [
         {
-          name: "Total Volume Lifted",
-          description: "Lift a combined total of 1,000,000 pounds",
+          name: 'Total Volume Lifted',
+          description: 'Lift a combined total of 1,000,000 pounds',
           type: 'exercise_volume',
           target_value: 1000000,
           operator: 'greater_equal',
@@ -437,42 +440,42 @@ export class ChallengeFactory {
           weight: 1.0,
           is_mandatory: true,
           allows_partial_credit: true,
-          verification_required: false
-        }
+          verification_required: false,
+        },
       ],
       rewards: [
         {
-          name: "Volume Crusher Title",
-          description: "Exclusive title for volume masters",
+          name: 'Volume Crusher Title',
+          description: 'Exclusive title for volume masters',
           type: 'title',
           value: 'Volume Crusher',
           unlock_condition: 'completion',
           is_unique: false,
           is_transferable: false,
-          rarity: 'epic'
+          rarity: 'epic',
         },
         {
-          name: "Million Pound Club Badge",
-          description: "Elite badge for joining the million pound club",
+          name: 'Million Pound Club Badge',
+          description: 'Elite badge for joining the million pound club',
           type: 'badge',
           value: 'million_pound_club',
           unlock_condition: 'completion',
           is_unique: false,
           is_transferable: false,
-          rarity: 'legendary'
+          rarity: 'legendary',
         },
         {
-          name: "Volume Master XP",
-          description: "Massive XP reward for volume achievement",
+          name: 'Volume Master XP',
+          description: 'Massive XP reward for volume achievement',
           type: 'xp',
           value: 2000,
           unlock_condition: 'completion',
           is_unique: false,
           is_transferable: false,
-          rarity: 'epic'
-        }
+          rarity: 'epic',
+        },
       ],
-      tags: ['volume', 'advanced', '60-day', 'elite']
+      tags: ['volume', 'advanced', '60-day', 'elite'],
     };
   }
 
@@ -482,21 +485,25 @@ export class ChallengeFactory {
   }
 
   private static generateShortDescription(description: string): string {
-    return description.length > 100 ? description.substring(0, 97) + '...' : description;
+    return description.length > 100
+      ? description.substring(0, 97) + '...'
+      : description;
   }
 
   private static getDifficultyLevel(difficulty: ChallengeDifficulty): number {
     const levels = {
-      'beginner': 2,
-      'intermediate': 4,
-      'advanced': 6,
-      'expert': 8,
-      'legendary': 10
+      beginner: 2,
+      intermediate: 4,
+      advanced: 6,
+      expert: 8,
+      legendary: 10,
     };
     return levels[difficulty];
   }
 
-  private static getDefaultScoringMethod(category: ChallengeCategory): ScoringMethod {
+  private static getDefaultScoringMethod(
+    category: ChallengeCategory
+  ): ScoringMethod {
     switch (category) {
       case 'strength':
         return {
@@ -506,27 +513,31 @@ export class ChallengeFactory {
           point_calculation: 'weighted_average',
           ranking_factors: [
             { name: 'weight_increase', weight: 0.6, direction: 'descending' },
-            { name: 'consistency', weight: 0.4, direction: 'descending' }
+            { name: 'consistency', weight: 0.4, direction: 'descending' },
           ],
           tiebreaker_rules: [
-            { priority: 1, factor: 'completion_time', direction: 'ascending' }
-          ]
+            { priority: 1, factor: 'completion_time', direction: 'ascending' },
+          ],
         };
-      
+
       case 'consistency':
         return {
           type: 'percentage',
           description: 'Percentage of required workouts completed',
           percentage_of_target: true,
           ranking_factors: [
-            { name: 'completion_percentage', weight: 0.8, direction: 'descending' },
-            { name: 'streak_length', weight: 0.2, direction: 'descending' }
+            {
+              name: 'completion_percentage',
+              weight: 0.8,
+              direction: 'descending',
+            },
+            { name: 'streak_length', weight: 0.2, direction: 'descending' },
           ],
           tiebreaker_rules: [
-            { priority: 1, factor: 'streak_length', direction: 'descending' }
-          ]
+            { priority: 1, factor: 'streak_length', direction: 'descending' },
+          ],
         };
-      
+
       case 'volume':
         return {
           type: 'points',
@@ -534,13 +545,13 @@ export class ChallengeFactory {
           max_points: 100,
           point_calculation: 'sum',
           ranking_factors: [
-            { name: 'total_volume', weight: 1.0, direction: 'descending' }
+            { name: 'total_volume', weight: 1.0, direction: 'descending' },
           ],
           tiebreaker_rules: [
-            { priority: 1, factor: 'completion_time', direction: 'ascending' }
-          ]
+            { priority: 1, factor: 'completion_time', direction: 'ascending' },
+          ],
         };
-      
+
       default:
         return {
           type: 'points',
@@ -548,11 +559,15 @@ export class ChallengeFactory {
           max_points: 100,
           point_calculation: 'weighted_average',
           ranking_factors: [
-            { name: 'completion_percentage', weight: 1.0, direction: 'descending' }
+            {
+              name: 'completion_percentage',
+              weight: 1.0,
+              direction: 'descending',
+            },
           ],
           tiebreaker_rules: [
-            { priority: 1, factor: 'completion_time', direction: 'ascending' }
-          ]
+            { priority: 1, factor: 'completion_time', direction: 'ascending' },
+          ],
         };
     }
   }
@@ -565,46 +580,48 @@ export class ChallengeFactory {
       point_calculation: 'average',
       ranking_factors: [
         { name: 'team_average_score', weight: 0.7, direction: 'descending' },
-        { name: 'team_completion_rate', weight: 0.3, direction: 'descending' }
+        { name: 'team_completion_rate', weight: 0.3, direction: 'descending' },
       ],
       tiebreaker_rules: [
         { priority: 1, factor: 'team_completion_time', direction: 'ascending' },
-        { priority: 2, factor: 'team_size', direction: 'descending' }
-      ]
+        { priority: 2, factor: 'team_size', direction: 'descending' },
+      ],
     };
   }
 
-  private static getDefaultRewards(difficulty: ChallengeDifficulty): Omit<ChallengeReward, 'id' | 'challenge_id'>[] {
+  private static getDefaultRewards(
+    difficulty: ChallengeDifficulty
+  ): Omit<ChallengeReward, 'id' | 'challenge_id'>[] {
     const baseXP = {
-      'beginner': 200,
-      'intermediate': 400,
-      'advanced': 800,
-      'expert': 1200,
-      'legendary': 2000
+      beginner: 200,
+      intermediate: 400,
+      advanced: 800,
+      expert: 1200,
+      legendary: 2000,
     }[difficulty];
 
     return [
       {
-        name: "Challenge Completion XP",
+        name: 'Challenge Completion XP',
         description: `XP reward for completing ${difficulty} challenge`,
         type: 'xp',
         value: baseXP,
         unlock_condition: 'completion',
         is_unique: false,
         is_transferable: false,
-        rarity: 'common'
+        rarity: 'common',
       },
       {
         name: "Winner's Bonus XP",
-        description: "Extra XP for first place finish",
+        description: 'Extra XP for first place finish',
         type: 'xp',
         value: Math.round(baseXP * 0.5),
         unlock_condition: 'winner',
         rank_requirement: 1,
         is_unique: false,
         is_transferable: false,
-        rarity: 'uncommon'
-      }
+        rarity: 'uncommon',
+      },
     ];
   }
 }
@@ -613,5 +630,5 @@ export class ChallengeFactory {
 export const CHALLENGE_TEMPLATES = {
   STRENGTH_30_DAY: ChallengeFactory.getStrengthChallengeTemplate(),
   CONSISTENCY_21_DAY: ChallengeFactory.getConsistencyChallengeTemplate(),
-  VOLUME_CRUSHER: ChallengeFactory.getVolumeChallengeTemplate()
+  VOLUME_CRUSHER: ChallengeFactory.getVolumeChallengeTemplate(),
 };

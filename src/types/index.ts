@@ -60,6 +60,12 @@ export type {
 // Additional workout types not in schemas
 export * from './workout';
 
+// Mentorship types
+export * from './mentorship';
+
+// Challenge types
+export * from './challengeModels';
+
 // Gamification Types
 export interface Achievement {
   id: string;
@@ -79,37 +85,7 @@ export interface AchievementRequirement {
   timeframe?: 'daily' | 'weekly' | 'monthly' | 'all_time';
 }
 
-export interface Challenge {
-  id: string;
-  name: string;
-  description: string;
-  type: 'individual' | 'group' | 'global';
-  category: 'strength' | 'consistency' | 'volume';
-  start_date: Date;
-  end_date: Date;
-  requirements: ChallengeRequirement[];
-  rewards: ChallengeReward[];
-  participants_count: number;
-  max_participants?: number;
-}
-
-export interface ChallengeRequirement {
-  type: string;
-  target_value: number;
-  unit: string;
-}
-
-export interface ChallengeReward {
-  type: 'xp' | 'badge' | 'title' | 'content';
-  value: string | number;
-}
-
-export interface ChallengeParticipant {
-  user_id: string;
-  progress: number;
-  rank: number;
-  joined_at: Date;
-}
+// Challenge types are now exported from challengeModels.ts
 
 // Social Types
 export interface GymFriend {

@@ -357,7 +357,7 @@ function getPageName(pathname: string): string {
   const routes: Record<string, string> = {
     '/': 'Home',
     '/workout': 'Workout',
-    '/workout-templates': 'Workout Templates',
+
     '/progress': 'Progress',
     '/social': 'Social',
     '/profile': 'Profile',

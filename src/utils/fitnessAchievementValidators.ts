@@ -51,8 +51,8 @@ export const validateStreakAchievement: AchievementValidator = (
   userAchievement,
   context
 ) => {
-  const targetDays = achievement.requirements.target;
-  const currentStreak = context.userStats.currentStreak || 0;
+  const targetDays = (achievement.requirements as any).target;
+  const currentStreak = (context.userStats as any).currentStreak || 0;
   
   const progress = Math.min(currentStreak / targetDays, 1);
   const isUnlocked = currentStreak >= targetDays;
@@ -76,8 +76,8 @@ export const validateWeeklyFrequencyAchievement: AchievementValidator = (
   userAchievement,
   context
 ) => {
-  const targetWorkouts = achievement.requirements.target;
-  const currentWeekWorkouts = context.userStats.workoutsThisWeek || 0;
+  const targetWorkouts = (achievement.requirements as any).target;
+  const currentWeekWorkouts = (context.userStats as any).workoutsThisWeek || 0;
   
   const progress = Math.min(currentWeekWorkouts / targetWorkouts, 1);
   const isUnlocked = currentWeekWorkouts >= targetWorkouts;
@@ -101,8 +101,8 @@ export const validateWorkoutCountAchievement: AchievementValidator = (
   userAchievement,
   context
 ) => {
-  const targetCount = achievement.requirements.target;
-  const currentCount = context.userStats.totalWorkouts || 0;
+  const targetCount = (achievement.requirements as any).target;
+  const currentCount = (context.userStats as any).totalWorkouts || 0;
   
   const progress = Math.min(currentCount / targetCount, 1);
   const isUnlocked = currentCount >= targetCount;
@@ -126,7 +126,7 @@ export const validatePersonalRecordsAchievement: AchievementValidator = (
   userAchievement,
   context
 ) => {
-  const targetPRs = achievement.requirements.target;
+  const targetPRs = (achievement.requirements as any).target;
   const currentPRs = context.personalRecords?.length || 0;
   
   const progress = Math.min(currentPRs / targetPRs, 1);
@@ -151,8 +151,8 @@ export const validateTotalVolumeAchievement: AchievementValidator = (
   userAchievement,
   context
 ) => {
-  const targetVolume = achievement.requirements.target;
-  const currentVolume = context.userStats.totalVolumeKg || 0;
+  const targetVolume = (achievement.requirements as any).target;
+  const currentVolume = (context.userStats as any).totalVolumeKg || 0;
   
   const progress = Math.min(currentVolume / targetVolume, 1);
   const isUnlocked = currentVolume >= targetVolume;
@@ -176,7 +176,7 @@ export const validateBodyweightRatioAchievement: AchievementValidator = (
   userAchievement,
   context
 ) => {
-  const targetRatio = achievement.requirements.target;
+  const targetRatio = (achievement.requirements as any).target;
   const userWeight = context.userProfile?.weight || 70; // Default weight if not provided
   
   let currentMax = 0;
@@ -194,7 +194,7 @@ export const validateBodyweightRatioAchievement: AchievementValidator = (
   // Find the maximum weight for the specific exercise
   if (context.personalRecords && exerciseType) {
     const exerciseRecords = context.personalRecords.filter(pr => 
-      pr.exerciseId.toLowerCase().includes(exerciseType)
+      pr.exercise_id.toLowerCase().includes(exerciseType)
     );
     
     if (exerciseRecords.length > 0) {
@@ -228,8 +228,8 @@ export const validateWorkoutTimeAchievement: AchievementValidator = (
   userAchievement,
   context
 ) => {
-  const targetHours = achievement.requirements.target;
-  const currentMinutes = context.userStats.totalWorkoutTimeMinutes || 0;
+  const targetHours = (achievement.requirements as any).target;
+  const currentMinutes = (context.userStats as any).totalWorkoutTimeMinutes || 0;
   const currentHours = currentMinutes / 60;
   
   const progress = Math.min(currentHours / targetHours, 1);
@@ -255,8 +255,8 @@ export const validateDaysSinceFirstWorkoutAchievement: AchievementValidator = (
   userAchievement,
   context
 ) => {
-  const targetDays = achievement.requirements.target;
-  const firstWorkoutDate = context.userStats.firstWorkoutDate;
+  const targetDays = (achievement.requirements as any).target;
+  const firstWorkoutDate = (context.userStats as any).firstWorkoutDate;
   
   if (!firstWorkoutDate) {
     return {
@@ -294,8 +294,8 @@ export const validateEarlyWorkoutsAchievement: AchievementValidator = (
   userAchievement,
   context
 ) => {
-  const targetCount = achievement.requirements.target;
-  const earlyWorkouts = context.userStats.earlyWorkouts || 0;
+  const targetCount = (achievement.requirements as any).target;
+  const earlyWorkouts = (context.userStats as any).earlyWorkouts || 0;
   
   const progress = Math.min(earlyWorkouts / targetCount, 1);
   const isUnlocked = earlyWorkouts >= targetCount;
@@ -319,8 +319,8 @@ export const validateLateWorkoutsAchievement: AchievementValidator = (
   userAchievement,
   context
 ) => {
-  const targetCount = achievement.requirements.target;
-  const lateWorkouts = context.userStats.lateWorkouts || 0;
+  const targetCount = (achievement.requirements as any).target;
+  const lateWorkouts = (context.userStats as any).lateWorkouts || 0;
   
   const progress = Math.min(lateWorkouts / targetCount, 1);
   const isUnlocked = lateWorkouts >= targetCount;
@@ -344,8 +344,8 @@ export const validateUniqueExercisesAchievement: AchievementValidator = (
   userAchievement,
   context
 ) => {
-  const targetCount = achievement.requirements.target;
-  const uniqueExercises = context.userStats.uniqueExercises || 0;
+  const targetCount = (achievement.requirements as any).target;
+  const uniqueExercises = (context.userStats as any).uniqueExercises || 0;
   
   const progress = Math.min(uniqueExercises / targetCount, 1);
   const isUnlocked = uniqueExercises >= targetCount;
@@ -369,8 +369,8 @@ export const validateMuscleGroupsPerWeekAchievement: AchievementValidator = (
   userAchievement,
   context
 ) => {
-  const targetGroups = achievement.requirements.target;
-  const muscleGroupsThisWeek = context.userStats.muscleGroupsThisWeek || 0;
+  const targetGroups = (achievement.requirements as any).target;
+  const muscleGroupsThisWeek = (context.userStats as any).muscleGroupsThisWeek || 0;
   
   const progress = Math.min(muscleGroupsThisWeek / targetGroups, 1);
   const isUnlocked = muscleGroupsThisWeek >= targetGroups;
@@ -394,8 +394,8 @@ export const validateShortWorkoutsAchievement: AchievementValidator = (
   userAchievement,
   context
 ) => {
-  const targetCount = achievement.requirements.target;
-  const shortWorkouts = context.userStats.shortWorkouts || 0;
+  const targetCount = (achievement.requirements as any).target;
+  const shortWorkouts = (context.userStats as any).shortWorkouts || 0;
   
   const progress = Math.min(shortWorkouts / targetCount, 1);
   const isUnlocked = shortWorkouts >= targetCount;
@@ -419,8 +419,8 @@ export const validateLongWorkoutAchievement: AchievementValidator = (
   userAchievement,
   context
 ) => {
-  const targetMinutes = achievement.requirements.target;
-  const longestWorkout = context.userStats.longestWorkoutMinutes || 0;
+  const targetMinutes = (achievement.requirements as any).target;
+  const longestWorkout = (context.userStats as any).longestWorkoutMinutes || 0;
   
   const progress = Math.min(longestWorkout / targetMinutes, 1);
   const isUnlocked = longestWorkout >= targetMinutes;
@@ -444,7 +444,7 @@ export const validateMidnightWorkoutAchievement: AchievementValidator = (
   userAchievement,
   context
 ) => {
-  const midnightWorkouts = context.userStats.midnightWorkouts || 0;
+  const midnightWorkouts = (context.userStats as any).midnightWorkouts || 0;
   const isUnlocked = midnightWorkouts >= 1;
   
   return {
@@ -466,8 +466,8 @@ export const validatePerfectFormSetsAchievement: AchievementValidator = (
   userAchievement,
   context
 ) => {
-  const targetSets = achievement.requirements.target;
-  const perfectFormSets = context.userStats.perfectFormSets || 0;
+  const targetSets = (achievement.requirements as any).target;
+  const perfectFormSets = (context.userStats as any).perfectFormSets || 0;
   
   const progress = Math.min(perfectFormSets / targetSets, 1);
   const isUnlocked = perfectFormSets >= targetSets;
@@ -588,15 +588,15 @@ export const validateFitnessAchievement = (
   userAchievement: UserAchievement,
   context: AchievementValidationContext
 ): ValidationResult => {
-  const validator = achievementValidators[achievement.requirements.type];
+  const validator = achievementValidators[(achievement.requirements as any).type];
   
   if (!validator) {
-    console.warn(`No validator found for achievement type: ${achievement.requirements.type}`);
+    console.warn(`No validator found for achievement type: ${(achievement.requirements as any).type}`);
     return {
       isUnlocked: false,
       progress: 0,
       currentValue: 0,
-      targetValue: achievement.requirements.target
+      targetValue: (achievement.requirements as any).target
     };
   }
   
@@ -608,7 +608,7 @@ export const validateFitnessAchievement = (
       isUnlocked: false,
       progress: 0,
       currentValue: 0,
-      targetValue: achievement.requirements.target
+      targetValue: (achievement.requirements as any).target
     };
   }
 };

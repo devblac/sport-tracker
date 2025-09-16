@@ -1,0 +1,323 @@
+/**
+ * Challenge Store - State management for challenge system
+ * Implements requirement 12 - Sistema de Challenges y Competencias
+ */
+
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { 
+  Challenge, 
+  ChallengeParticipant, 
+  ChallengeLeaderboard,
+  CreateChallengeRequest,
+  JoinChallengeRequest,
+  UpdateChallengeProgressRequest,
+  ChallengeFilters,
+  ChallengeStats
+} from '@/types/challenges';
+import { challengeService } from '@/services/challengeService';
+import { sampleChallenges, sampleParticipants, sampleLeaderboardEntries } from '@/data/sampleChallenges';
+
+interface ChallengeInvitation {
+  id: string;
+  challenge_id: string;
+  from_user_id: string;
+  to_user_id: string;
+  status: 'pending' | 'accepted' | 'declined';
+  created_at: Date;
+  expires_at: Date;
+}
+
+interface ChallengeStore {
+  // State
+  challenges: Challenge[];
+  userParticipants: Map<string, ChallengeParticipant>;
+  leaderboards: Map<string, ChallengeLeaderboard>;
+  invitations: ChallengeInvitation[];
+  challengeStats: Map<string, ChallengeStats>;
+  isLoading: boolean;
+  error: string | null;
+  
+  // Filters and UI state
+  filters: ChallengeFilters;
+  selectedChallengeId: string | null;
+  
+  // Actions
+  loadChallenges: () => Promise<void>;
+  createChallenge: (request: CreateChallengeRequest, createdBy: string) => Promise<Challenge>;
+  joinChallenge: (request: JoinChallengeRequest) => Promise<void>;
+  updateProgress: (request: UpdateChallengeProgressRequest) => Promise<void>;
+  loadLeaderboard: (challengeId: string) => Promise<void>;
+  loadChallengeStats: (challengeId: string) => Promise<void>;
+  
+  // Invitation system
+  inviteToChallenge: (challengeId: string, friendIds: string[]) => Promise<void>;
+  respondToInvitation: (invitationId: string, accept: boolean) => Promise<void>;
+  loadInvitations: (userId: string) => Promise<void>;
+  
+  // UI actions
+  setFilters: (filters: ChallengeFilters) => void;
+  setSelectedChallenge: (challengeId: string | null) => void;
+  clearError: () => void;
+}
+
+export const useChallengeStore = create<ChallengeStore>()(
+  persist(
+    (set, get) => ({
+      // Initial state
+      challenges: [],
+      userParticipants: new Map(),
+      leaderboards: new Map(),
+      invitations: [],
+      challengeStats: new Map(),
+      isLoading: false,
+      error: null,
+      filters: {},
+      selectedChallengeId: null,
+
+      // Load all challenges
+      loadChallenges: async () => {
+        set({ isLoading: true, error: null });
+        try {
+          // Use sample data for now
+          const challenges = sampleChallenges;
+          const userParticipants = sampleParticipants;
+          
+          set({ 
+            challenges, 
+            userParticipants,
+            isLoading: false 
+          });
+        } catch (error) {
+          set({ 
+            error: error instanceof Error ? error.message : 'Failed to load challenges',
+            isLoading: false 
+          });
+        }
+      },
+
+      // Create new challenge
+      createChallenge: async (request: CreateChallengeRequest, createdBy: string) => {
+        set({ isLoading: true, error: null });
+        try {
+          const challenge = await challengeService.createChallenge(request, createdBy);
+          const currentChallenges = get().challenges;
+          set({ 
+            challenges: [challenge, ...currentChallenges],
+            isLoading: false 
+          });
+          return challenge;
+        } catch (error) {
+          set({ 
+            error: error instanceof Error ? error.message : 'Failed to create challenge',
+            isLoading: false 
+          });
+          throw error;
+        }
+      },
+
+      // Join a challenge
+      joinChallenge: async (request: JoinChallengeRequest) => {
+        set({ isLoading: true, error: null });
+        try {
+          const { participant } = await challengeService.joinChallenge(request);
+          
+          // Update participant map
+          const userParticipants = new Map(get().userParticipants);
+          userParticipants.set(request.challenge_id, participant);
+          
+          // Update challenge participant count
+          const challenges = get().challenges.map(challenge => 
+            challenge.id === request.challenge_id 
+              ? { ...challenge, participants_count: challenge.participants_count + 1 }
+              : challenge
+          );
+          
+          set({ 
+            userParticipants,
+            challenges,
+            isLoading: false 
+          });
+        } catch (error) {
+          set({ 
+            error: error instanceof Error ? error.message : 'Failed to join challenge',
+            isLoading: false 
+          });
+          throw error;
+        }
+      },
+
+      // Update challenge progress
+      updateProgress: async (request: UpdateChallengeProgressRequest) => {
+        try {
+          const { progressRecords } = await challengeService.updateProgress(request);
+          
+          // Update participant progress
+          const userParticipants = new Map(get().userParticipants);
+          const participant = Array.from(userParticipants.values())
+            .find(p => p.id === request.participant_id);
+          
+          if (participant) {
+            const overallProgress = progressRecords.reduce((sum, p) => sum + p.progress_percentage, 0) / progressRecords.length;
+            const updatedParticipant = {
+              ...participant,
+              progress: overallProgress,
+              last_activity: new Date()
+            };
+            userParticipants.set(participant.challenge_id, updatedParticipant);
+            set({ userParticipants });
+            
+            // Refresh leaderboard for this challenge
+            await get().loadLeaderboard(participant.challenge_id);
+          }
+        } catch (error) {
+          set({ 
+            error: error instanceof Error ? error.message : 'Failed to update progress'
+          });
+          throw error;
+        }
+      },
+
+      // Load challenge leaderboard
+      loadLeaderboard: async (challengeId: string) => {
+        try {
+          // Use sample leaderboard data
+          const leaderboard = {
+            challenge_id: challengeId,
+            participants: sampleLeaderboardEntries,
+            last_updated: new Date()
+          };
+          
+          const leaderboards = new Map(get().leaderboards);
+          leaderboards.set(challengeId, leaderboard);
+          set({ leaderboards });
+        } catch (error) {
+          console.error('Failed to load leaderboard:', error);
+        }
+      },
+
+      // Load challenge statistics
+      loadChallengeStats: async (challengeId: string) => {
+        try {
+          const stats = await challengeService.getChallengeStats(challengeId);
+          const challengeStats = new Map(get().challengeStats);
+          challengeStats.set(challengeId, stats);
+          set({ challengeStats });
+        } catch (error) {
+          console.error('Failed to load challenge stats:', error);
+        }
+      },
+
+      // Invite friends to challenge
+      inviteToChallenge: async (challengeId: string, friendIds: string[]) => {
+        set({ isLoading: true, error: null });
+        try {
+          // Create invitations for each friend
+          const newInvitations: ChallengeInvitation[] = friendIds.map(friendId => ({
+            id: `inv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            challenge_id: challengeId,
+            from_user_id: 'current_user', // In real app, get from auth store
+            to_user_id: friendId,
+            status: 'pending',
+            created_at: new Date(),
+            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+          }));
+
+          const currentInvitations = get().invitations;
+          set({ 
+            invitations: [...currentInvitations, ...newInvitations],
+            isLoading: false 
+          });
+
+          // In real app, this would send notifications to friends
+          console.log(`Sent ${newInvitations.length} challenge invitations`);
+        } catch (error) {
+          set({ 
+            error: error instanceof Error ? error.message : 'Failed to send invitations',
+            isLoading: false 
+          });
+          throw error;
+        }
+      },
+
+      // Respond to challenge invitation
+      respondToInvitation: async (invitationId: string, accept: boolean) => {
+        try {
+          const invitations = get().invitations.map(inv => 
+            inv.id === invitationId 
+              ? { ...inv, status: accept ? 'accepted' as const : 'declined' as const }
+              : inv
+          );
+          
+          set({ invitations });
+
+          // If accepted, join the challenge
+          if (accept) {
+            const invitation = invitations.find(inv => inv.id === invitationId);
+            if (invitation) {
+              await get().joinChallenge({
+                challenge_id: invitation.challenge_id,
+                user_id: invitation.to_user_id
+              });
+            }
+          }
+        } catch (error) {
+          set({ 
+            error: error instanceof Error ? error.message : 'Failed to respond to invitation'
+          });
+          throw error;
+        }
+      },
+
+      // Load user invitations
+      loadInvitations: async (userId: string) => {
+        try {
+          // In real app, this would fetch from backend
+          // For now, filter existing invitations
+          const userInvitations = get().invitations.filter(inv => 
+            inv.to_user_id === userId && inv.status === 'pending'
+          );
+          
+          // Remove expired invitations
+          const validInvitations = userInvitations.filter(inv => 
+            new Date(inv.expires_at) > new Date()
+          );
+          
+          set({ invitations: validInvitations });
+        } catch (error) {
+          console.error('Failed to load invitations:', error);
+        }
+      },
+
+      // UI actions
+      setFilters: (filters: ChallengeFilters) => {
+        set({ filters });
+      },
+
+      setSelectedChallenge: (challengeId: string | null) => {
+        set({ selectedChallengeId: challengeId });
+      },
+
+      clearError: () => {
+        set({ error: null });
+      }
+    }),
+    {
+      name: 'challenge-store',
+      partialize: (state) => ({
+        challenges: state.challenges,
+        userParticipants: Array.from(state.userParticipants.entries()),
+        invitations: state.invitations,
+        filters: state.filters
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          // Convert userParticipants array back to Map
+          state.userParticipants = new Map(state.userParticipants as any);
+          state.leaderboards = new Map();
+          state.challengeStats = new Map();
+        }
+      }
+    }
+  )
+);

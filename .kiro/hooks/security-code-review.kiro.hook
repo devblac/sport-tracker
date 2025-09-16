@@ -1,0 +1,24 @@
+{
+  "enabled": true,
+  "name": "Security Code Review",
+  "description": "Automatically reviews code changes for security vulnerabilities, sensitive data exposure, and compliance with security best practices for a Supabase-backed fitness PWA",
+  "version": "1",
+  "when": {
+    "type": "userTriggered",
+    "patterns": [
+      "src/**/*.ts",
+      "src/**/*.tsx",
+      "supabase/**/*.sql",
+      "supabase/**/*.ts",
+      "database/**/*.sql",
+      ".env.example",
+      ".env.local",
+      "vite.config.ts",
+      "capacitor.config.ts"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Review the changed files for security vulnerabilities and compliance with world-class security practices. Focus on:\n\n1. **Authentication & Authorization**: Check for proper role-based access control, token handling, and session management\n2. **Input Validation**: Ensure all user inputs are validated with Zod schemas and properly sanitized\n3. **Data Protection**: Verify no sensitive data (API keys, secrets, PII) is exposed in frontend code\n4. **Supabase Security**: Review RLS policies, database permissions, and API security patterns\n5. **XSS/Injection Prevention**: Check for proper sanitization of user-generated content\n6. **Privacy Controls**: Ensure user privacy settings and data sharing controls are respected\n7. **Environment Variables**: Verify only VITE_ prefixed variables are used client-side\n8. **SQL Security**: Review database queries for injection vulnerabilities and proper parameterization\n9. **API Security**: Check for proper request validation and secure error handling\n10. **Social Features Security**: Ensure friend systems and leaderboards have proper privacy controls\n\nProvide specific recommendations for any security issues found, including code examples where helpful. If the code follows security best practices, acknowledge this and highlight any particularly good security implementations."
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "enabled": true,
+  "name": "Code Quality Analyzer",
+  "description": "Monitors source code files for changes and provides automated code quality analysis, suggesting improvements for readability, maintainability, and performance while maintaining existing functionality",
+  "version": "1",
+  "when": {
+    "type": "userTriggered",
+    "patterns": [
+      "src/**/*.ts",
+      "src/**/*.tsx",
+      "src/**/*.js",
+      "src/**/*.jsx",
+      "*.ts",
+      "*.tsx",
+      "*.js",
+      "*.jsx",
+      "eslint.config.js",
+      "vite.config.ts",
+      "vitest.config.ts",
+      "tsconfig*.json"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Analyze the modified code files for potential improvements. Focus on:\n\n1. **Code Smells & Anti-patterns**: Identify long functions, complex conditionals, duplicated code, and other code smells\n2. **Design Patterns**: Suggest appropriate design patterns that could improve the code structure\n3. **Best Practices**: Check for React best practices, TypeScript usage, performance optimizations, and security considerations\n4. **Readability**: Suggest improvements for variable naming, function structure, and code organization\n5. **Maintainability**: Identify areas that could be refactored for better maintainability\n6. **Performance**: Suggest optimizations for React rendering, bundle size, and runtime performance\n7. **Type Safety**: Recommend improvements for TypeScript usage and Zod schema validation\n8. **Architecture**: Evaluate component structure, state management, and separation of concerns\n\nConsider the project context:\n- React 19 + TypeScript + Vite + Tailwind CSS\n- Zustand for state management\n- Offline-first PWA architecture\n- Gamification and social features\n- Mobile-first responsive design\n\nProvide specific, actionable suggestions while preserving existing functionality. Include code examples where helpful.\n\n**Prioritize maintainability, security, and cost efficiency**"
+  }
+}

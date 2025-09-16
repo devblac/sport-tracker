@@ -1,0 +1,390 @@
+// Challenge Validation Utilities
+// Implements validation logic for challenge system
+
+import type { 
+  Challenge, 
+  ChallengeRequirement, 
+  ChallengeReward,
+  CreateChallengeRequest,
+  ChallengeParticipant,
+  ChallengeError,
+  ChallengeErrorType
+} from '@/types';
+
+import {
+  CHALLENGE_CONSTANTS,
+  CHALLENGE_CATEGORIES,
+  CHALLENGE_TYPES,
+  REQUIREMENT_TYPES,
+  REWARD_TYPES,
+  REWARD_RARITIES,
+  ChallengeError,
+  ChallengeErrorType
+} from '@/types';
+
+// Validation result interface
+export interface ValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings?: string[];
+}
+
+// Challenge creation validation
+export function validateChallengeCreation(request: CreateChallengeRequest): ValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  // Basic field validation
+  if (!request.name || request.name.trim().length === 0) {
+    errors.push('Challenge name is required');
+  } else if (request.name.length > CHALLENGE_CONSTANTS.MAX_NAME_LENGTH) {
+    errors.push(`Challenge name must be less than ${CHALLENGE_CONSTANTS.MAX_NAME_LENGTH} characters`);
+  }
+
+  if (!request.description || request.description.trim().length === 0) {
+    errors.push('Challenge description is required');
+  } else if (request.description.length > CHALLENGE_CONSTANTS.MAX_DESCRIPTION_LENGTH) {
+    errors.push(`Challenge description must be less than ${CHALLENGE_CONSTANTS.MAX_DESCRIPTION_LENGTH} characters`);
+  }
+
+  // Type and category validation
+  if (!CHALLENGE_TYPES.includes(request.type)) {
+    errors.push(`Invalid challenge type. Must be one of: ${CHALLENGE_TYPES.join(', ')}`);
+  }
+
+  if (!CHALLENGE_CATEGORIES.includes(request.category)) {
+    errors.push(`Invalid challenge category. Must be one of: ${CHALLENGE_CATEGORIES.join(', ')}`);
+  }
+
+  // Date validation
+  const now = new Date();
+  const startDate = new Date(request.start_date);
+  const endDate = new Date(request.end_date);
+
+  if (startDate < now) {
+    warnings.push('Challenge start date is in the past');
+  }
+
+  if (endDate <= startDate) {
+    errors.push('Challenge end date must be after start date');
+  }
+
+  const durationDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  if (durationDays < CHALLENGE_CONSTANTS.MIN_DURATION_DAYS) {
+    errors.push(`Challenge duration must be at least ${CHALLENGE_CONSTANTS.MIN_DURATION_DAYS} day(s)`);
+  }
+
+  if (durationDays > CHALLENGE_CONSTANTS.MAX_DURATION_DAYS) {
+    errors.push(`Challenge duration cannot exceed ${CHALLENGE_CONSTANTS.MAX_DURATION_DAYS} days`);
+  }
+
+  // Participants validation
+  if (request.max_participants) {
+    if (request.max_participants < CHALLENGE_CONSTANTS.MIN_PARTICIPANTS) {
+      errors.push(`Maximum participants must be at least ${CHALLENGE_CONSTANTS.MIN_PARTICIPANTS}`);
+    }
+    if (request.max_participants > CHALLENGE_CONSTANTS.MAX_PARTICIPANTS) {
+      errors.push(`Maximum participants cannot exceed ${CHALLENGE_CONSTANTS.MAX_PARTICIPANTS}`);
+    }
+  }
+
+  // Difficulty level validation
+  if (request.difficulty_level < 1 || request.difficulty_level > 5) {
+    errors.push('Difficulty level must be between 1 and 5');
+  }
+
+  // Requirements validation
+  if (!request.requirements || request.requirements.length === 0) {
+    errors.push('At least one requirement is needed');
+  } else if (request.requirements.length > CHALLENGE_CONSTANTS.MAX_REQUIREMENTS) {
+    errors.push(`Cannot have more than ${CHALLENGE_CONSTANTS.MAX_REQUIREMENTS} requirements`);
+  } else {
+    request.requirements.forEach((req, index) => {
+      const reqErrors = validateChallengeRequirement(req);
+      if (!reqErrors.isValid) {
+        errors.push(...reqErrors.errors.map(err => `Requirement ${index + 1}: ${err}`));
+      }
+    });
+  }
+
+  // Rewards validation
+  if (!request.rewards || request.rewards.length === 0) {
+    warnings.push('Consider adding rewards to increase participation');
+  } else if (request.rewards.length > CHALLENGE_CONSTANTS.MAX_REWARDS) {
+    errors.push(`Cannot have more than ${CHALLENGE_CONSTANTS.MAX_REWARDS} rewards`);
+  } else {
+    request.rewards.forEach((reward, index) => {
+      const rewardErrors = validateChallengeReward(reward);
+      if (!rewardErrors.isValid) {
+        errors.push(...rewardErrors.errors.map(err => `Reward ${index + 1}: ${err}`));
+      }
+    });
+  }
+
+  // Tags validation
+  if (request.tags && request.tags.length > CHALLENGE_CONSTANTS.MAX_TAGS) {
+    errors.push(`Cannot have more than ${CHALLENGE_CONSTANTS.MAX_TAGS} tags`);
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+    warnings
+  };
+}
+
+// Challenge requirement validation
+export function validateChallengeRequirement(requirement: Omit<ChallengeRequirement, 'id'>): ValidationResult {
+  const errors: string[] = [];
+
+  if (!REQUIREMENT_TYPES.includes(requirement.type)) {
+    errors.push(`Invalid requirement type. Must be one of: ${REQUIREMENT_TYPES.join(', ')}`);
+  }
+
+  if (!requirement.target_value || requirement.target_value <= 0) {
+    errors.push('Target value must be a positive number');
+  }
+
+  if (!requirement.target_unit || requirement.target_unit.trim().length === 0) {
+    errors.push('Target unit is required');
+  }
+
+  if (!requirement.timeframe || !['daily', 'weekly', 'total'].includes(requirement.timeframe)) {
+    errors.push('Timeframe must be daily, weekly, or total');
+  }
+
+  if (!requirement.description || requirement.description.trim().length === 0) {
+    errors.push('Requirement description is required');
+  }
+
+  // Specific validation based on requirement type
+  switch (requirement.type) {
+    case 'specific_exercise':
+      if (!requirement.exercise_id) {
+        errors.push('Exercise ID is required for specific exercise requirements');
+      }
+      break;
+    
+    case 'workout_count':
+      if (requirement.target_unit !== 'workouts') {
+        errors.push('Workout count requirements must use "workouts" as target unit');
+      }
+      break;
+    
+    case 'total_volume':
+      if (requirement.target_unit !== 'kg') {
+        errors.push('Total volume requirements must use "kg" as target unit');
+      }
+      break;
+    
+    case 'streak_days':
+      if (requirement.target_unit !== 'days') {
+        errors.push('Streak requirements must use "days" as target unit');
+      }
+      if (requirement.timeframe !== 'total') {
+        errors.push('Streak requirements must use "total" timeframe');
+      }
+      break;
+    
+    case 'frequency':
+      if (requirement.target_unit !== 'sessions_per_week') {
+        errors.push('Frequency requirements must use "sessions_per_week" as target unit');
+      }
+      if (requirement.timeframe === 'daily') {
+        errors.push('Frequency requirements cannot use daily timeframe');
+      }
+      break;
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+}
+
+// Challenge reward validation
+export function validateChallengeReward(reward: Omit<ChallengeReward, 'id'>): ValidationResult {
+  const errors: string[] = [];
+
+  if (!REWARD_TYPES.includes(reward.type)) {
+    errors.push(`Invalid reward type. Must be one of: ${REWARD_TYPES.join(', ')}`);
+  }
+
+  if (!REWARD_RARITIES.includes(reward.rarity)) {
+    errors.push(`Invalid reward rarity. Must be one of: ${REWARD_RARITIES.join(', ')}`);
+  }
+
+  if (!reward.description || reward.description.trim().length === 0) {
+    errors.push('Reward description is required');
+  }
+
+  if (!['participation', 'completion', 'top_10', 'top_3', 'winner'].includes(reward.unlock_condition)) {
+    errors.push('Invalid unlock condition');
+  }
+
+  // Specific validation based on reward type
+  switch (reward.type) {
+    case 'xp':
+      if (typeof reward.value !== 'number' || reward.value <= 0) {
+        errors.push('XP reward value must be a positive number');
+      }
+      break;
+    
+    case 'badge':
+    case 'title':
+    case 'premium_content':
+      if (typeof reward.value !== 'string' || reward.value.trim().length === 0) {
+        errors.push(`${reward.type} reward value must be a non-empty string`);
+      }
+      break;
+    
+    case 'discount':
+      if (typeof reward.value !== 'number' || reward.value <= 0 || reward.value > 100) {
+        errors.push('Discount reward value must be a number between 1 and 100');
+      }
+      break;
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+}
+
+// Challenge participation validation
+export function validateChallengeParticipation(
+  challenge: Challenge, 
+  userId: string, 
+  existingParticipants: ChallengeParticipant[]
+): ValidationResult {
+  const errors: string[] = [];
+
+  // Check if challenge is active
+  const now = new Date();
+  if (new Date(challenge.start_date) > now) {
+    errors.push('Challenge has not started yet');
+  }
+
+  if (new Date(challenge.end_date) < now) {
+    errors.push('Challenge has already ended');
+  }
+
+  if (!challenge.is_active) {
+    errors.push('Challenge is not active');
+  }
+
+  // Check if user is already participating
+  const isAlreadyParticipating = existingParticipants.some(p => p.user_id === userId);
+  if (isAlreadyParticipating) {
+    errors.push('User is already participating in this challenge');
+  }
+
+  // Check participant limit
+  if (challenge.max_participants && existingParticipants.length >= challenge.max_participants) {
+    errors.push('Challenge is full');
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+}
+
+// Progress update validation
+export function validateProgressUpdate(
+  participant: ChallengeParticipant,
+  requirement: ChallengeRequirement,
+  valueIncrement: number
+): ValidationResult {
+  const errors: string[] = [];
+
+  if (participant.is_completed) {
+    errors.push('Cannot update progress for completed participant');
+  }
+
+  if (valueIncrement <= 0) {
+    errors.push('Progress increment must be positive');
+  }
+
+  // Check if the new value would exceed reasonable limits
+  const newValue = participant.current_value + valueIncrement;
+  const maxReasonableValue = requirement.target_value * 2; // Allow up to 2x target for overachievers
+
+  if (newValue > maxReasonableValue) {
+    errors.push(`Progress value seems unreasonably high (${newValue} vs target ${requirement.target_value})`);
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+}
+
+// Challenge business rule validation
+export function validateChallengeBusinessRules(challenge: Challenge): ValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  // Check for conflicting requirements
+  const requirementTypes = challenge.requirements.map(r => r.type);
+  const uniqueTypes = new Set(requirementTypes);
+  
+  if (requirementTypes.length !== uniqueTypes.size) {
+    warnings.push('Challenge has duplicate requirement types - consider combining them');
+  }
+
+  // Check reward distribution logic
+  const winnerRewards = challenge.rewards.filter(r => r.unlock_condition === 'winner');
+  const top3Rewards = challenge.rewards.filter(r => r.unlock_condition === 'top_3');
+  
+  if (challenge.type === 'individual' && (winnerRewards.length > 0 || top3Rewards.length > 0)) {
+    warnings.push('Individual challenges with winner/top_3 rewards may not make sense');
+  }
+
+  // Check difficulty vs requirements alignment
+  const totalTargetValue = challenge.requirements.reduce((sum, req) => sum + req.target_value, 0);
+  const avgTargetValue = totalTargetValue / challenge.requirements.length;
+  
+  if (challenge.difficulty_level <= 2 && avgTargetValue > 100) {
+    warnings.push('High target values for low difficulty level - consider adjusting');
+  }
+
+  if (challenge.difficulty_level >= 4 && avgTargetValue < 10) {
+    warnings.push('Low target values for high difficulty level - consider adjusting');
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+    warnings
+  };
+}
+
+// Utility function to throw validation errors
+export function throwIfInvalid(validation: ValidationResult, errorType: ChallengeErrorType = ChallengeErrorType.VALIDATION_ERROR): void {
+  if (!validation.isValid) {
+    throw new ChallengeError(
+      errorType,
+      validation.errors.join('; '),
+      { errors: validation.errors, warnings: validation.warnings }
+    );
+  }
+}
+
+// Helper function to sanitize challenge input
+export function sanitizeChallengeInput(request: CreateChallengeRequest): CreateChallengeRequest {
+  return {
+    ...request,
+    name: request.name.trim(),
+    description: request.description.trim(),
+    tags: request.tags.map(tag => tag.trim().toLowerCase()).filter(tag => tag.length > 0),
+    requirements: request.requirements.map(req => ({
+      ...req,
+      description: req.description.trim()
+    })),
+    rewards: request.rewards.map(reward => ({
+      ...reward,
+      description: reward.description.trim()
+    }))
+  };
+}

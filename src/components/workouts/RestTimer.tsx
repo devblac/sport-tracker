@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { notificationService } from '@/services/NotificationService';
 
 interface RestTimerProps {
   duration: number; // Duration in seconds
@@ -47,6 +48,11 @@ export const RestTimer: React.FC<RestTimerProps> = ({
     if (isRunning && timeRemaining > 0) {
       intervalRef.current = setInterval(() => {
         setTimeRemaining(prev => {
+          // Send notifications at specific intervals
+          if (prev === 10) {
+            notificationService.showRestTimerNotification(10);
+          }
+          
           if (prev <= 1) {
             setIsRunning(false);
             // Play completion sound
@@ -55,6 +61,8 @@ export const RestTimer: React.FC<RestTimerProps> = ({
             } catch (error) {
               console.log('Could not play audio:', error);
             }
+            // Send completion notification
+            notificationService.showRestTimerNotification(0);
             // Auto-complete after a short delay
             setTimeout(() => {
               onComplete();

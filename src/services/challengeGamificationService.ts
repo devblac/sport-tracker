@@ -6,7 +6,7 @@ import {
   ChallengeParticipant, 
   ChallengeReward,
   ChallengeProgress 
-} from '../types/challenges';
+} from '@/types';
 import { 
   CHALLENGE_XP_REWARDS, 
   DIFFICULTY_MULTIPLIERS,

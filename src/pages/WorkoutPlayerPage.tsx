@@ -73,7 +73,7 @@ export const WorkoutPlayerPage: React.FC = () => {
     }
     
     // Navigate back to templates or home
-    navigate('/workout-templates', { replace: true });
+    navigate('/workout', { replace: true });
   };
 
   if (loading) {
@@ -105,7 +105,7 @@ export const WorkoutPlayerPage: React.FC = () => {
           </p>
           <div className="space-y-3">
             <button
-              onClick={() => navigate('/workout-templates')}
+              onClick={() => navigate('/workout')}
               className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors"
             >
               Browse Templates

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, EyeOff, Mail, Lock, User, Loader2, Check, X } from 'lucide-react';
+import { Mail, Lock, User, Loader2, Check, X } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, Button, Input } from '@/components/ui';
 import { 
   validateUserRegistration, 
@@ -34,15 +34,26 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [availabilityChecks, setAvailabilityChecks] = useState({
     email: { checking: false, available: null as boolean | null },
     username: { checking: false, available: null as boolean | null },
   });
   
-  const { register, isLoading, error: authError, clearError } = useAuthStore();
+  const { register, isLoading, error: authError, clearError, isAuthenticated } = useAuthStore();
+
+  // Handle auth state changes
+  useEffect(() => {
+    if (isAuthenticated) {
+      // Registration successful
+      logger.info('User registered successfully');
+      onSuccess?.();
+    } else if (authError && isSubmitting) {
+      // Registration failed
+      setErrors({ general: authError });
+      setIsSubmitting(false);
+    }
+  }, [isAuthenticated, authError, isSubmitting, onSuccess]);
 
   // Debounced availability checks
   useEffect(() => {
@@ -227,28 +238,41 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
       fitness_level: formData.fitnessLevel,
     };
     
+    logger.info('Attempting registration with data:', {
+      ...registrationData,
+      password: '[REDACTED]' // Don't log actual password
+    });
+    
     const validation = validateUserRegistration(registrationData);
     if (!validation.success) {
       const fieldErrors: Record<string, string> = {};
       validation.errors?.forEach(error => {
-        const [field, message] = error.split(': ');
-        fieldErrors[field] = message;
+        // Handle both "field: message" and plain message formats
+        if (error.includes(': ')) {
+          const [field, message] = error.split(': ');
+          fieldErrors[field] = message;
+        } else {
+          // If no field specified, treat as general error
+          fieldErrors.general = error;
+        }
       });
       setErrors(fieldErrors);
+      logger.error('Registration validation failed', { errors: validation.errors, data: registrationData });
       return;
     }
     
+    logger.info('Validation passed, proceeding with registration');
+    
     setIsSubmitting(true);
     
-    try {
-      await register(formData.email, formData.username, formData.password);
-      logger.info('User registered successfully', { email: formData.email, username: formData.username });
-      onSuccess?.();
-    } catch (error) {
-      logger.error('Registration failed', error);
-    } finally {
-      setIsSubmitting(false);
-    }
+    // Clear any previous auth errors
+    clearError();
+    
+    await register(formData.email, formData.username, formData.password);
+    
+    // The register function handles success/error internally
+    // We'll use useEffect to watch for changes in auth state
+    setIsSubmitting(false);
   };
 
   const passwordStrength = getPasswordStrength(formData.password);
@@ -365,21 +389,13 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
                 id="password"
-                type={showPassword ? 'text' : 'password'}
+                type="password"
                 placeholder="Create a password"
                 value={formData.password}
                 onChange={(e) => handleInputChange('password', e.target.value)}
-                className={`pl-10 pr-10 ${errors.password ? 'border-destructive' : ''}`}
+                className={`pl-10 ${errors.password ? 'border-destructive' : ''}`}
                 disabled={isLoading || isSubmitting}
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                disabled={isLoading || isSubmitting}
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
             </div>
             
             {/* Password Strength Indicator */}
@@ -424,21 +440,13 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
                 id="confirmPassword"
-                type={showConfirmPassword ? 'text' : 'password'}
+                type="password"
                 placeholder="Confirm your password"
                 value={formData.confirmPassword}
                 onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                className={`pl-10 pr-10 ${errors.confirmPassword ? 'border-destructive' : ''}`}
+                className={`pl-10 ${errors.confirmPassword ? 'border-destructive' : ''}`}
                 disabled={isLoading || isSubmitting}
               />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                disabled={isLoading || isSubmitting}
-              >
-                {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
             </div>
             {errors.confirmPassword && (
               <p className="text-sm text-destructive">{errors.confirmPassword}</p>
@@ -463,6 +471,13 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               <option value="expert">Expert - Competitive level</option>
             </select>
           </div>
+
+          {/* General Form Errors */}
+          {errors.general && (
+            <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20">
+              <p className="text-sm text-destructive">{errors.general}</p>
+            </div>
+          )}
 
           {/* Auth Error */}
           {authError && (

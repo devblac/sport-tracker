@@ -1,4 +1,4 @@
-import { PersistOptions } from 'zustand/middleware';
+import type { PersistOptions } from 'zustand/middleware';
 import { storage } from '@/utils';
 
 export interface CustomPersistOptions<T> extends Omit<PersistOptions<T>, 'storage'> {

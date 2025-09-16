@@ -57,12 +57,28 @@ class SupabaseAuthService {
       // Sign in with Supabase
       const { data, error } = await authHelpers.signIn(credentials.email, credentials.password);
       
+      logger.info('Supabase auth response', { 
+        hasData: !!data, 
+        hasError: !!error, 
+        hasUser: !!data?.user, 
+        hasSession: !!data?.session,
+        errorMessage: error?.message 
+      });
+      
       if (error) {
         throw error;
       }
 
-      if (!data.user || !data.session) {
-        throw new Error('Authentication failed - no user data received');
+      if (!data) {
+        throw new Error('Authentication failed - no response data received');
+      }
+
+      if (!data.user) {
+        throw new Error('Authentication failed - no user data received. Please check your credentials.');
+      }
+
+      if (!data.session) {
+        throw new Error('Authentication failed - no session created. You may need to verify your email.');
       }
 
       // Get or create user profile

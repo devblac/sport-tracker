@@ -121,7 +121,7 @@ export const WorkoutSummary: React.FC = () => {
           {/* Actions */}
           <div className="space-y-3">
             <button
-              onClick={() => navigate('/workout-templates')}
+              onClick={() => navigate('/workout')}
               className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
             >
               Start Another Workout

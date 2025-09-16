@@ -371,7 +371,7 @@ export const PercentileSystemDemo: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                   <div>
                     <span className="font-semibold">Processing Time:</span>
-                    <span className="ml-2 text-green-600">< 500ms</span>
+                    <span className="ml-2 text-green-600">&lt; 500ms</span>
                   </div>
                   <div>
                     <span className="font-semibold">Data Sources:</span>

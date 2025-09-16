@@ -6,6 +6,7 @@ import { UpdateNotification } from '@/components/offline/UpdateNotification';
 import { OfflineIndicator, SyncFAB } from '@/components/offline/OfflineIndicator';
 import { SyncNotifications } from '@/components/sync/SyncNotifications';
 import { DevTools } from '@/components/DevTools';
+import { useSettingsStore } from '@/stores/useSettingsStore';
 import { cn } from '@/utils';
 
 interface AppLayoutProps {
@@ -13,6 +14,7 @@ interface AppLayoutProps {
 }
 
 export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
+  const { showDevTools } = useSettingsStore();
   return (
     <div className={cn(
       'min-h-screen min-h-dvh bg-gray-50 dark:bg-gray-900',
@@ -49,8 +51,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       {/* Sync FAB */}
       <SyncFAB />
       
-      {/* DevTools (development only) */}
-      <DevTools />
+      {/* DevTools (controlled by settings) */}
+      {showDevTools && <DevTools />}
       
       {/* Bottom safe area */}
       <div className="safe-area-bottom" />

@@ -1,0 +1,542 @@
+// Challenge Service - Core business logic for challenge system
+// Implements requirement 12 - Sistema de Challenges y Competencias
+
+import {
+  Challenge,
+  ChallengeParticipant,
+  ChallengeProgress,
+  ChallengeLeaderboard,
+  ChallengeLeaderboardEntry,
+  CreateChallengeRequest,
+  JoinChallengeRequest,
+  UpdateChallengeProgressRequest,
+  ChallengeFilters,
+  ChallengeSearchParams,
+  ChallengeStats,
+  ChallengeNotification,
+  ChallengeError,
+  ChallengeErrorType
+} from '@/types';
+
+import {
+  validateChallengeCreation,
+  validateChallengeParticipation,
+  validateProgressUpdate,
+  validateChallengeBusinessRules,
+  throwIfInvalid,
+  sanitizeChallengeInput
+} from '../utils/challengeValidation';
+
+import { 
+  challengeGamificationService, 
+  CelebrationData 
+} from './challengeGamificationService';
+
+// Mock data storage - In real app, this would be replaced with actual database calls
+class ChallengeStorage {
+  private challenges: Map<string, Challenge> = new Map();
+  private participants: Map<string, ChallengeParticipant[]> = new Map();
+  private progress: Map<string, ChallengeProgress[]> = new Map();
+
+  // Challenge CRUD operations
+  async saveChallenge(challenge: Challenge): Promise<void> {
+    this.challenges.set(challenge.id, challenge);
+  }
+
+  async getChallenge(id: string): Promise<Challenge | null> {
+    return this.challenges.get(id) || null;
+  }
+
+  async getChallenges(filters?: ChallengeFilters): Promise<Challenge[]> {
+    let challenges = Array.from(this.challenges.values());
+
+    if (filters) {
+      if (filters.type) {
+        challenges = challenges.filter(c => c.type === filters.type);
+      }
+      if (filters.category) {
+        challenges = challenges.filter(c => c.category === filters.category);
+      }
+      if (filters.difficulty_level) {
+        challenges = challenges.filter(c => c.difficulty_level === filters.difficulty_level);
+      }
+      if (filters.is_active !== undefined) {
+        challenges = challenges.filter(c => c.is_active === filters.is_active);
+      }
+      if (filters.has_spots_available) {
+        challenges = challenges.filter(c => {
+          const participantCount = this.participants.get(c.id)?.length || 0;
+          return !c.max_participants || participantCount < c.max_participants;
+        });
+      }
+      if (filters.tags && filters.tags.length > 0) {
+        challenges = challenges.filter(c => 
+          filters.tags!.some(tag => c.tags.includes(tag))
+        );
+      }
+    }
+
+    return challenges;
+  }
+
+  // Participant operations
+  async saveParticipant(participant: ChallengeParticipant): Promise<void> {
+    const participants = this.participants.get(participant.challenge_id) || [];
+    const existingIndex = participants.findIndex(p => p.user_id === participant.user_id);
+    
+    if (existingIndex >= 0) {
+      participants[existingIndex] = participant;
+    } else {
+      participants.push(participant);
+    }
+    
+    this.participants.set(participant.challenge_id, participants);
+  }
+
+  async getParticipants(challengeId: string): Promise<ChallengeParticipant[]> {
+    return this.participants.get(challengeId) || [];
+  }
+
+  async getParticipant(challengeId: string, userId: string): Promise<ChallengeParticipant | null> {
+    const participants = this.participants.get(challengeId) || [];
+    return participants.find(p => p.user_id === userId) || null;
+  }
+
+  // Progress operations
+  async saveProgress(progress: ChallengeProgress[]): Promise<void> {
+    if (progress.length > 0) {
+      this.progress.set(progress[0].participant_id, progress);
+    }
+  }
+
+  async getProgress(participantId: string): Promise<ChallengeProgress[]> {
+    return this.progress.get(participantId) || [];
+  }
+}
+
+export class ChallengeService {
+  private storage = new ChallengeStorage();
+
+  // Create a new challenge
+  async createChallenge(request: CreateChallengeRequest, createdBy: string): Promise<Challenge> {
+    // Sanitize and validate input
+    const sanitizedRequest = sanitizeChallengeInput(request);
+    const validation = validateChallengeCreation(sanitizedRequest);
+    throwIfInvalid(validation);
+
+    // Generate challenge ID and create challenge object
+    const challengeId = this.generateId();
+    const now = new Date();
+
+    const challenge: Challenge = {
+      id: challengeId,
+      name: sanitizedRequest.name,
+      description: sanitizedRequest.description,
+      type: sanitizedRequest.type,
+      category: sanitizedRequest.category,
+      start_date: sanitizedRequest.start_date,
+      end_date: sanitizedRequest.end_date,
+      requirements: sanitizedRequest.requirements.map(req => ({
+        ...req,
+        id: this.generateId()
+      })),
+      rewards: sanitizedRequest.rewards.map(reward => ({
+        ...reward,
+        id: this.generateId()
+      })),
+      participants_count: 0,
+      max_participants: sanitizedRequest.max_participants,
+      created_by: createdBy,
+      is_active: true,
+      difficulty_level: sanitizedRequest.difficulty_level,
+      image_url: sanitizedRequest.image_url,
+      tags: sanitizedRequest.tags,
+      created_at: now,
+      updated_at: now
+    };
+
+    // Validate business rules
+    const businessValidation = validateChallengeBusinessRules(challenge);
+    if (businessValidation.warnings && businessValidation.warnings.length > 0) {
+      console.warn('Challenge business rule warnings:', businessValidation.warnings);
+    }
+
+    await this.storage.saveChallenge(challenge);
+    return challenge;
+  }
+
+  // Get challenge by ID
+  async getChallenge(challengeId: string): Promise<Challenge> {
+    const challenge = await this.storage.getChallenge(challengeId);
+    if (!challenge) {
+      throw new ChallengeError(
+        ChallengeErrorType.CHALLENGE_NOT_FOUND,
+        `Challenge with ID ${challengeId} not found`
+      );
+    }
+    return challenge;
+  }
+
+  // Search and filter challenges
+  async searchChallenges(params: ChallengeSearchParams): Promise<Challenge[]> {
+    let challenges = await this.storage.getChallenges(params.filters);
+
+    // Apply text search if query provided
+    if (params.query) {
+      const query = params.query.toLowerCase();
+      challenges = challenges.filter(c => 
+        c.name.toLowerCase().includes(query) ||
+        c.description.toLowerCase().includes(query) ||
+        c.tags.some(tag => tag.toLowerCase().includes(query))
+      );
+    }
+
+    // Apply sorting
+    if (params.sort_by) {
+      challenges.sort((a, b) => {
+        let aValue: any, bValue: any;
+        
+        switch (params.sort_by) {
+          case 'created_at':
+            aValue = a.created_at.getTime();
+            bValue = b.created_at.getTime();
+            break;
+          case 'start_date':
+            aValue = a.start_date.getTime();
+            bValue = b.start_date.getTime();
+            break;
+          case 'participants_count':
+            aValue = a.participants_count;
+            bValue = b.participants_count;
+            break;
+          case 'difficulty_level':
+            aValue = a.difficulty_level;
+            bValue = b.difficulty_level;
+            break;
+          default:
+            return 0;
+        }
+
+        const order = params.sort_order === 'desc' ? -1 : 1;
+        return aValue < bValue ? -order : aValue > bValue ? order : 0;
+      });
+    }
+
+    // Apply pagination
+    const offset = params.offset || 0;
+    const limit = params.limit || 20;
+    return challenges.slice(offset, offset + limit);
+  }
+
+  // Join a challenge
+  async joinChallenge(request: JoinChallengeRequest): Promise<{ participant: ChallengeParticipant; celebration: CelebrationData }> {
+    const challenge = await this.getChallenge(request.challenge_id);
+    const existingParticipants = await this.storage.getParticipants(request.challenge_id);
+
+    // Validate participation
+    const validation = validateChallengeParticipation(challenge, request.user_id, existingParticipants);
+    throwIfInvalid(validation, ChallengeErrorType.ALREADY_PARTICIPATING);
+
+    // Create participant record
+    const participant: ChallengeParticipant = {
+      id: this.generateId(),
+      challenge_id: request.challenge_id,
+      user_id: request.user_id,
+      progress: 0,
+      current_value: 0,
+      rank: existingParticipants.length + 1,
+      joined_at: new Date(),
+      last_activity: new Date(),
+      is_completed: false
+    };
+
+    await this.storage.saveParticipant(participant);
+
+    // Initialize progress tracking for each requirement
+    const progressRecords: ChallengeProgress[] = challenge.requirements.map(req => ({
+      participant_id: participant.id,
+      requirement_id: req.id,
+      current_value: 0,
+      target_value: req.target_value,
+      progress_percentage: 0,
+      is_completed: false,
+      last_updated: new Date()
+    }));
+
+    await this.storage.saveProgress(progressRecords);
+
+    // Update challenge participant count
+    challenge.participants_count = existingParticipants.length + 1;
+    challenge.updated_at = new Date();
+    await this.storage.saveChallenge(challenge);
+
+    // Process gamification for joining challenge
+    const celebration = await challengeGamificationService.processJoinChallenge(
+      request.user_id,
+      challenge,
+      participant
+    );
+
+    return { participant, celebration };
+  }
+
+  // Update participant progress
+  async updateProgress(request: UpdateChallengeProgressRequest): Promise<{ 
+    progressRecords: ChallengeProgress[]; 
+    celebration?: CelebrationData 
+  }> {
+    const progressRecords = await this.storage.getProgress(request.participant_id);
+    const targetProgress = progressRecords.find(p => p.requirement_id === request.requirement_id);
+
+    if (!targetProgress) {
+      throw new ChallengeError(
+        ChallengeErrorType.CHALLENGE_NOT_FOUND,
+        'Progress record not found'
+      );
+    }
+
+    // Get participant to validate update
+    const participant = await this.getParticipantById(request.participant_id);
+    const challenge = await this.getChallenge(participant.challenge_id);
+    const requirement = challenge.requirements.find(r => r.id === request.requirement_id);
+
+    if (!requirement) {
+      throw new ChallengeError(
+        ChallengeErrorType.CHALLENGE_NOT_FOUND,
+        'Challenge requirement not found'
+      );
+    }
+
+    // Validate progress update
+    const validation = validateProgressUpdate(participant, requirement, request.value_increment);
+    throwIfInvalid(validation);
+
+    // Store previous progress for gamification
+    const previousProgress = participant.progress;
+    const previousRank = participant.rank;
+
+    // Update progress
+    targetProgress.current_value += request.value_increment;
+    targetProgress.progress_percentage = Math.min(
+      (targetProgress.current_value / targetProgress.target_value) * 100,
+      100
+    );
+    targetProgress.is_completed = targetProgress.progress_percentage >= 100;
+    targetProgress.last_updated = new Date();
+
+    // Update participant overall progress
+    const overallProgress = progressRecords.reduce((sum, p) => sum + p.progress_percentage, 0) / progressRecords.length;
+    participant.progress = overallProgress;
+    participant.current_value = progressRecords.reduce((sum, p) => sum + p.current_value, 0);
+    participant.last_activity = new Date();
+    
+    const wasCompleted = participant.is_completed;
+    participant.is_completed = progressRecords.every(p => p.is_completed);
+
+    if (participant.is_completed && !participant.completion_date) {
+      participant.completion_date = new Date();
+    }
+
+    // Save updates
+    await this.storage.saveProgress(progressRecords);
+    await this.storage.saveParticipant(participant);
+
+    // Update leaderboard rankings
+    await this.updateLeaderboardRankings(participant.challenge_id);
+    
+    // Get updated rank after leaderboard update
+    const updatedParticipant = await this.storage.getParticipant(participant.challenge_id, participant.user_id);
+    const newRank = updatedParticipant?.rank || participant.rank;
+
+    // Process gamification events
+    let celebration: CelebrationData | undefined;
+
+    if (participant.is_completed && !wasCompleted) {
+      // Challenge completed
+      celebration = await challengeGamificationService.processChallengeCompletion(
+        participant.user_id,
+        challenge,
+        participant,
+        newRank
+      );
+    } else if (newRank < previousRank) {
+      // Rank improved
+      celebration = await challengeGamificationService.processRankImprovement(
+        participant.user_id,
+        challenge,
+        previousRank,
+        newRank
+      );
+    } else {
+      // Regular progress update
+      celebration = await challengeGamificationService.processProgressUpdate(
+        participant.user_id,
+        challenge,
+        participant,
+        progressRecords,
+        previousProgress
+      ) || undefined;
+    }
+
+    return { progressRecords, celebration };
+  }
+
+  // Get challenge leaderboard
+  async getLeaderboard(challengeId: string): Promise<ChallengeLeaderboard> {
+    const participants = await this.storage.getParticipants(challengeId);
+    
+    // Sort participants by progress (descending) and then by last activity (ascending for tie-breaking)
+    const sortedParticipants = participants
+      .sort((a, b) => {
+        if (b.progress !== a.progress) {
+          return b.progress - a.progress;
+        }
+        return a.last_activity.getTime() - b.last_activity.getTime();
+      })
+      .map((participant, index) => ({
+        user_id: participant.user_id,
+        username: `User_${participant.user_id}`, // In real app, fetch from user service
+        avatar_url: undefined,
+        rank: index + 1,
+        progress: participant.progress,
+        current_value: participant.current_value,
+        is_completed: participant.is_completed,
+        badge_count: 0 // In real app, fetch from gamification service
+      }));
+
+    return {
+      challenge_id: challengeId,
+      participants: sortedParticipants,
+      last_updated: new Date()
+    };
+  }
+
+  // Get challenge statistics
+  async getChallengeStats(challengeId: string): Promise<ChallengeStats> {
+    const challenge = await this.getChallenge(challengeId);
+    const participants = await this.storage.getParticipants(challengeId);
+    
+    const activeParticipants = participants.filter(p => !p.is_completed);
+    const completionRate = participants.length > 0 ? 
+      (participants.filter(p => p.is_completed).length / participants.length) * 100 : 0;
+    
+    const averageProgress = participants.length > 0 ?
+      participants.reduce((sum, p) => sum + p.progress, 0) / participants.length : 0;
+
+    const topPerformer = participants.reduce((top, current) => 
+      current.progress > (top?.progress || 0) ? current : top, participants[0]);
+
+    return {
+      challenge_id: challengeId,
+      total_participants: participants.length,
+      active_participants: activeParticipants.length,
+      completion_rate: completionRate,
+      average_progress: averageProgress,
+      top_performer: topPerformer ? {
+        user_id: topPerformer.user_id,
+        username: `User_${topPerformer.user_id}`,
+        progress: topPerformer.progress
+      } : {
+        user_id: '',
+        username: '',
+        progress: 0
+      },
+      daily_activity: [] // In real app, this would be calculated from activity logs
+    };
+  }
+
+  // Get user's active challenges
+  async getUserChallenges(userId: string): Promise<Challenge[]> {
+    const allChallenges = await this.storage.getChallenges();
+    const userChallenges: Challenge[] = [];
+
+    for (const challenge of allChallenges) {
+      const participants = await this.storage.getParticipants(challenge.id);
+      const isParticipating = participants.some(p => p.user_id === userId);
+      
+      if (isParticipating) {
+        userChallenges.push(challenge);
+      }
+    }
+
+    return userChallenges;
+  }
+
+  // Private helper methods
+  private async getParticipantById(participantId: string): Promise<ChallengeParticipant> {
+    // In a real implementation, this would be a direct database query
+    const allChallenges = await this.storage.getChallenges();
+    
+    for (const challenge of allChallenges) {
+      const participants = await this.storage.getParticipants(challenge.id);
+      const participant = participants.find(p => p.id === participantId);
+      if (participant) {
+        return participant;
+      }
+    }
+
+    throw new ChallengeError(
+      ChallengeErrorType.CHALLENGE_NOT_FOUND,
+      'Participant not found'
+    );
+  }
+
+  private async updateLeaderboardRankings(challengeId: string): Promise<void> {
+    const participants = await this.storage.getParticipants(challengeId);
+    
+    // Sort by progress and update ranks
+    participants
+      .sort((a, b) => {
+        if (b.progress !== a.progress) {
+          return b.progress - a.progress;
+        }
+        return a.last_activity.getTime() - b.last_activity.getTime();
+      })
+      .forEach((participant, index) => {
+        participant.rank = index + 1;
+      });
+
+    // Save updated participants
+    for (const participant of participants) {
+      await this.storage.saveParticipant(participant);
+    }
+  }
+
+  private generateId(): string {
+    return Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+  }
+
+  // Challenge lifecycle management
+  async activateChallenge(challengeId: string): Promise<void> {
+    const challenge = await this.getChallenge(challengeId);
+    challenge.is_active = true;
+    challenge.updated_at = new Date();
+    await this.storage.saveChallenge(challenge);
+  }
+
+  async deactivateChallenge(challengeId: string): Promise<void> {
+    const challenge = await this.getChallenge(challengeId);
+    challenge.is_active = false;
+    challenge.updated_at = new Date();
+    await this.storage.saveChallenge(challenge);
+  }
+
+  // Check for expired challenges and auto-deactivate
+  async processExpiredChallenges(): Promise<Challenge[]> {
+    const challenges = await this.storage.getChallenges({ is_active: true });
+    const now = new Date();
+    const expiredChallenges: Challenge[] = [];
+
+    for (const challenge of challenges) {
+      if (new Date(challenge.end_date) < now) {
+        await this.deactivateChallenge(challenge.id);
+        expiredChallenges.push(challenge);
+      }
+    }
+
+    return expiredChallenges;
+  }
+}
+
+// Export singleton instance
+export const challengeService = new ChallengeService();

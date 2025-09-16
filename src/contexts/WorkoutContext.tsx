@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import type { Workout } from '@/schemas/workout';
 import { WorkoutService } from '@/services/WorkoutService';
+import { workoutRecoveryService } from '@/services/WorkoutRecoveryService';
+import { workoutAutoSaveService } from '@/services/WorkoutAutoSaveService';
 
 interface WorkoutContextType {
   activeWorkout: Workout | null;
@@ -46,22 +48,29 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
     };
   }, [activeWorkout, workoutStartTime]);
 
-  // Load active workout on mount (in case of page refresh)
+  // Load active workout on mount (in case of page refresh) with recovery
   useEffect(() => {
     const loadActiveWorkout = async () => {
       try {
-        // Check localStorage for active workout
-        const savedWorkoutId = localStorage.getItem('activeWorkoutId');
-        const savedStartTime = localStorage.getItem('workoutStartTime');
+        // Temporarily disable recovery system to prevent errors
+        console.log('Workout recovery temporarily disabled');
         
-        if (savedWorkoutId && savedStartTime) {
-          const workout = await workoutService.getWorkoutById(savedWorkoutId);
-          if (workout && (workout.status === 'in_progress' || workout.status === 'paused')) {
-            setActiveWorkout(workout);
-            setWorkoutStartTime(new Date(savedStartTime));
-            setIsWorkoutMinimized(true); // Start minimized when reloading
+        // Clear any problematic localStorage data
+        localStorage.removeItem('activeWorkoutId');
+        localStorage.removeItem('workoutStartTime');
+        
+        // Clear any workout backup data that might be causing issues
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('workout_backup_')) {
+            localStorage.removeItem(key);
           }
         }
+        
+        // TODO: Re-enable recovery system after fixing all date handling issues
+        // const recoveryData = await workoutRecoveryService.checkForRecoverableWorkouts();
+        // ... recovery logic ...
+        
       } catch (error) {
         console.error('Error loading active workout:', error);
       }
@@ -101,8 +110,9 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
 
   const updateWorkout = (workout: Workout) => {
     setActiveWorkout(workout);
-    // Save to database
+    // Save to database and trigger auto-save
     workoutService.saveWorkout(workout);
+    workoutAutoSaveService.updateWorkout(workout);
   };
 
   const finishWorkout = async () => {
@@ -133,6 +143,11 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
             await workoutService.updateTemplateFromWorkout(activeWorkout.template_id, activeWorkout);
           }
         }
+        
+        // Notify that templates have been updated
+        window.dispatchEvent(new CustomEvent('templatesUpdated', { 
+          detail: { templateId: activeWorkout.template_id } 
+        }));
       }
     }
 

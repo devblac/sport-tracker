@@ -49,7 +49,7 @@ export const QuickStartWorkout: React.FC<QuickStartWorkoutProps> = ({
         }
       } else {
         // Navigate to template selection
-        navigate('/workout-templates');
+        navigate('/workout');
       }
     } catch (error) {
       console.error('Error starting quick workout:', error);
@@ -143,7 +143,7 @@ export const QuickStartWorkout: React.FC<QuickStartWorkoutProps> = ({
         <Button
           variant="outline"
           fullWidth
-          onClick={() => navigate('/workout-templates')}
+          onClick={() => navigate('/workout')}
           disabled={isStarting}
           className="text-sm"
         >

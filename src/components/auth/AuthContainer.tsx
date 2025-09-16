@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { AuthModeSelector } from './AuthModeSelector';
 import { LoginForm } from './LoginForm';
 import { RegisterForm } from './RegisterForm';
@@ -18,8 +19,29 @@ export const AuthContainer: React.FC<AuthContainerProps> = ({ onAuthComplete }) 
   
   const { loginAsGuest, isAuthenticated, user } = useAuthStore();
 
+  // Safely get location only if inside Router context
+  let location: any = null;
+  try {
+    location = useLocation();
+  } catch (error) {
+    // Not inside Router context, location will remain null
+    console.log('AuthContainer rendered outside Router context');
+  }
+
+  // Handle navigation state (forceSelection from Profile/Social pages)
+  useEffect(() => {
+    if (location?.state?.forceSelection) {
+      setMode('selector');
+    }
+  }, [location?.state]);
+
   // Check if user needs onboarding
   useEffect(() => {
+    // If forceSelection is true, always show the selector (don't auto-complete)
+    if (location?.state?.forceSelection) {
+      return;
+    }
+
     if (isAuthenticated && user && user.role !== 'guest') {
       // Check if user has completed basic profile setup
       const needsOnboarding = 
@@ -35,7 +57,7 @@ export const AuthContainer: React.FC<AuthContainerProps> = ({ onAuthComplete }) 
       // Guest users skip onboarding
       onAuthComplete();
     }
-  }, [isAuthenticated, user, onAuthComplete]);
+  }, [isAuthenticated, user, onAuthComplete, location?.state]);
 
   const handleLoginAsGuest = () => {
     logger.info('User chose to continue as guest');

@@ -103,3 +103,185 @@ jspm_packages/
 # Temporary folders
 tmp/
 temp/
+
+# Android keystore and signing files
+android/app/*.keystore
+android/app/*.jks
+android/keystore.properties
+android/app/keystore.properties
+
+# Android build outputs
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+
+# Capacitor
+android/capacitor.settings.gradle
+
+# Security-sensitive files and directories
+# ==========================================
+
+# API Keys and Secrets
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets/
+keys/
+certificates/
+.secrets/
+.keys/
+
+# Payment and Financial Data
+stripe_keys/
+payment_logs/
+transaction_data/
+financial_reports/
+payout_data/
+*.stripe
+*.paypal
+
+# Database and Backup Files
+*.db
+*.sqlite
+*.sqlite3
+*.sql
+*.dump
+*.backup
+backups/
+database_dumps/
+db_backups/
+
+# User Data and PII
+user_data/
+personal_data/
+uploads/user_content/
+profile_images/
+private_uploads/
+*.csv
+*.xlsx
+user_exports/
+
+# Configuration Files with Sensitive Data
+config/production.json
+config/staging.json
+config/secrets.json
+.env.production
+.env.staging
+.env.secrets
+docker-compose.override.yml
+docker-compose.production.yml
+
+# Authentication and Session Data
+auth_tokens/
+session_data/
+jwt_secrets/
+oauth_credentials/
+.auth/
+.session/
+
+# Third-party Service Credentials
+firebase-adminsdk-*.json
+google-services.json
+GoogleService-Info.plist
+aws-credentials.json
+.aws/
+.gcp/
+
+# Monitoring and Analytics
+analytics_data/
+monitoring_logs/
+error_reports/
+crash_reports/
+performance_data/
+
+# Legal and Compliance Documents
+legal_documents/
+compliance_reports/
+audit_logs/
+gdpr_data/
+privacy_exports/
+
+# Development and Testing Secrets
+test_data/real_users/
+staging_data/
+mock_payments/
+test_credentials/
+.test_secrets/
+
+# Deployment and Infrastructure
+deployment_keys/
+infrastructure/secrets/
+terraform.tfstate
+terraform.tfstate.backup
+*.tfvars
+ansible_vault/
+k8s_secrets/
+
+# Temporary Security Files
+security_scan_results/
+vulnerability_reports/
+penetration_test_results/
+security_audit/
+
+# IDE Security Extensions
+.vscode/settings.json
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/dictionaries/
+.idea/shelf/
+
+# Package Manager Security
+.npmrc
+.yarnrc
+package-lock.json.audit
+yarn-audit.json
+
+# Mobile App Security
+ios/Runner/GoogleService-Info.plist
+android/app/google-services.json
+ios/firebase_app_id_file.json
+android/app/src/main/res/values/strings_secrets.xml
+
+# Content and Media Security
+content_moderation_logs/
+flagged_content/
+reported_users/
+banned_content/
+
+# Business Intelligence and Analytics
+bi_reports/
+revenue_data/
+user_analytics/
+business_metrics/
+
+# Backup and Recovery
+*.tar.gz.encrypted
+*.zip.encrypted
+recovery_keys/
+backup_encryption_keys/
+
+# Development and build artifacts
+*.tsbuildinfo
+*.bak
+
+# Development scripts and tools
+install-*.sh
+test-mobile-integration.js
+
+# Asset directories (store submission only)
+/play-store-assets
+
+# Alternative/experimental config files
+vite.config.minimal.js
+vite.config.simple.ts
+vite.config.mobile.ts
+mobile-performance.config.js
+
+# Other project files
+/fitness-admin-setup
+/docs
+/supabase
+/sport-tracker-clean.git

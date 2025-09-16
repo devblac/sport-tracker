@@ -58,16 +58,16 @@ export function calculateWorkoutXP(
   }
 
   // Volume bonus (1 XP per 100kg, max 50)
-  if (workout.totalVolume) {
+  if (workout.total_volume) {
     const volumeXP = Math.min(
-      Math.floor(workout.totalVolume / 100) * (1 / config.volumeMultiplier),
+      Math.floor(workout.total_volume / 100) * (1 / config.volumeMultiplier),
       50
     );
     totalXP += volumeXP;
   }
 
   // Exercise variety bonus (5 XP per exercise, max 30)
-  const uniqueExercises = new Set(workout.exercises.map(e => e.exerciseId)).size;
+  const uniqueExercises = new Set(workout.exercises.map(e => e.exercise_id)).size;
   const varietyXP = Math.min(uniqueExercises * config.exerciseVarietyBonus, 30);
   totalXP += varietyXP;
 
@@ -86,7 +86,7 @@ export function calculateWorkoutXP(
   }
 
   // Apply weekend bonus
-  const workoutDate = workout.completedAt || new Date();
+  const workoutDate = workout.completed_at || new Date();
   if (isWeekend(workoutDate)) {
     totalXP *= config.weekendBonus;
   }
@@ -167,7 +167,7 @@ export function calculateSocialXP(interactionType: string): number {
     mentor_session: 100,
   };
 
-  return socialXPValues[interactionType] || 0;
+  return (socialXPValues as any)[interactionType] || 0;
 }
 
 /**
@@ -201,7 +201,7 @@ export function calculateChallengeXP(
     seasonal: 2.0,
   };
 
-  const typeMultiplier = typeMultipliers[challengeType] || 1.0;
+  const typeMultiplier = (typeMultipliers as any)[challengeType] || 1.0;
 
   return Math.round(baseXP * rankMultiplier * typeMultiplier);
 }

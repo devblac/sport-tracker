@@ -70,7 +70,7 @@ export const WorkoutSystemTest: React.FC = () => {
             </h3>
             
             <Link
-              to="/workout-templates"
+              to="/workout"
               className="block w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white text-center font-medium rounded-lg transition-colors"
             >
               Start a Workout

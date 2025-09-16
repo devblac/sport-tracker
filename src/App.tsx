@@ -5,12 +5,19 @@ import { WorkoutProvider } from '@/contexts/WorkoutContext';
 import { AppLayout } from '@/layouts/AppLayout';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { WorkoutOverlay } from '@/components/workouts/WorkoutOverlay';
+import { WorkoutRecoveryModal } from '@/components/workouts/WorkoutRecoveryModal';
 import { AuthPage } from '@/pages/Auth';
 import { useAuthStore } from '@/stores';
 import { useStoreInitialization, useApiInterceptors, useDatabaseInit } from '@/hooks';
 import { useOffline } from '@/hooks/useOffline';
+import { useWorkoutRecovery } from '@/hooks/useWorkoutRecovery';
 import { logger } from '@/utils';
 import { CacheMonitor } from '@/components/performance/CacheMonitor';
+import { useSettingsStore } from '@/stores/useSettingsStore';
+import { CapacitorUtils } from '@/utils/capacitorUtils';
+
+// Import debugging tools (makes them available globally)
+import '@/utils/debugTemplate';
 import { ExperimentDashboard } from '@/components/experiments/ExperimentDashboard';
 import { BackupDashboard } from '@/components/backup/BackupDashboard';
 import { EmergencyRecovery } from '@/components/backup/EmergencyRecovery';
@@ -23,29 +30,36 @@ const Social = React.lazy(() => import('@/pages/Social').then(m => ({ default: m
 const Profile = React.lazy(() => import('@/pages/Profile').then(m => ({ default: m.Profile })));
 const DevTest = React.lazy(() => import('@/pages/DevTest').then(m => ({ default: m.DevTest })));
 const TestDataPage = React.lazy(() => import('@/pages/TestDataPage').then(m => ({ default: m.TestDataPage })));
+const TemplateDebugPage = React.lazy(() => import('@/pages/TemplateDebugPage'));
 const ExerciseBrowser = React.lazy(() => import('@/pages/ExerciseBrowser').then(m => ({ default: m.ExerciseBrowser })));
 const ExerciseTest = React.lazy(() => import('@/pages/ExerciseTest').then(m => ({ default: m.ExerciseTest })));
 const ExerciseDetailPage = React.lazy(() => import('@/pages/ExerciseDetailPage').then(m => ({ default: m.ExerciseDetailPage })));
-const WorkoutTemplates = React.lazy(() => import('@/pages/WorkoutTemplates').then(m => ({ default: m.WorkoutTemplates })));
-const WorkoutTemplateTest = React.lazy(() => import('@/pages/WorkoutTemplateTest').then(m => ({ default: m.WorkoutTemplateTest })));
+
+// const WorkoutTemplateTest = React.lazy(() => import('@/pages/WorkoutTemplateTest').then(m => ({ default: m.WorkoutTemplateTest })));
 const WorkoutPlayerPage = React.lazy(() => import('@/pages/WorkoutPlayerPage').then(m => ({ default: m.WorkoutPlayerPage })));
 const WorkoutSummary = React.lazy(() => import('@/pages/WorkoutSummary').then(m => ({ default: m.WorkoutSummary })));
 const WorkoutPlayerTest = React.lazy(() => import('@/pages/WorkoutPlayerTest').then(m => ({ default: m.WorkoutPlayerTest })));
+
 const WorkoutTestPage = React.lazy(() => import('@/pages/WorkoutTestPage').then(m => ({ default: m.WorkoutTestPage })));
 const WorkoutSystemTest = React.lazy(() => import('@/pages/WorkoutSystemTest').then(m => ({ default: m.WorkoutSystemTest })));
-const GamificationTestPage = React.lazy(() => import('@/pages/GamificationTestPage').then(m => ({ default: m.GamificationTestPage })));
+// const GamificationTestPage = React.lazy(() => import('@/pages/GamificationTestPage').then(m => ({ default: m.GamificationTestPage })));
 const XPIntegrationTestPage = React.lazy(() => import('@/pages/XPIntegrationTestPage').then(m => ({ default: m.XPIntegrationTestPage })));
-const StreakRewardTestPage = React.lazy(() => import('@/pages/StreakRewardTestPage').then(m => ({ default: m.StreakRewardTestPage })));
+// const StreakRewardTestPage = React.lazy(() => import('@/pages/StreakRewardTestPage').then(m => ({ default: m.StreakRewardTestPage })));
 const NotificationTestPage = React.lazy(() => import('@/pages/NotificationTestPage').then(m => ({ default: m.NotificationTestPage })));
 const SocialTestPage = React.lazy(() => import('@/pages/SocialTestPage').then(m => ({ default: m.SocialTestPage })));
 const PrivacyTestPage = React.lazy(() => import('@/pages/PrivacyTestPage').then(m => ({ default: m.PrivacyTestPage })));
 const SocialPostsTestPage = React.lazy(() => import('@/pages/SocialPostsTestPage').then(m => ({ default: m.SocialPostsTestPage })));
 const DatabaseTestPage = React.lazy(() => import('@/pages/DatabaseTestPage').then(m => ({ default: m.DatabaseTestPage })));
 const SocialFeedTestPage = React.lazy(() => import('@/pages/SocialFeedTestPage').then(m => ({ default: m.SocialFeedTestPage })));
+const SupabaseTestPage = React.lazy(() => import('@/pages/SupabaseTestPage').then(m => ({ default: m.SupabaseTestPage })));
+const ViralContentTestPage = React.lazy(() => import('@/pages/ViralContentTestPage'));
+// const MentorshipPage = React.lazy(() => import('@/pages/MentorshipPage').then(m => ({ default: m.MentorshipPage })));
+// const MentorshipTestPage = React.lazy(() => import('@/pages/MentorshipTestPage').then(m => ({ default: m.MentorshipTestPage })));
 
 function App() {
   const [showAuth, setShowAuth] = useState(true);
   const { isAuthenticated, user, initializeAuth } = useAuthStore();
+  const { showCacheMonitor } = useSettingsStore();
   
   // Initialize stores
   useStoreInitialization();
@@ -58,6 +72,15 @@ function App() {
   
   // Initialize offline capabilities
   const offlineState = useOffline();
+  
+  // Initialize workout recovery
+  const {
+    recoveryData,
+    showRecoveryModal,
+    handleRecover,
+    handleDiscard,
+    handleCloseModal,
+  } = useWorkoutRecovery();
   
   // Add debug functions to window object in development
   React.useEffect(() => {
@@ -111,9 +134,34 @@ function App() {
     }
   }, []);
   
+  // Initialize Capacitor plugins
+  React.useEffect(() => {
+    const initCapacitor = async () => {
+      try {
+        await CapacitorUtils.initializePlugins();
+        logger.info('Capacitor plugins initialized', { 
+          platform: CapacitorUtils.getPlatform(),
+          isNative: CapacitorUtils.isNative()
+        });
+      } catch (error) {
+        logger.error('Failed to initialize Capacitor plugins', error);
+      }
+    };
+    
+    initCapacitor();
+  }, []);
+
   // Initialize authentication on app start
   React.useEffect(() => {
-    initializeAuth();
+    const initAuth = async () => {
+      try {
+        await initializeAuth();
+      } catch (error) {
+        logger.error('Failed to initialize authentication', error);
+      }
+    };
+    
+    initAuth();
   }, [initializeAuth]);
 
   // Check authentication status
@@ -219,27 +267,33 @@ function App() {
                     <Route path="/workout" element={<Workout />} />
                     <Route path="/social" element={<Social />} />
                     <Route path="/profile" element={<Profile />} />
+                    <Route path="/auth" element={<AuthPage onAuthComplete={handleAuthComplete} />} />
                     <Route path="/dev-test" element={<DevTest />} />
                     <Route path="/test-data" element={<TestDataPage />} />
+                    <Route path="/template-debug" element={<TemplateDebugPage />} />
                     <Route path="/exercises" element={<ExerciseBrowser />} />
                     <Route path="/exercises/:exerciseId" element={<ExerciseDetailPage />} />
                     <Route path="/exercise-test" element={<ExerciseTest />} />
-                    <Route path="/workout-templates" element={<WorkoutTemplates />} />
-                    <Route path="/workout-template-test" element={<WorkoutTemplateTest />} />
+
+                    {/* <Route path="/workout-template-test" element={<WorkoutTemplateTest />} /> */}
                     <Route path="/workout/:workoutId" element={<WorkoutPlayerPage />} />
                     <Route path="/workout-summary" element={<WorkoutSummary />} />
                     <Route path="/workout-player-test" element={<WorkoutPlayerTest />} />
                     <Route path="/workout-test" element={<WorkoutTestPage />} />
                     <Route path="/workout-system-test" element={<WorkoutSystemTest />} />
-                    <Route path="/gamification-test" element={<GamificationTestPage />} />
+                    {/* <Route path="/gamification-test" element={<GamificationTestPage />} /> */}
                     <Route path="/xp-integration-test" element={<XPIntegrationTestPage />} />
-                    <Route path="/streak-reward-test" element={<StreakRewardTestPage />} />
+                    {/* <Route path="/streak-reward-test" element={<StreakRewardTestPage />} /> */}
                     <Route path="/notification-test" element={<NotificationTestPage />} />
                     <Route path="/social-test" element={<SocialTestPage />} />
                     <Route path="/privacy-test" element={<PrivacyTestPage />} />
                     <Route path="/social-posts-test" element={<SocialPostsTestPage />} />
                     <Route path="/database-test" element={<DatabaseTestPage />} />
                     <Route path="/social-feed-test" element={<SocialFeedTestPage />} />
+                    <Route path="/supabase-test" element={<SupabaseTestPage />} />
+                    <Route path="/viral-content-test" element={<ViralContentTestPage />} />
+                    {/* <Route path="/mentorship" element={<MentorshipPage />} /> */}
+                    {/* <Route path="/mentorship-test" element={<MentorshipTestPage />} /> */}
                     <Route path="/experiment-dashboard" element={<ExperimentDashboard />} />
                     <Route path="/backup-dashboard" element={<BackupDashboard />} />
                   </Routes>
@@ -249,13 +303,23 @@ function App() {
                 <WorkoutOverlay />
                 
                 {/* Cache Performance Monitor */}
-                <CacheMonitor />
+                {showCacheMonitor && <CacheMonitor />}
                 
                 {/* Emergency Recovery */}
                 <EmergencyRecovery className="fixed top-4 left-4 right-4 z-50" />
                 
                 {/* Real-Time Notifications - Temporarily disabled to fix infinite loop */}
                 {/* <RealTimeNotifications position="top-right" maxNotifications={5} /> */}
+                
+                {/* Workout Recovery Modal */}
+                {showRecoveryModal && (
+                  <WorkoutRecoveryModal
+                    recoveryData={recoveryData}
+                    onRecover={handleRecover}
+                    onDiscard={handleDiscard}
+                    onClose={handleCloseModal}
+                  />
+                )}
               </AppLayout>
             </Router>
           )}

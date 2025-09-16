@@ -10,40 +10,59 @@ export default defineConfig({
       registerType: 'autoUpdate',
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        maximumFileSizeToCacheInBytes: 3000000, // 3MB limit for mobile
+        cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true,
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/api\./,
+            urlPattern: /^https:\/\/.*\.supabase\.co\/.*$/,
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'api-cache',
+              cacheName: 'supabase-api-cache',
               expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24, // 24 hours
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 12, // 12 hours
               },
+              networkTimeoutSeconds: 10,
               cacheKeyWillBeUsed: async ({ request }) => {
-                return `${request.url}?v=${Date.now()}`;
+                // Remove auth tokens from cache keys for security
+                const url = new URL(request.url);
+                url.searchParams.delete('apikey');
+                return url.href;
               },
             },
           },
           {
-            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/,
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|avif)$/,
             handler: 'CacheFirst',
             options: {
               cacheName: 'images-cache',
               expiration: {
-                maxEntries: 200,
+                maxEntries: 100, // Reduced for mobile
                 maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
               },
             },
           },
           {
-            urlPattern: /^https:\/\/fonts\./,
+            urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com/,
             handler: 'CacheFirst',
             options: {
               cacheName: 'fonts-cache',
               expiration: {
                 maxEntries: 10,
                 maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+              },
+            },
+          },
+          {
+            urlPattern: /\.(?:js|css)$/,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'static-resources',
+              expiration: {
+                maxEntries: 60,
+                maxAgeSeconds: 60 * 60 * 24 * 7, // 1 week
               },
             },
           },
@@ -157,37 +176,132 @@ export default defineConfig({
       compress: {
         drop_console: true,
         drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info', 'console.debug'],
+        passes: 2,
+        unsafe_arrows: true,
+        unsafe_methods: true,
+        unsafe_proto: true,
+      },
+      mangle: {
+        safari10: true,
+      },
+      format: {
+        comments: false,
       },
     },
+    cssMinify: 'lightningcss',
+    reportCompressedSize: false,
+    sourcemap: false,
     rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html')
+      },
       output: {
-        manualChunks: {
-          // Vendor chunks
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['lucide-react', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
+        manualChunks(id) {
+          // Vendor chunks - optimized for mobile loading performance
+          if (id.includes('node_modules')) {
+            // Critical path - keep as small as possible
+            if (id.includes('react/') || id.includes('react-dom/')) {
+              return 'react-core';
+            }
+            
+            // Essential routing - loaded early
+            if (id.includes('react-router')) {
+              return 'react-router';
+            }
+            
+            // State management - critical for app functionality
+            if (id.includes('zustand') || id.includes('zod')) {
+              return 'state-utils';
+            }
+            
+            // Mobile-specific libraries
+            if (id.includes('@capacitor/')) {
+              return 'capacitor';
+            }
+            
+            // Backend integration - can be lazy loaded
+            if (id.includes('@supabase/')) {
+              return 'supabase';
+            }
+            
+            // UI libraries - split by usage frequency
+            if (id.includes('lucide-react')) {
+              return 'icons';
+            }
+            if (id.includes('framer-motion')) {
+              return 'animations';
+            }
+            if (id.includes('@radix-ui')) {
+              return 'ui-primitives';
+            }
+            
+            // Heavy libraries - lazy load
+            if (id.includes('chart.js') || id.includes('react-chartjs')) {
+              return 'charts';
+            }
+            
+            // Utility libraries
+            if (id.includes('clsx') || id.includes('tailwind-merge') || id.includes('immer')) {
+              return 'utils';
+            }
+            
+            // PWA and service worker
+            if (id.includes('workbox') || id.includes('vite-plugin-pwa')) {
+              return 'pwa';
+            }
+            
+            // Other vendor libraries - keep small
+            return 'vendor';
+          }
           
-          // Feature chunks
-          'workout-features': [
-            './src/components/workouts/WorkoutPlayerView',
-            './src/components/workouts/TemplateSelector',
-            './src/components/workouts/ExerciseSelector',
-            './src/services/WorkoutService'
-          ],
-          'marketplace-features': [
-            './src/components/marketplace/ContentMarketplace',
-            './src/components/marketplace/TrainerProfile',
-            './src/services/premiumContentService',
-            './src/services/paymentService'
-          ],
-          'gamification-features': [
-            './src/components/gamification/StreakCounter',
-            './src/components/gamification/XPBar',
-            './src/components/gamification/AchievementCard'
-          ],
-          'social-features': [
-            './src/components/social/SocialFeed',
-            './src/components/social/GymFriendsList'
-          ]
+          // Feature-based chunks for lazy-loaded routes - mobile optimized
+          if (id.includes('/pages/')) {
+            if (id.includes('Workout') || id.includes('Exercise')) {
+              return 'workout-pages';
+            }
+            if (id.includes('Social') || id.includes('Profile') || id.includes('Friends')) {
+              return 'social-pages';
+            }
+            if (id.includes('Progress') || id.includes('Analytics')) {
+              return 'analytics-pages';
+            }
+            if (id.includes('Settings') || id.includes('Auth')) {
+              return 'settings-pages';
+            }
+            if (id.includes('Test') || id.includes('Dev')) {
+              return 'dev-pages';
+            }
+          }
+          
+          // Component chunks - optimized for mobile
+          if (id.includes('/components/')) {
+            if (id.includes('workouts/')) {
+              return 'workout-components';
+            }
+            if (id.includes('social/')) {
+              return 'social-components';
+            }
+            if (id.includes('gamification/')) {
+              return 'gamification-components';
+            }
+            if (id.includes('ui/') && !id.includes('ui/charts')) {
+              return 'ui-components';
+            }
+            if (id.includes('ui/charts') || id.includes('analytics/')) {
+              return 'chart-components';
+            }
+          }
+          
+          // Service chunks
+          if (id.includes('/services/')) {
+            return 'services';
+          }
+          
+          // Hooks and utilities
+          if (id.includes('/hooks/') || id.includes('/utils/')) {
+            return 'app-utils';
+          }
         },
       },
     },

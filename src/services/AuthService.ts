@@ -1,5 +1,5 @@
 import type { User, UserLogin, UserRegistration } from '@/schemas/user';
-import { validateUserLogin, validateUserRegistration } from '@/utils/userValidation';
+import { validateUserLogin } from '@/utils/userValidation';
 import { storage, logger } from '@/utils';
 
 interface AuthTokens {
@@ -101,12 +101,6 @@ class AuthService {
    * Register new user
    */
   async register(userData: UserRegistration): Promise<AuthResponse> {
-    // Validate user data
-    const validation = validateUserRegistration(userData);
-    if (!validation.success) {
-      throw new Error(validation.errors?.[0] || 'Invalid user data');
-    }
-
     try {
       // In a real app, this would be an API call
       await this.simulateApiDelay();
@@ -268,7 +262,7 @@ class AuthService {
   /**
    * Check if user is authenticated
    */
-  isAuthenticated(): boolean {
+  async isAuthenticated(): Promise<boolean> {
     const user = this.getCurrentUser();
     
     if (!user) {
@@ -380,6 +374,15 @@ class AuthService {
     storage.set(this.REFRESH_TOKEN_KEY, tokens.refreshToken);
     storage.set(this.TOKEN_EXPIRES_KEY, tokens.expiresAt);
     storage.set(this.USER_KEY, user);
+  }
+
+  /**
+   * Initialize authentication state
+   */
+  async initializeAuth(): Promise<void> {
+    // For the mock auth service, this is just a placeholder
+    // In a real app, this would check for valid tokens, refresh if needed, etc.
+    logger.info('Auth service initialized');
   }
 
   private async simulateApiDelay(): Promise<void> {

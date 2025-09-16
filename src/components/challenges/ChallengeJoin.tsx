@@ -6,7 +6,7 @@
  */
 
 import React, { useState } from 'react';
-import type { Challenge, ChallengeParticipant } from '@/types/challengeModels';
+import type { Challenge, ChallengeParticipant } from '@/types';
 import { ChallengeValidationUtils } from '@/utils/challengeModelValidation';
 import { 
   Trophy, 

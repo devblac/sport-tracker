@@ -5,6 +5,9 @@ import { useExercises } from '@/hooks/useExercises';
 import { ExerciseSelector } from './ExerciseSelector';
 import { WorkoutService } from '@/services/WorkoutService';
 import { SmartWeightSuggestion } from '@/components/recommendations/SmartWeightSuggestion';
+import { workoutAutoSaveService } from '@/services/WorkoutAutoSaveService';
+import { notificationService } from '@/services/NotificationService';
+import { useSettingsStore } from '@/stores/useSettingsStore';
 import type { SetData, WorkoutExercise } from '@/schemas/workout';
 
 export const WorkoutPlayerView: React.FC = () => {
@@ -18,11 +21,28 @@ export const WorkoutPlayerView: React.FC = () => {
   } = useWorkout();
   
   const { getExerciseByIdSync } = useExercises();
+  const { enableAIWorkoutSuggestions } = useSettingsStore();
   const [showExerciseSelector, setShowExerciseSelector] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [exerciseHistory, setExerciseHistory] = useState<Record<string, SetData[]>>({});
   
   const workoutService = WorkoutService.getInstance();
+
+  // Initialize auto-save and notifications when workout starts
+  useEffect(() => {
+    if (activeWorkout) {
+      // Start auto-save
+      workoutAutoSaveService.startAutoSave(activeWorkout);
+      
+      // Request notification permission
+      notificationService.requestPermission();
+      
+      // Cleanup on unmount
+      return () => {
+        workoutAutoSaveService.stopAutoSave(activeWorkout.id);
+      };
+    }
+  }, [activeWorkout?.id]);
 
   // Format duration helper function
   const formatDuration = (seconds: number) => {
@@ -81,6 +101,28 @@ export const WorkoutPlayerView: React.FC = () => {
               sets: exercise.sets.map((set, sIndex) =>
                 sIndex === setIndex ? updatedSet : set
               ),
+            }
+          : exercise
+      ),
+    };
+
+    updateWorkout(updatedWorkout);
+    
+    // Trigger auto-save
+    workoutAutoSaveService.updateWorkout(updatedWorkout);
+  };
+
+  const handleWeightSelectAll = (exerciseIndex: number, weight: number) => {
+    const updatedWorkout = {
+      ...activeWorkout,
+      exercises: activeWorkout.exercises.map((exercise, eIndex) =>
+        eIndex === exerciseIndex
+          ? {
+              ...exercise,
+              sets: exercise.sets.map((set) => ({
+                ...set,
+                weight
+              })),
             }
           : exercise
       ),
@@ -280,6 +322,7 @@ export const WorkoutPlayerView: React.FC = () => {
                   exerciseData={getExerciseByIdSync(exercise.exercise_id)}
                   exerciseHistory={exerciseHistory[exercise.exercise_id] || []}
                   onSetComplete={handleSetComplete}
+                  onWeightSelectAll={handleWeightSelectAll}
                   onAddSet={handleAddSet}
                   onRemoveSet={handleRemoveSet}
                   onSetTypeChange={handleSetTypeChange}
@@ -374,6 +417,7 @@ interface ExerciseSectionProps {
   exerciseData: any;
   exerciseHistory: SetData[];
   onSetComplete: (exerciseIndex: number, setIndex: number, updatedSet: SetData) => void;
+  onWeightSelectAll: (exerciseIndex: number, weight: number) => void;
   onAddSet: (exerciseIndex: number) => void;
   onRemoveSet: (exerciseIndex: number, setIndex: number) => void;
   onSetTypeChange: (exerciseIndex: number, setIndex: number, newType: string) => void;
@@ -385,10 +429,12 @@ const ExerciseSection: React.FC<ExerciseSectionProps> = ({
   exerciseData,
   exerciseHistory,
   onSetComplete,
+  onWeightSelectAll,
   onAddSet,
   onRemoveSet,
   onSetTypeChange,
 }) => {
+  const { enableAIWorkoutSuggestions } = useSettingsStore();
   return (
     <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
       {/* Exercise Header */}
@@ -411,8 +457,8 @@ const ExerciseSection: React.FC<ExerciseSectionProps> = ({
           </div>
         </div>
 
-        {/* Smart Weight Suggestion - only show for first set */}
-        {exercise.sets.length > 0 && (
+        {/* Smart Weight Suggestion - only show for first set and if AI is enabled */}
+        {enableAIWorkoutSuggestions && exercise.sets.length > 0 && (
           <SmartWeightSuggestion
             exerciseId={exercise.exercise_id}
             targetReps={exercise.sets[0]?.reps || 8}
@@ -421,6 +467,9 @@ const ExerciseSection: React.FC<ExerciseSectionProps> = ({
             onWeightSelect={(weight) => {
               const updatedSet = { ...exercise.sets[0], weight };
               onSetComplete(exerciseIndex, 0, updatedSet);
+            }}
+            onWeightSelectAll={(weight) => {
+              onWeightSelectAll(exerciseIndex, weight);
             }}
             className="mb-3"
           />
@@ -482,6 +531,7 @@ const SetRow: React.FC<SetRowProps> = ({
   onRemoveSet,
   onSetTypeChange,
 }) => {
+  const { enableAIWorkoutSuggestions } = useSettingsStore();
   const [weight, setWeight] = useState(set.weight.toString());
   const [reps, setReps] = useState(set.reps.toString());
   const [showTypeMenu, setShowTypeMenu] = useState(false);
@@ -573,6 +623,16 @@ const SetRow: React.FC<SetRowProps> = ({
     };
 
     onSetComplete(exerciseIndex, setIndex, updatedSet);
+    
+    // Show rest timer notification when completing a set
+    if (!set.completed) {
+      const restTime = set.planned_rest_time || 120; // Default 2 minutes
+      setTimeout(() => {
+        import('@/services/NotificationService').then(({ notificationService }) => {
+          notificationService.showRestTimerNotification(0);
+        });
+      }, restTime * 1000);
+    }
   };
 
   const getSetTypeColor = (type: string) => {
@@ -686,8 +746,8 @@ const SetRow: React.FC<SetRowProps> = ({
               inputMode="decimal"
             />
             
-            {/* Smart suggestion indicator */}
-            {setIndex === 0 && (
+            {/* Smart suggestion indicator - only show if AI is enabled */}
+            {enableAIWorkoutSuggestions && setIndex === 0 && (
               <div className="absolute -top-1 -right-1 w-2 h-2 bg-purple-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" 
                    title="AI suggestion available" />
             )}

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { logger } from './middleware';
-import { Workout, WorkoutExercise, SetData } from '@/types';
+import type { Workout, WorkoutExercise, SetData } from '@/schemas/workout';
 import { storage, generateId } from '@/utils';
 
 interface WorkoutState {

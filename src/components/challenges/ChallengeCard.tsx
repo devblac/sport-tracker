@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { Challenge, ChallengeParticipant } from '@/types/challengeModels';
+import type { Challenge, ChallengeParticipant } from '@/types';
 import { formatDistanceToNow, format } from 'date-fns';
 import { 
   Trophy, 

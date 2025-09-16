@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { SetLogger } from './SetLogger';
 import { RestTimer } from './RestTimer';
+import { WorkoutRewardsModal } from '@/components/gamification/WorkoutRewardsModal';
 import { useExercises } from '@/hooks/useExercises';
+import { useWorkoutCompletion } from '@/hooks/useWorkoutCompletion';
+import { workoutAutoSaveService } from '@/services/WorkoutAutoSaveService';
+import { notificationService } from '@/services/NotificationService';
 import type { Workout, WorkoutExercise, SetData } from '@/schemas/workout';
 
 interface WorkoutPlayerProps {
@@ -24,8 +28,18 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
   const [restDuration, setRestDuration] = useState(0);
   const [workoutStartTime] = useState(new Date());
   const [exerciseStartTime, setExerciseStartTime] = useState<Date | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const [pausedAt, setPausedAt] = useState<Date | null>(null);
+  const [totalPausedTime, setTotalPausedTime] = useState(0);
   
   const { getExerciseByIdSync } = useExercises();
+  const { 
+    isProcessing: isCompletingWorkout, 
+    completionResult, 
+    showRewardsModal, 
+    completeWorkout, 
+    closeRewardsModal 
+  } = useWorkoutCompletion();
 
   const currentExercise = workout.exercises[currentExerciseIndex];
   const currentSet = currentExercise?.sets[currentSetIndex];
@@ -38,21 +52,36 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
     }
   }, [currentExercise, exerciseStartTime]);
 
-  // Update workout status when starting
+  // Update workout status when starting and initialize auto-save
   useEffect(() => {
     if (workout.status === 'planned') {
-      setWorkout(prev => ({
-        ...prev,
-        status: 'in_progress',
+      const updatedWorkout = {
+        ...workout,
+        status: 'in_progress' as const,
         started_at: workoutStartTime,
-      }));
+      };
+      setWorkout(updatedWorkout);
+      
+      // Start auto-save
+      workoutAutoSaveService.startAutoSave(updatedWorkout);
+    } else if (workout.status === 'in_progress') {
+      // Resume auto-save for existing workout
+      workoutAutoSaveService.startAutoSave(workout);
     }
-  }, [workoutStartTime, workout.status]);
+
+    // Request notification permission
+    notificationService.requestPermission();
+
+    // Cleanup auto-save on unmount
+    return () => {
+      workoutAutoSaveService.stopAutoSave(workout.id);
+    };
+  }, [workoutStartTime, workout.status, workout.id]);
 
   const updateSet = (exerciseIndex: number, setIndex: number, updatedSet: SetData) => {
-    setWorkout(prev => ({
-      ...prev,
-      exercises: prev.exercises.map((exercise, eIndex) =>
+    const updatedWorkout = {
+      ...workout,
+      exercises: workout.exercises.map((exercise, eIndex) =>
         eIndex === exerciseIndex
           ? {
               ...exercise,
@@ -62,7 +91,12 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
             }
           : exercise
       ),
-    }));
+    };
+    
+    setWorkout(updatedWorkout);
+    
+    // Trigger auto-save
+    workoutAutoSaveService.updateWorkout(updatedWorkout);
   };
 
   const handleSetComplete = (completedSet: SetData) => {
@@ -110,15 +144,72 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
     setRestDuration(0);
   };
 
-  const handleWorkoutComplete = () => {
+  const handlePauseWorkout = () => {
+    if (!isPaused) {
+      setIsPaused(true);
+      setPausedAt(new Date());
+      
+      const pausedWorkout = {
+        ...workout,
+        status: 'paused' as const,
+        paused_at: new Date(),
+      };
+      
+      setWorkout(pausedWorkout);
+      workoutAutoSaveService.updateWorkout(pausedWorkout);
+      
+      // Show notification
+      notificationService.showWorkoutPausedNotification();
+    }
+  };
+
+  const handleResumeWorkout = () => {
+    if (isPaused && pausedAt) {
+      const pauseDuration = Math.floor((new Date().getTime() - pausedAt.getTime()) / 1000);
+      setTotalPausedTime(prev => prev + pauseDuration);
+      
+      setIsPaused(false);
+      setPausedAt(null);
+      
+      const resumedWorkout = {
+        ...workout,
+        status: 'in_progress' as const,
+        resumed_at: new Date(),
+      };
+      
+      setWorkout(resumedWorkout);
+      workoutAutoSaveService.updateWorkout(resumedWorkout);
+    }
+  };
+
+  const handleWorkoutComplete = async () => {
+    const actualDuration = Math.floor((new Date().getTime() - workoutStartTime.getTime()) / 1000) - totalPausedTime;
+    
     const completedWorkout: Workout = {
       ...workout,
       status: 'completed',
       completed_at: new Date(),
-      total_duration: Math.floor((new Date().getTime() - workoutStartTime.getTime()) / 1000),
+      total_duration: actualDuration,
+      duration_minutes: Math.floor(actualDuration / 60),
     };
 
-    onWorkoutComplete(completedWorkout);
+    try {
+      // Force save before completing
+      await workoutAutoSaveService.forceSave(workout.id);
+      workoutAutoSaveService.stopAutoSave(workout.id);
+
+      // Process gamification rewards through the hook
+      await completeWorkout(completedWorkout);
+
+      // Complete the workout (this will be called after rewards are shown)
+      onWorkoutComplete(completedWorkout);
+      
+    } catch (error) {
+      console.error('❌ Error in workout completion flow:', error);
+      
+      // Still complete the workout even if gamification fails
+      onWorkoutComplete(completedWorkout);
+    }
   };
 
   const handleExitWorkout = () => {
@@ -129,8 +220,11 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
       paused_at: new Date(),
     };
 
-    // In a real app, you'd save this to the database
-    onWorkoutExit();
+    // Force save and stop auto-save
+    workoutAutoSaveService.forceSave(workout.id).then(() => {
+      workoutAutoSaveService.stopAutoSave(workout.id);
+      onWorkoutExit();
+    });
   };
 
   const getWorkoutProgress = () => {
@@ -155,14 +249,23 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
 
   const [elapsedTime, setElapsedTime] = useState(0);
 
-  // Update elapsed time every second
+  // Update elapsed time every second (accounting for pauses)
   useEffect(() => {
-    const interval = setInterval(() => {
-      setElapsedTime(Math.floor((new Date().getTime() - workoutStartTime.getTime()) / 1000));
-    }, 1000);
+    let interval: NodeJS.Timeout | null = null;
+    
+    if (!isPaused) {
+      interval = setInterval(() => {
+        const currentTime = new Date().getTime();
+        const rawElapsed = Math.floor((currentTime - workoutStartTime.getTime()) / 1000);
+        const currentPausedTime = pausedAt ? Math.floor((currentTime - pausedAt.getTime()) / 1000) : 0;
+        setElapsedTime(rawElapsed - totalPausedTime - currentPausedTime);
+      }, 1000);
+    }
 
-    return () => clearInterval(interval);
-  }, [workoutStartTime]);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [workoutStartTime, isPaused, pausedAt, totalPausedTime]);
 
   // Handle empty workout (no exercises)
   if (workout.exercises.length === 0) {
@@ -214,9 +317,10 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
               </button>
               <button 
                 onClick={handleWorkoutComplete}
-                className="w-full px-4 py-3 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 font-medium rounded-lg transition-colors"
+                disabled={isCompletingWorkout}
+                className="w-full px-4 py-3 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Finish Empty Workout
+                {isCompletingWorkout ? 'Finishing...' : 'Finish Empty Workout'}
               </button>
             </div>
           </div>
@@ -235,9 +339,10 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
           </h2>
           <button
             onClick={handleWorkoutComplete}
-            className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-md"
+            disabled={isCompletingWorkout}
+            className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Finish Workout
+            {isCompletingWorkout ? 'Finishing...' : 'Finish Workout'}
           </button>
         </div>
       </div>
@@ -245,7 +350,15 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
   }
 
   return (
-    <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 ${className}`}>
+    <>
+      {/* Workout Rewards Modal */}
+      <WorkoutRewardsModal
+        result={completionResult}
+        isOpen={showRewardsModal}
+        onClose={closeRewardsModal}
+      />
+      
+      <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 ${className}`}>
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
         <div className="max-w-md mx-auto px-4 py-3">
@@ -262,21 +375,51 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
 
             {/* Workout Timer */}
             <div className="text-center">
-              <div className="text-lg font-mono font-semibold text-gray-900 dark:text-gray-100">
-                {formatDuration(elapsedTime)}
+              <div className="flex items-center justify-center space-x-2">
+                <div className="text-lg font-mono font-semibold text-gray-900 dark:text-gray-100">
+                  {formatDuration(elapsedTime)}
+                </div>
+                {isPaused && (
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                )}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400">
-                {getWorkoutProgress()}% complete
+                {isPaused ? 'Paused' : `${getWorkoutProgress()}% complete`}
               </div>
             </div>
 
-            {/* Finish Button */}
-            <button
-              onClick={handleWorkoutComplete}
-              className="px-3 py-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
-            >
-              FINISH
-            </button>
+            {/* Pause/Resume and Finish Buttons */}
+            <div className="flex items-center space-x-2">
+              {isPaused ? (
+                <button
+                  onClick={handleResumeWorkout}
+                  className="p-2 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300"
+                  title="Resume Workout"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h1m4 0h1m-6-8h1m4 0h1M9 6h1m4 0h1" />
+                  </svg>
+                </button>
+              ) : (
+                <button
+                  onClick={handlePauseWorkout}
+                  className="p-2 text-yellow-600 dark:text-yellow-400 hover:text-yellow-700 dark:hover:text-yellow-300"
+                  title="Pause Workout"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6" />
+                  </svg>
+                </button>
+              )}
+              
+              <button
+                onClick={handleWorkoutComplete}
+                disabled={isCompletingWorkout}
+                className="px-3 py-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isCompletingWorkout ? 'FINISHING...' : 'FINISH'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -331,8 +474,38 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
           />
         )}
 
+        {/* Pause Overlay */}
+        {isPaused && (
+          <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+            <div className="p-6 text-center">
+              <div className="text-4xl mb-4">⏸️</div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                Workout Paused
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">
+                Take your time. Your progress is automatically saved.
+              </p>
+              
+              <div className="flex space-x-3">
+                <button
+                  onClick={handleResumeWorkout}
+                  className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
+                >
+                  Resume Workout
+                </button>
+                <button
+                  onClick={handleExitWorkout}
+                  className="flex-1 px-4 py-3 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 font-medium rounded-lg transition-colors"
+                >
+                  Exit
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Set Logger */}
-        {!isResting && (
+        {!isResting && !isPaused && (
           <SetLogger
             currentSet={currentSet}
             exercise={currentExercise}
@@ -342,5 +515,6 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
         )}
       </div>
     </div>
+    </>
   );
 };

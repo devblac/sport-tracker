@@ -11,7 +11,7 @@ import {
   Flag, 
   MessageSquare,
   User,
-  Spam,
+  AlertTriangle as Spam,
   Shield
 } from 'lucide-react';
 import { usePrivacy } from '@/hooks/usePrivacy';

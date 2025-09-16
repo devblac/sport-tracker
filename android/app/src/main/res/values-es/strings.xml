@@ -1,0 +1,34 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <!-- Identidad de la App -->
+    <string name="app_name">Sport Tracker</string>
+    <string name="app_name_full">Sport Tracker - Fitness Gamificada</string>
+    <string name="title_activity_main">Sport Tracker</string>
+    
+    <!-- Descripción de la App -->
+    <string name="app_description">Seguimiento de fitness gamificado con características sociales, logros y análisis de entrenamientos</string>
+    <string name="app_short_description">Rastreador de Fitness Gamificado</string>
+    
+    <!-- Características -->
+    <string name="feature_offline">Funciona sin conexión</string>
+    <string name="feature_gamification">XP, niveles y logros</string>
+    <string name="feature_social">Conecta con amigos del gimnasio</string>
+    <string name="feature_analytics">Seguimiento de progreso y análisis</string>
+    
+    <!-- Descripciones de permisos -->
+    <string name="permission_camera_description">Tomar fotos para el perfil y progreso de entrenamientos</string>
+    <string name="permission_storage_description">Guardar datos de entrenamientos y fotos de progreso</string>
+    <string name="permission_activity_description">Rastrear actividades físicas y pasos</string>
+    <string name="permission_sensors_description">Monitorear ritmo cardíaco y métricas de fitness</string>
+    <string name="permission_vibrate_description">Proporcionar notificaciones y retroalimentación de entrenamientos</string>
+    
+    <!-- Notificaciones -->
+    <string name="notification_workout_reminder">¡Es hora de tu entrenamiento!</string>
+    <string name="notification_streak_risk">¡No rompas tu racha!</string>
+    <string name="notification_achievement">¡Nuevo logro desbloqueado!</string>
+    
+    <!-- Mensajes de error -->
+    <string name="error_network">Verifica tu conexión a internet</string>
+    <string name="error_sync">Error al sincronizar datos</string>
+    <string name="error_generic">Algo salió mal. Por favor intenta de nuevo.</string>
+</resources>

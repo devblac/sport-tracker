@@ -6,7 +6,7 @@ import {
   ChallengeRequirement, 
   ChallengeReward,
   ChallengeProgressRecord 
-} from '../../types/challengeModels';
+} from '@/types';
 
 describe('ChallengeValidator', () => {
   describe('validateChallenge', () => {

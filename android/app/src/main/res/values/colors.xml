@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary brand colors for Sport Tracker -->
+    <color name="colorPrimary">#3b82f6</color>
+    <color name="colorPrimaryDark">#1d4ed8</color>
+    <color name="colorAccent">#10b981</color>
+    
+    <!-- Background colors -->
+    <color name="backgroundColor">#1f2937</color>
+    <color name="backgroundColorLight">#f9fafb</color>
+    
+    <!-- Status bar colors -->
+    <color name="statusBarColor">#1f2937</color>
+    <color name="statusBarColorLight">#ffffff</color>
+    
+    <!-- Splash screen colors -->
+    <color name="splashBackground">#1f2937</color>
+    <color name="splashAccent">#3b82f6</color>
+</resources>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Settings, Crown, UserPlus, LogOut, User, Shield, X, Users, MessageCircle } from 'lucide-react';
+import { Settings, Crown, UserPlus, LogOut, User, Shield, X, Users, MessageCircle, GraduationCap } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent, Button } from '@/components/ui';
 import { ThemeSelector } from '@/components/ui/ThemeSelector';
 import { ProfileSettings } from '@/components/profile/ProfileSettings';
@@ -8,9 +9,11 @@ import { useAuthStore } from '@/stores';
 
 export const Profile: React.FC = () => {
   const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'overview' | 'settings' | 'privacy'>('overview');
   const [showAddFriends, setShowAddFriends] = useState(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [showSignUpModal, setShowSignUpModal] = useState(false);
 
   const getUserInitial = () => {
     if (!user) return 'U';
@@ -97,11 +100,15 @@ export const Profile: React.FC = () => {
               </p>
               
               {user?.role === 'guest' ? (
-                <Button variant="primary" fullWidth>
+                <Button 
+                  variant="primary" 
+                  fullWidth
+                  onClick={() => setShowSignUpModal(true)}
+                >
                   Sign Up for Full Features
                 </Button>
               ) : (
-                <Button variant="outline" fullWidth onClick={logout} icon={<LogOut className="w-4 h-4" />}>
+                <Button variant="outline" fullWidth onClick={() => logout()} icon={<LogOut className="w-4 h-4" />}>
                   Sign Out
                 </Button>
               )}
@@ -130,6 +137,22 @@ export const Profile: React.FC = () => {
                   onClick={() => setShowAddFriends(true)}
                 >
                   Add
+                </Button>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <GraduationCap className="w-5 h-5 text-blue-500" />
+                  <span className="text-foreground">
+                    Mentorship Hub
+                  </span>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => navigate('/mentorship-test')}
+                >
+                  Open
                 </Button>
               </div>
             </CardContent>
@@ -337,6 +360,68 @@ export const Profile: React.FC = () => {
                   className="flex-1"
                 >
                   Upgrade Now
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sign Up Modal */}
+      {showSignUpModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-background rounded-lg max-w-md w-full p-6">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-primary to-secondary rounded-full flex items-center justify-center mx-auto mb-4">
+                <UserPlus className="w-8 h-8 text-primary-foreground" />
+              </div>
+              <h2 className="text-2xl font-bold text-foreground mb-2">
+                Create Your Account
+              </h2>
+              <p className="text-muted-foreground mb-6">
+                Sign up to unlock all features, save your progress, and sync across devices
+              </p>
+              
+              <div className="space-y-3 mb-6 text-left">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm text-foreground">Save workouts and progress</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm text-foreground">Sync across all your devices</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm text-foreground">Connect with gym friends</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm text-foreground">Track achievements and streaks</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm text-foreground">Access premium templates</span>
+                </div>
+              </div>
+              
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowSignUpModal(false)}
+                  className="flex-1"
+                >
+                  Maybe Later
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    setShowSignUpModal(false);
+                    navigate('/auth', { state: { forceSelection: true } });
+                  }}
+                  className="flex-1"
+                >
+                  Sign Up Now
                 </Button>
               </div>
             </div>

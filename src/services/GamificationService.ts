@@ -41,19 +41,72 @@ import {
   DEFAULT_ACHIEVEMENTS
 } from '@/utils/achievementSystem';
 
-import { IndexedDBManager } from '@/db/IndexedDBManager';
 import { logger } from '@/utils/logger';
+
+/**
+ * Mock Database Interface for Gamification Service
+ * Using localStorage until Supabase integration is complete
+ */
+interface MockDB {
+  add(store: string, data: any): Promise<string>;
+  get(store: string, key: string): Promise<any>;
+  getAll(store: string, options?: any): Promise<any[]>;
+  update(store: string, key: string, data: any): Promise<void>;
+}
+
+class MockDatabase implements MockDB {
+  async add(store: string, data: any): Promise<string> {
+    const key = data.id || crypto.randomUUID();
+    const storageKey = `${store}_${key}`;
+    localStorage.setItem(storageKey, JSON.stringify({ ...data, id: key }));
+    return key;
+  }
+
+  async get(store: string, key: string): Promise<any> {
+    const storageKey = `${store}_${key}`;
+    const data = localStorage.getItem(storageKey);
+    return data ? JSON.parse(data) : null;
+  }
+
+  async getAll(store: string, options?: any): Promise<any[]> {
+    const results: any[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(`${store}_`)) {
+        const data = localStorage.getItem(key);
+        if (data) {
+          const parsed = JSON.parse(data);
+          if (options?.index && options?.value) {
+            if (parsed[options.index] === options.value) {
+              results.push(parsed);
+            }
+          } else {
+            results.push(parsed);
+          }
+        }
+      }
+    }
+    return results;
+  }
+
+  async update(store: string, key: string, data: any): Promise<void> {
+    const storageKey = `${store}_${key}`;
+    localStorage.setItem(storageKey, JSON.stringify(data));
+  }
+}
 
 /**
  * Gamification Service Implementation
  */
 export class GamificationService implements IGamificationEngine {
   private static instance: GamificationService;
-  private db: IndexedDBManager;
   private config: GamificationConfig;
+  private db: MockDB;
 
   private constructor() {
-    this.db = IndexedDBManager.getInstance();
+    // Using mock database with localStorage for now
+    this.db = new MockDatabase();
+    
     this.config = {
       xpCalculation: DEFAULT_XP_CONFIG,
       levelConfigs: DEFAULT_LEVEL_CONFIGS,

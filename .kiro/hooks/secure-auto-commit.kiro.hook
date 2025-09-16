@@ -1,0 +1,27 @@
+{
+  "enabled": true,
+  "name": "Secure Auto Commit",
+  "description": "Automatically commits latest changes following security measures to verify no sensitive keys/values are committed and creates meaningful commit messages based on file changes",
+  "version": "1",
+  "when": {
+    "type": "userTriggered",
+    "patterns": [
+      "src/**/*",
+      "package.json",
+      "*.md",
+      "*.ts",
+      "*.tsx",
+      "*.js",
+      "*.jsx",
+      "*.json",
+      "*.sql",
+      "database/**/*",
+      "supabase/**/*",
+      "docs/**/*"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Review the changed files and perform a secure commit with the following steps:\n\n1. **Security Check**: Scan all changed files for sensitive information:\n   - API keys, tokens, passwords, or secrets\n   - Database connection strings or credentials  \n   - Private keys or certificates\n   - Personal identifiable information (PII)\n   - Any hardcoded sensitive values\n\n2. **Generate Meaningful Commit Message**: Based on the file changes, create a descriptive commit message following conventional commits format:\n   - Use appropriate type (feat, fix, docs, style, refactor, test, chore)\n   - Include scope when relevant (auth, ui, api, db, etc.)\n   - Write clear, concise description of what changed\n   - Add breaking change notes if applicable\n\n3. **Stage and Commit**: If security check passes:\n   - Stage the appropriate files (exclude sensitive files like .env.local)\n   - Create the commit with the generated message\n   - Provide summary of what was committed\n\n4. **Security Alert**: If sensitive data is detected:\n   - List the specific security issues found\n   - Recommend actions to fix them\n   - Do NOT commit until issues are resolved\n\nFocus on maintaining security while ensuring meaningful commit history for the Sport Tracker fitness PWA project."
+  }
+}

@@ -65,6 +65,8 @@ export interface StreakStats {
   perfectWeeks: number;
   averageWorkoutsPerWeek: number;
   consistencyScore: number; // 0-100 based on adherence to schedule
+  totalMissedDays: number; // Total missed days in current period
+  shieldsUsed: number; // Number of shields used in current period
 }
 
 export interface StreakConfig {

@@ -62,6 +62,12 @@ export const dbManager = {
     return service.getManager().put(storeName, data);
   },
 
+  // Legacy update method - just delegates to put since IndexedDB doesn't distinguish
+  async update<T>(storeName: string, key: IDBValidKey, data: T): Promise<void> {
+    const service = await ensureInitialized();
+    await service.getManager().put(storeName, data);
+  },
+
   async get<T>(storeName: string, key: IDBValidKey): Promise<T | undefined> {
     const service = await ensureInitialized();
     return service.getManager().get(storeName, key);

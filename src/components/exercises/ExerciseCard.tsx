@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Card, CardContent, Badge } from '@/components/ui';
+import { ExerciseThumbnail } from '@/components/ui/LazyImage';
+import { useExerciseListPreloader } from '@/hooks/useMediaPreloader';
 import type { Exercise } from '@/schemas/exercise';
 
 // Import utilities with error handling
@@ -26,6 +28,7 @@ interface ExerciseCardProps {
   showDetails?: boolean;
   compact?: boolean;
   className?: string;
+  enablePreloading?: boolean;
 }
 
 export const ExerciseCard: React.FC<ExerciseCardProps> = ({
@@ -34,7 +37,27 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   showDetails = true,
   compact = false,
   className = '',
+  enablePreloading = true,
 }) => {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const { observeElement, unobserveElement } = useExerciseListPreloader([exercise], {
+    enabled: enablePreloading,
+    preloadOnVisible: true,
+    preloadOnMount: false
+  });
+
+  // Setup intersection observer for preloading
+  useEffect(() => {
+    if (cardRef.current && enablePreloading) {
+      observeElement(cardRef.current, exercise.id);
+      
+      return () => {
+        if (cardRef.current) {
+          unobserveElement(cardRef.current);
+        }
+      };
+    }
+  }, [exercise.id, enablePreloading, observeElement, unobserveElement]);
   const categoryInfo = EXERCISE_CATEGORIES[exercise.category] || { 
     name: exercise.category, 
     icon: '💪' 
@@ -97,10 +120,22 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
 
   return (
     <Card 
+      ref={cardRef}
       className={`hover:shadow-md transition-shadow cursor-pointer ${className}`}
       onClick={handleClick}
     >
       <CardContent className="p-3">
+        {/* Exercise Thumbnail */}
+        {(exercise.thumbnail_url || exercise.gif_url) && !compact && (
+          <div className="mb-3">
+            <ExerciseThumbnail
+              src={exercise.thumbnail_url || exercise.gif_url || ''}
+              alt={`${exercise.name} thumbnail`}
+              className="w-full h-24 object-cover rounded-md"
+              loading="lazy"
+            />
+          </div>
+        )}
         {/* Header */}
         <div className="flex items-start justify-between mb-2">
           <div className="flex-1 min-w-0">

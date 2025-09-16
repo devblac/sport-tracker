@@ -1,6 +1,6 @@
 import { dbManager } from '@/db/IndexedDBManager';
 import type { Workout, WorkoutTemplate } from '@/schemas/workout';
-import { validateWorkout, validateWorkoutTemplate, transformWorkoutData } from '@/utils/workoutValidation';
+import { validateWorkout, validateWorkoutTemplate, transformWorkoutData, transformTemplateData } from '@/utils/workoutValidation';
 import { SAMPLE_WORKOUT_TEMPLATES } from '@/data/sampleWorkouts';
 import { QueryOptimizer } from './QueryOptimizer';
 import { PrefetchManager } from './PrefetchManager';
@@ -30,33 +30,21 @@ export class WorkoutService {
   // Template Management with Advanced Caching
   async getAllTemplates(): Promise<WorkoutTemplate[]> {
     try {
-      // Record behavior for prefetch learning
-      this.prefetchManager.recordBehavior({
-        userId: 'current_user',
-        action: 'getAllTemplates',
-        resource: 'workoutTemplates:getAll',
-        context: { operation: 'getAll' }
-      });
+      await dbManager.init();
+      
+      // Get all templates directly from database
+      const allTemplates = await dbManager.getAll<WorkoutTemplate>('workoutTemplates');
+      
+      console.log('Raw templates from DB:', allTemplates.length);
+      
+      // Filter and transform templates
+      const templates = allTemplates
+        .filter(template => template.is_template === true) // Only actual templates
+        .map(template => transformTemplateData(template))
+        .filter(Boolean) as WorkoutTemplate[];
 
-      // Use optimized query with caching
-      const result = await this.queryOptimizer.getAll<WorkoutTemplate>(
-        'workoutTemplates',
-        undefined,
-        {
-          useCache: true,
-          cacheStrategy: 'templates',
-          cacheTTL: 12 * 60 * 60 * 1000, // 12 hours
-          prefetch: ['workoutTemplates:popular', 'workoutTemplates:recent']
-        }
-      );
-
-      const templates = result.data.map(template => 
-        transformWorkoutData(template) as WorkoutTemplate
-      ).filter(Boolean);
-
-      // TODO: Re-enable prefetching once QueryOptimizer is properly integrated
-      // const templateIds = templates.slice(0, 5).map(t => `workoutTemplates:${t.id}`);
-      // await this.queryOptimizer.prefetchRelated(templateIds);
+      console.log('Filtered templates:', templates.length);
+      console.log('Template details:', templates.map(t => ({ id: t.id, name: t.name, user_id: t.user_id, is_template: t.is_template })));
 
       return templates;
     } catch (error) {
@@ -71,7 +59,7 @@ export class WorkoutService {
       const template = await dbManager.get<WorkoutTemplate>('workoutTemplates', id);
       if (!template) return null;
       
-      const transformed = transformWorkoutData(template) as WorkoutTemplate;
+      const transformed = transformTemplateData(template);
       return transformed || null;
     } catch (error) {
       console.error('Error getting template by id:', error);
@@ -102,13 +90,26 @@ export class WorkoutService {
   async saveTemplate(template: WorkoutTemplate): Promise<boolean> {
     try {
       await dbManager.init();
+      
+      console.log('Saving template:', template);
+      
+      // Use the template-specific validation
       const validation = validateWorkoutTemplate(template);
       if (!validation.success) {
         console.error('Template validation failed:', validation.errors);
         return false;
       }
-
+      
       await dbManager.put('workoutTemplates', template);
+      
+      // Notify that templates have been updated
+      if (typeof window !== 'undefined') {
+        console.log('Dispatching templatesUpdated event for:', template.id);
+        window.dispatchEvent(new CustomEvent('templatesUpdated', { 
+          detail: { templateId: template.id } 
+        }));
+      }
+      
       return true;
     } catch (error) {
       console.error('Error saving template:', error);
@@ -116,16 +117,7 @@ export class WorkoutService {
     }
   }
 
-  async deleteTemplate(id: string): Promise<boolean> {
-    try {
-      await dbManager.init();
-      await dbManager.delete('workoutTemplates', id);
-      return true;
-    } catch (error) {
-      console.error('Error deleting template:', error);
-      return false;
-    }
-  }
+  // Removed duplicate deleteTemplate method - see line 491 for the main implementation
 
   // Create workout from template
   async createWorkoutFromTemplate(templateId: string, userId: string): Promise<Workout | null> {
@@ -185,6 +177,13 @@ export class WorkoutService {
         template.times_used = (template.times_used || 0) + 1;
         template.last_used = new Date();
         await this.saveTemplate(template);
+        
+        // Notify that templates have been updated
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('templatesUpdated', { 
+            detail: { templateId } 
+          }));
+        }
       }
     } catch (error) {
       console.error('Error incrementing template usage:', error);
@@ -321,13 +320,21 @@ export class WorkoutService {
     try {
       await dbManager.init();
       const template = await dbManager.get<WorkoutTemplate>('workoutTemplates', templateId);
+      
       if (template) {
         const updatedTemplate = {
           ...template,
           last_used: new Date(),
           times_used: (template.times_used || 0) + 1
         };
-        await dbManager.update('workoutTemplates', templateId, updatedTemplate);
+        await dbManager.put('workoutTemplates', updatedTemplate);
+        
+        // Notify that templates have been updated
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('templatesUpdated', { 
+            detail: { templateId } 
+          }));
+        }
       }
     } catch (error) {
       console.error('Error updating template usage:', error);
@@ -359,10 +366,179 @@ export class WorkoutService {
           })),
           updated_at: new Date()
         };
-        await dbManager.update('workoutTemplates', templateId, updatedTemplate);
+        await dbManager.put('workoutTemplates', updatedTemplate);
+        
+        // Notify that templates have been updated
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('templatesUpdated', { 
+            detail: { templateId } 
+          }));
+        }
       }
     } catch (error) {
       console.error('Error updating template from workout:', error);
+    }
+  }
+
+  // Archive/Unarchive template functionality
+  async archiveTemplate(templateId: string): Promise<boolean> {
+    try {
+      await dbManager.init();
+      const template = await dbManager.get<WorkoutTemplate>('workoutTemplates', templateId);
+      
+      if (!template) {
+        console.error('Template not found:', templateId);
+        return false;
+      }
+
+      const updatedTemplate = {
+        ...template,
+        is_archived: true,
+        archived_at: new Date(),
+        updated_at: new Date()
+      };
+
+      await dbManager.put('workoutTemplates', updatedTemplate);
+      
+      // Notify that templates have been updated
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('templatesUpdated', { 
+          detail: { templateId } 
+        }));
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error archiving template:', error);
+      return false;
+    }
+  }
+
+  async unarchiveTemplate(templateId: string): Promise<boolean> {
+    try {
+      await dbManager.init();
+      const template = await dbManager.get<WorkoutTemplate>('workoutTemplates', templateId);
+      
+      if (!template) {
+        console.error('Template not found:', templateId);
+        return false;
+      }
+
+      const updatedTemplate = {
+        ...template,
+        is_archived: false,
+        archived_at: undefined,
+        updated_at: new Date()
+      };
+
+      await dbManager.put('workoutTemplates', updatedTemplate);
+      
+      // Notify that templates have been updated
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('templatesUpdated', { 
+          detail: { templateId } 
+        }));
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error unarchiving template:', error);
+      return false;
+    }
+  }
+
+  async renameTemplate(templateId: string, newName: string): Promise<boolean> {
+    try {
+      await dbManager.init();
+      const template = await dbManager.get<WorkoutTemplate>('workoutTemplates', templateId);
+      
+      if (!template) {
+        console.error('Template not found:', templateId);
+        return false;
+      }
+
+      const updatedTemplate = {
+        ...template,
+        name: newName.trim(),
+        updated_at: new Date()
+      };
+
+      await dbManager.put('workoutTemplates', updatedTemplate);
+      
+      // Notify that templates have been updated
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('templatesUpdated', { 
+          detail: { templateId } 
+        }));
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error renaming template:', error);
+      return false;
+    }
+  }
+
+  async deleteTemplate(templateId: string): Promise<boolean> {
+    try {
+      await dbManager.init();
+      await dbManager.delete('workoutTemplates', templateId);
+      
+      // Notify that templates have been updated
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('templatesUpdated', { 
+          detail: { templateId } 
+        }));
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error deleting template:', error);
+      return false;
+    }
+  }
+
+  async duplicateTemplate(templateId: string, newName?: string): Promise<string | null> {
+    try {
+      console.log('Duplicating template:', templateId, 'with name:', newName);
+      await dbManager.init();
+      const template = await dbManager.get<WorkoutTemplate>('workoutTemplates', templateId);
+      
+      if (!template) {
+        console.error('Template not found:', templateId);
+        return null;
+      }
+
+      console.log('Original template found:', template.name);
+
+      const newTemplateId = `template-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const duplicatedTemplate = {
+        ...template,
+        id: newTemplateId,
+        name: newName || `${template.name} (Copy)`,
+        times_used: 0,
+        last_used: undefined,
+        is_archived: false,
+        archived_at: undefined,
+        created_at: new Date(),
+        updated_at: new Date()
+      };
+
+      console.log('Saving duplicated template:', duplicatedTemplate.name);
+      await dbManager.put('workoutTemplates', duplicatedTemplate);
+      
+      // Notify that templates have been updated
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('templatesUpdated', { 
+          detail: { templateId: newTemplateId } 
+        }));
+      }
+
+      console.log('Template duplicated successfully:', newTemplateId);
+      return newTemplateId;
+    } catch (error) {
+      console.error('Error duplicating template:', error);
+      return null;
     }
   }
 }

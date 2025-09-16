@@ -151,7 +151,7 @@ export class RecommendationEngine {
     limit: number,
     afterDate?: Date
   ): Promise<Workout[]> {
-    const allWorkouts = await this.workoutService.getWorkoutHistory(userId);
+    const allWorkouts = await this.workoutService.getWorkoutsByUser(userId);
     
     return allWorkouts
       .filter(workout => {
@@ -233,16 +233,25 @@ export class RecommendationEngine {
     let reasoning = '';
     let confidence = 0.7;
 
+    // Base confidence on data quality
+    const dataQuality = Math.min(performanceHistory.length / 5, 1); // More data = higher confidence
+    confidence = 0.5 + (dataQuality * 0.3); // 0.5 to 0.8 base confidence
+
     // Adjust based on rep difference
     const repDifference = targetReps - lastBestSet.reps;
     if (repDifference > 0) {
       // More reps = less weight
       suggestedWeight = baseWeight * (1 - (repDifference * 0.025));
       reasoning = `Adjusted for ${repDifference} more reps than last time`;
+      confidence += 0.1; // More confident when reducing weight for more reps
     } else if (repDifference < 0) {
       // Fewer reps = more weight
       suggestedWeight = baseWeight * (1 + (Math.abs(repDifference) * 0.025));
       reasoning = `Adjusted for ${Math.abs(repDifference)} fewer reps than last time`;
+      confidence += 0.05; // Slightly less confident when increasing weight
+    } else {
+      reasoning = 'Same rep range as last time';
+      confidence += 0.15; // Most confident when rep range matches
     }
 
     // Apply progression based on recent trend
@@ -251,13 +260,18 @@ export class RecommendationEngine {
       suggestedWeight *= 1.025; // 2.5% increase
       progressionType = 'linear';
       reasoning += '. Recent progress suggests you can handle more weight';
-      confidence = 0.8;
+      confidence = Math.min(confidence + 0.1, 0.95); // Cap at 95%
     } else if (recentTrend < -0.05) {
       // Declining performance - maintain or deload
       suggestedWeight *= 0.95; // 5% decrease
       progressionType = 'deload';
       reasoning += '. Recent performance suggests taking a step back';
-      confidence = 0.9;
+      confidence = Math.min(confidence + 0.15, 0.95); // Very confident in deload recommendations
+    } else {
+      // Stable performance
+      progressionType = 'maintain';
+      reasoning += '. Performance has been stable';
+      confidence += 0.05;
     }
 
     // Adjust for set number (fatigue)
@@ -265,7 +279,11 @@ export class RecommendationEngine {
       const fatigueReduction = (currentSetNumber - 1) * 0.02; // 2% per additional set
       suggestedWeight *= (1 - fatigueReduction);
       reasoning += `. Adjusted for set ${currentSetNumber} fatigue`;
+      confidence -= 0.05; // Less confident for later sets due to fatigue
     }
+
+    // Ensure confidence stays within bounds
+    confidence = Math.max(0.3, Math.min(0.95, confidence));
 
     // Round to nearest 2.5kg/5lb
     suggestedWeight = Math.round(suggestedWeight * 2) / 2;
@@ -363,15 +381,43 @@ export class RecommendationEngine {
       'bench_press': 20,
       'deadlift': 30,
       'overhead_press': 15,
-      'row': 15
+      'row': 15,
+      'barbell_curl': 10,
+      'tricep_extension': 10,
+      'lat_pulldown': 25,
+      'leg_press': 40
     };
 
     const baseWeight = beginnerWeights[exerciseId] || 10;
+    
+    // Adjust weight based on rep range
+    let adjustedWeight = baseWeight;
+    let confidence = 0.4; // Lower confidence for beginners
+    let reasoning = 'Conservative starting weight for new exercise';
+
+    if (targetReps <= 5) {
+      // Heavy weight, low reps
+      adjustedWeight = baseWeight * 1.2;
+      confidence = 0.3; // Less confident for heavy weights without history
+      reasoning = 'Starting weight for strength training (low reps)';
+    } else if (targetReps >= 12) {
+      // Light weight, high reps
+      adjustedWeight = baseWeight * 0.8;
+      confidence = 0.6; // More confident for lighter weights
+      reasoning = 'Starting weight for endurance training (high reps)';
+    } else {
+      // Moderate weight, moderate reps
+      confidence = 0.5;
+      reasoning = 'Starting weight for hypertrophy training (moderate reps)';
+    }
+
+    // Round to nearest 2.5kg
+    adjustedWeight = Math.round(adjustedWeight * 2) / 2;
 
     return {
-      suggestedWeight: baseWeight,
-      confidence: 0.5,
-      reasoning: 'Conservative starting weight for new exercise',
+      suggestedWeight: adjustedWeight,
+      confidence,
+      reasoning,
       previousBest: 0,
       progressionType: 'linear'
     };

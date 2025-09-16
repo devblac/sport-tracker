@@ -1,9 +1,13 @@
 // Challenge Components Index
 // Exports all challenge-related UI components
 
-export { default as ChallengeCard } from './ChallengeCard';
+export { ChallengeCard } from './ChallengeCard';
 export { default as ChallengeList } from './ChallengeList';
-export { default as ChallengeLeaderboard } from './ChallengeLeaderboard';
+export { ChallengeLeaderboard } from './ChallengeLeaderboard';
+export { ChallengeCreator } from './ChallengeCreator';
+export { ChallengeInviteModal } from './ChallengeInviteModal';
+export { RealTimeLeaderboard } from './RealTimeLeaderboard';
+export { ChallengeRewardsSystem } from './ChallengeRewardsSystem';
 export { default as ChallengeJoinFlow } from './ChallengeJoinFlow';
 
 // Gamification integration components

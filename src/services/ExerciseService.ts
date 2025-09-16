@@ -1,383 +1,777 @@
-import type { Exercise, ExerciseFilter, ExerciseCreate, ExerciseUpdate } from '@/schemas/exercise';
-import { dbManager, STORES } from '@/db/IndexedDBManager';
-import { logger } from '@/utils/logger';
-import { 
-  validateExercise, 
-  validateExerciseCreate, 
-  validateExerciseUpdate,
-  validateExerciseFilter,
-  transformExerciseData,
-  generateExerciseId,
-  matchesSearchCriteria
-} from '@/utils/exerciseValidation';
+import { getDatabaseService } from '@/db/DatabaseService';
+import type { Exercise, ExerciseFilter, BodyPart, ExerciseCategory } from '@/schemas/exercise';
 
-/**
- * Service for managing exercise data in IndexedDB
- */
 export class ExerciseService {
-  private fallbackMode = false;
-  private memoryStore: Exercise[] = [];
+  private static instance: ExerciseService;
+  private db = getDatabaseService();
+  private initialized = false;
+  private sampleExercises: Exercise[] = [];
+  private userPreferences: Map<string, any> = new Map();
+
+  static getInstance(): ExerciseService {
+    if (!ExerciseService.instance) {
+      ExerciseService.instance = new ExerciseService();
+    }
+    return ExerciseService.instance;
+  }
 
   /**
-   * Initialize the service
+   * Initialize the service and populate with sample data
    */
   async init(): Promise<void> {
+    if (this.initialized) return;
+
     try {
-      await dbManager.init();
-      logger.info('ExerciseService initialized');
+      // Initialize the database
+      await this.db.initialize();
+      
+      // Check if we have exercises in the database
+      const existingExercises = await this.db.getAllExercises();
+      
+      if (existingExercises.length === 0) {
+        // Populate with sample exercises
+        await this.populateSampleExercises();
+      }
+      
+      this.initialized = true;
+      console.log('ExerciseService initialized successfully');
     } catch (error) {
-      logger.warn('ExerciseService falling back to memory mode', error);
-      this.fallbackMode = true;
-      this.initializeFallbackData();
+      console.error('Error initializing ExerciseService:', error);
+      // Fallback to in-memory exercises
+      this.initializeFallbackExercises();
+      this.initialized = true;
     }
   }
 
   /**
-   * Initialize fallback data in memory
+   * Initialize fallback exercises in memory
    */
-  private initializeFallbackData(): void {
-    // Load basic exercises from sample data
-    this.memoryStore = [];
-    logger.info('ExerciseService initialized in fallback mode');
+  private initializeFallbackExercises(): void {
+    this.sampleExercises = this.createSampleExerciseData();
+    console.log('Using fallback in-memory exercises');
   }
 
   /**
-   * Create a new exercise
+   * Create sample exercise data
    */
-  async createExercise(exerciseData: ExerciseCreate): Promise<Exercise> {
-    // Validate input data
-    const validation = validateExerciseCreate(exerciseData);
-    if (!validation.success) {
-      throw new Error(`Invalid exercise data: ${validation.errors?.join(', ')}`);
-    }
+  private createSampleExerciseData(): Exercise[] {
+    return [
+      {
+        id: 'bench-press',
+        name: 'Bench Press',
+        type: 'barbell',
+        category: 'strength',
+        body_parts: ['chest'],
+        muscle_groups: ['pectorals'],
+        equipment: 'barbell',
+        difficulty_level: 3,
+        instructions: [{ step_number: 1, instruction: 'Lie on bench, grip bar shoulder-width apart, lower to chest, press up' }],
+        tips: [],
+        variations: [],
+        created_at: new Date(),
+        is_custom: false,
+        is_verified: true,
+        tags: [],
+        aliases: [],
+        safety_notes: [],
+        contraindications: [],
+        prerequisites: []
+      },
+      {
+        id: 'squat',
+        name: 'Squat',
+        type: 'barbell',
+        category: 'strength',
+        body_parts: ['legs'],
+        muscle_groups: ['quadriceps_femoris'],
+        equipment: 'barbell',
+        difficulty_level: 4,
+        instructions: [{ step_number: 1, instruction: 'Stand with bar on shoulders, squat down and up' }],
+        tips: [],
+        variations: [],
+        created_at: new Date(),
+        is_custom: false,
+        is_verified: true,
+        tags: [],
+        aliases: []
+      },
+      {
+        id: 'deadlift',
+        name: 'Deadlift',
+        type: 'barbell',
+        category: 'powerlifting',
+        body_parts: ['back', 'legs'],
+        muscle_groups: ['latissimus_dorsi'],
+        equipment: 'barbell',
+        difficulty_level: 4,
+        instructions: [{ step_number: 1, instruction: 'Stand with feet hip-width, grip bar, lift by extending hips and knees' }],
+        tips: [],
+        variations: [],
+        created_at: new Date(),
+        is_custom: false,
+        is_verified: true,
+        tags: [],
+        aliases: []
+      },
+      {
+        id: 'pull-ups',
+        name: 'Pull-ups',
+        type: 'bodyweight',
+        category: 'strength',
+        body_parts: ['back', 'arms'],
+        muscle_groups: ['latissimus_dorsi'],
+        equipment: 'pull_up_bar',
+        difficulty_level: 4,
+        instructions: [{ step_number: 1, instruction: 'Hang from bar, pull body up until chin over bar' }],
+        tips: [],
+        variations: [],
+        created_at: new Date(),
+        is_custom: false,
+        is_verified: true,
+        tags: [],
+        aliases: []
+      },
+      {
+        id: 'push-ups',
+        name: 'Push-ups',
+        type: 'bodyweight',
+        category: 'strength',
+        body_parts: ['chest', 'arms'],
+        muscle_groups: ['pectorals'],
+        equipment: 'none',
+        difficulty_level: 1,
+        instructions: [{ step_number: 1, instruction: 'Start in plank position, lower chest to ground, push back up' }],
+        tips: [],
+        variations: [],
+        created_at: new Date(),
+        is_custom: false,
+        is_verified: true,
+        tags: [],
+        aliases: []
+      },
+      {
+        id: 'overhead-press',
+        name: 'Overhead Press',
+        type: 'barbell',
+        category: 'strength',
+        body_parts: ['shoulders'],
+        muscle_groups: ['deltoids'],
+        equipment: 'barbell',
+        difficulty_level: 3,
+        instructions: [{ step_number: 1, instruction: 'Press bar from shoulders to overhead' }],
+        tips: [],
+        variations: [],
+        created_at: new Date(),
+        is_custom: false,
+        is_verified: true,
+        tags: [],
+        aliases: []
+      },
+      {
+        id: 'bent-over-row',
+        name: 'Bent-over Row',
+        type: 'barbell',
+        category: 'strength',
+        body_parts: ['back'],
+        muscle_groups: ['latissimus_dorsi'],
+        equipment: 'barbell',
+        difficulty_level: 3,
+        instructions: [{ step_number: 1, instruction: 'Bend at hips, pull bar to lower chest' }],
+        tips: [],
+        variations: [],
+        created_at: new Date(),
+        is_custom: false,
+        is_verified: true,
+        tags: [],
+        aliases: []
+      },
+      {
+        id: 'dips',
+        name: 'Dips',
+        type: 'bodyweight',
+        category: 'strength',
+        body_parts: ['chest', 'triceps'],
+        muscle_groups: ['pectorals'],
+        equipment: 'dip_station',
+        difficulty_level: 3,
+        instructions: [{ step_number: 1, instruction: 'Support body on parallel bars, lower and raise body' }],
+        tips: [],
+        variations: [],
+        created_at: new Date(),
+        is_custom: false,
+        is_verified: true,
+        tags: [],
+        aliases: []
+      },
+      {
+        id: 'lunges',
+        name: 'Lunges',
+        type: 'bodyweight',
+        category: 'functional',
+        body_parts: ['legs'],
+        muscle_groups: ['quadriceps_femoris'],
+        equipment: 'none',
+        difficulty_level: 2,
+        instructions: [{ step_number: 1, instruction: 'Step forward into lunge position, return to start' }],
+        tips: [],
+        variations: [],
+        created_at: new Date(),
+        is_custom: false,
+        is_verified: true,
+        tags: [],
+        aliases: []
+      },
+      {
+        id: 'plank',
+        name: 'Plank',
+        type: 'bodyweight',
+        category: 'functional',
+        body_parts: ['core'],
+        muscle_groups: ['rectus_abdominis'],
+        equipment: 'none',
+        difficulty_level: 1,
+        instructions: [{ step_number: 1, instruction: 'Hold body in straight line on forearms' }],
+        tips: [],
+        variations: [],
+        created_at: new Date(),
+        is_custom: false,
+        is_verified: true,
+        tags: [],
+        aliases: []
+      },
+      {
+        id: 'bicep-curls',
+        name: 'Bicep Curls',
+        type: 'dumbbell',
+        category: 'strength',
+        body_parts: ['biceps'],
+        muscle_groups: ['biceps_brachii'],
+        equipment: 'dumbbell',
+        difficulty_level: 1,
+        instructions: [{ step_number: 1, instruction: 'Curl dumbbells up, squeeze biceps' }],
+        tips: [],
+        variations: [],
+        created_at: new Date(),
+        is_custom: false,
+        is_verified: true,
+        tags: [],
+        aliases: []
+      },
+      {
+        id: 'lateral-raises',
+        name: 'Lateral Raises',
+        type: 'dumbbell',
+        category: 'strength',
+        body_parts: ['shoulders'],
+        muscle_groups: ['deltoids'],
+        equipment: 'dumbbell',
+        difficulty_level: 2,
+        instructions: [{ step_number: 1, instruction: 'Raise dumbbells to sides until parallel to floor' }],
+        tips: [],
+        variations: [],
+        created_at: new Date(),
+        is_custom: false,
+        is_verified: true,
+        tags: [],
+        aliases: []
+      },
+      {
+        id: 'leg-press',
+        name: 'Leg Press',
+        type: 'machine',
+        category: 'strength',
+        body_parts: ['legs'],
+        muscle_groups: ['quadriceps_femoris'],
+        equipment: 'leg_press',
+        difficulty_level: 2,
+        instructions: [{ step_number: 1, instruction: 'Sit in machine, press weight with legs' }],
+        tips: [],
+        variations: [],
+        created_at: new Date(),
+        is_custom: false,
+        is_verified: true,
+        tags: [],
+        aliases: []
+      },
+      {
+        id: 'lat-pulldown',
+        name: 'Lat Pulldown',
+        type: 'machine',
+        category: 'strength',
+        body_parts: ['back'],
+        muscle_groups: ['latissimus_dorsi'],
+        equipment: 'lat_pulldown',
+        difficulty_level: 2,
+        instructions: [{ step_number: 1, instruction: 'Sit at machine, pull bar down to upper chest' }],
+        tips: [],
+        variations: [],
+        created_at: new Date(),
+        is_custom: false,
+        is_verified: true,
+        tags: [],
+        aliases: []
+      },
+      {
+        id: 'russian-twists',
+        name: 'Russian Twists',
+        type: 'bodyweight',
+        category: 'functional',
+        body_parts: ['core'],
+        muscle_groups: ['obliques'],
+        equipment: 'none',
+        difficulty_level: 2,
+        instructions: [{ step_number: 1, instruction: 'Sit with knees bent, rotate torso side to side' }],
+        tips: [],
+        variations: [],
+        created_at: new Date(),
+        is_custom: false,
+        is_verified: true,
+        tags: [],
+        aliases: []
+      },
+      {
+        id: 'burpees',
+        name: 'Burpees',
+        type: 'bodyweight',
+        category: 'functional',
+        body_parts: ['full_body'],
+        muscle_groups: ['pectorals'],
+        equipment: 'none',
+        difficulty_level: 3,
+        instructions: [{ step_number: 1, instruction: 'Squat, jump back to plank, push-up, jump up' }],
+        tips: [],
+        variations: [],
+        created_at: new Date(),
+        is_custom: false,
+        is_verified: true,
+        tags: [],
+        aliases: []
+      },
+      {
+        id: 'mountain-climbers',
+        name: 'Mountain Climbers',
+        type: 'bodyweight',
+        category: 'cardio',
+        body_parts: ['core'],
+        muscle_groups: ['rectus_abdominis'],
+        equipment: 'none',
+        difficulty_level: 2,
+        instructions: [{ step_number: 1, instruction: 'In plank position, alternate bringing knees to chest' }],
+        tips: [],
+        variations: [],
+        created_at: new Date(),
+        is_custom: false,
+        is_verified: true,
+        tags: [],
+        aliases: []
+      },
+      {
+        id: 'tricep-dips',
+        name: 'Tricep Dips',
+        type: 'bodyweight',
+        category: 'strength',
+        body_parts: ['triceps'],
+        muscle_groups: ['triceps_brachii'],
+        equipment: 'none',
+        difficulty_level: 2,
+        instructions: [{ step_number: 1, instruction: 'Lower and raise body using triceps' }],
+        tips: [],
+        variations: [],
+        created_at: new Date(),
+        is_custom: false,
+        is_verified: true,
+        tags: [],
+        aliases: []
+      },
+      {
+        id: 'romanian-deadlift',
+        name: 'Romanian Deadlift',
+        type: 'barbell',
+        category: 'strength',
+        body_parts: ['hamstrings', 'glutes'],
+        muscle_groups: ['hamstrings'],
+        equipment: 'barbell',
+        difficulty_level: 3,
+        instructions: [{ step_number: 1, instruction: 'Keep legs straight, hinge at hips, lower bar' }],
+        tips: [],
+        variations: [],
+        created_at: new Date(),
+        is_custom: false,
+        is_verified: true,
+        tags: [],
+        aliases: []
+      },
+      {
+        id: 'face-pulls',
+        name: 'Face Pulls',
+        type: 'cable',
+        category: 'strength',
+        body_parts: ['shoulders', 'back'],
+        muscle_groups: ['deltoids'],
+        equipment: 'cable_machine',
+        difficulty_level: 2,
+        instructions: [{ step_number: 1, instruction: 'Pull rope to face level, separate handles' }],
+        tips: [],
+        variations: [],
+        created_at: new Date(),
+        is_custom: false,
+        is_verified: true,
+        tags: [],
+        aliases: []
+      }
+    ];
+  }
 
-    // Generate ID and timestamps
-    const id = generateExerciseId(exerciseData.name);
-    const now = new Date();
+  /**
+   * Populate database with sample exercises
+   */
+  private async populateSampleExercises(): Promise<void> {
+    try {
+      const sampleData = this.createSampleExerciseData();
+      
+      for (const exercise of sampleData) {
+        // Convert to database format
+        const dbExercise = {
+          id: exercise.id,
+          name: exercise.name,
+          category: exercise.category,
+          bodyPart: exercise.body_parts[0] || 'full_body',
+          equipment: exercise.equipment,
+          difficulty: exercise.difficulty_level,
+          instructions: exercise.instructions[0]?.instruction || '',
+          createdAt: new Date(),
+          isCustom: false
+        };
+
+        // Try to add to database
+        try {
+          await this.db.put('exercises', dbExercise);
+        } catch (error) {
+          console.warn('Could not add exercise to database:', exercise.name, error);
+        }
+      }
+
+      console.log(`Populated ${sampleData.length} sample exercises`);
+    } catch (error) {
+      console.error('Error populating sample exercises:', error);
+    }
+  }
+
+  /**
+   * Get all exercises with optional filtering
+   */
+  async getAllExercises(filter?: ExerciseFilter): Promise<Exercise[]> {
+    await this.init();
     
-    const exercise: Exercise = {
-      ...validation.data!,
-      id,
-      created_at: now,
-      updated_at: now,
+    try {
+      // Try to get from database first
+      const dbExercises = await this.db.getAllExercises();
+      
+      if (dbExercises.length > 0) {
+        // Convert database format to Exercise format
+        const exercises = dbExercises.map(this.mapDatabaseToExercise);
+        return this.applyFilters(exercises, filter);
+      }
+    } catch (error) {
+      console.warn('Could not get exercises from database, using fallback:', error);
+    }
+
+    // Fallback to in-memory exercises
+    if (this.sampleExercises.length === 0) {
+      this.sampleExercises = this.createSampleExerciseData();
+    }
+    
+    return this.applyFilters(this.sampleExercises, filter);
+  }
+
+  /**
+   * Apply filters to exercise list
+   */
+  private applyFilters(exercises: Exercise[], filter?: ExerciseFilter): Exercise[] {
+    if (!filter) return exercises;
+
+    let filtered = exercises;
+
+    if (filter.search) {
+      const query = filter.search.toLowerCase();
+      filtered = filtered.filter(exercise =>
+        exercise.name.toLowerCase().includes(query) ||
+        exercise.instructions[0]?.instruction.toLowerCase().includes(query)
+      );
+    }
+
+    if (filter.body_parts && filter.body_parts.length > 0) {
+      filtered = filtered.filter(exercise =>
+        exercise.body_parts.some(bp => filter.body_parts!.includes(bp))
+      );
+    }
+
+    return filtered;
+  }
+
+  /**
+   * Get exercises by body part
+   */
+  async getExercisesByBodyPart(bodyPart: BodyPart): Promise<Exercise[]> {
+    const allExercises = await this.getAllExercises();
+    return allExercises.filter(exercise => 
+      exercise.body_parts.includes(bodyPart)
+    );
+  }
+
+  /**
+   * Get exercise categories with counts
+   */
+  async getExerciseCategories(): Promise<Array<{ category: ExerciseCategory; name: string; count: number }>> {
+    const allExercises = await this.getAllExercises();
+    
+    const categoryCounts: Record<string, number> = {};
+    
+    allExercises.forEach(exercise => {
+      const type = exercise.type;
+      categoryCounts[type] = (categoryCounts[type] || 0) + 1;
+    });
+
+    return Object.entries(categoryCounts).map(([type, count]) => ({
+      category: type as ExerciseCategory,
+      name: this.getTypeDisplayName(type),
+      count
+    }));
+  }
+
+  /**
+   * Get body parts with exercise counts
+   */
+  async getBodyPartsWithCounts(): Promise<Array<{ bodyPart: BodyPart; name: string; count: number }>> {
+    const allExercises = await this.getAllExercises();
+    
+    const bodyPartCounts: Record<BodyPart, number> = {
+      chest: 0, back: 0, shoulders: 0, arms: 0, biceps: 0, triceps: 0,
+      forearms: 0, abs: 0, core: 0, legs: 0, quadriceps: 0, hamstrings: 0,
+      glutes: 0, calves: 0, full_body: 0
     };
 
-    // Validate complete exercise
-    const exerciseValidation = validateExercise(exercise);
-    if (!exerciseValidation.success) {
-      throw new Error(`Invalid exercise: ${exerciseValidation.errors?.join(', ')}`);
-    }
+    allExercises.forEach(exercise => {
+      exercise.body_parts.forEach(bodyPart => {
+        bodyPartCounts[bodyPart]++;
+      });
+    });
 
-    // Check if exercise with same ID already exists
-    const existing = await this.getExerciseById(id);
-    if (existing) {
-      throw new Error(`Exercise with name "${exerciseData.name}" already exists`);
-    }
+    return Object.entries(bodyPartCounts)
+      .filter(([_, count]) => count > 0)
+      .map(([bodyPart, count]) => ({
+        bodyPart: bodyPart as BodyPart,
+        name: this.getBodyPartDisplayName(bodyPart as BodyPart),
+        count
+      }));
+  }
 
-    // Save to database
-    await dbManager.put(STORES.EXERCISES, exercise);
+  /**
+   * Create custom exercise
+   */
+  async createCustomExercise(exercise: Partial<Exercise>, userId: string): Promise<Exercise | null> {
+    const exerciseId = `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
-    logger.info('Exercise created', { id, name: exercise.name });
-    return exercise;
+    const newExercise: Exercise = {
+      id: exerciseId,
+      name: exercise.name || 'Custom Exercise',
+      type: 'bodyweight',
+      category: 'strength',
+      body_parts: exercise.body_parts || ['full_body'],
+      muscle_groups: ['pectorals'],
+      equipment: 'none',
+      difficulty_level: exercise.difficulty_level || 2,
+      instructions: exercise.instructions || [{ step_number: 1, instruction: 'Custom exercise instructions' }],
+      tips: [],
+      variations: [],
+      created_at: new Date(),
+      created_by: userId,
+      is_custom: true,
+      is_verified: false,
+      tags: [],
+      aliases: []
+    };
+
+    // Add to in-memory list
+    this.sampleExercises.push(newExercise);
+
+    // Try to add to database
+    try {
+      const dbExercise = {
+        id: newExercise.id,
+        name: newExercise.name,
+        category: newExercise.category,
+        bodyPart: newExercise.body_parts[0],
+        equipment: newExercise.equipment,
+        difficulty: newExercise.difficulty_level,
+        instructions: newExercise.instructions[0]?.instruction || '',
+        createdAt: new Date(),
+        isCustom: true,
+        createdBy: userId
+      };
+      
+      await this.db.put('exercises', dbExercise);
+    } catch (error) {
+      console.warn('Could not save custom exercise to database:', error);
+    }
+
+    return newExercise;
   }
 
   /**
    * Get exercise by ID
    */
   async getExerciseById(id: string): Promise<Exercise | null> {
-    const exercise = await dbManager.get<Exercise>(STORES.EXERCISES, id);
-    return exercise ? transformExerciseData(exercise) : null;
+    const allExercises = await this.getAllExercises();
+    return allExercises.find(exercise => exercise.id === id) || null;
   }
 
   /**
-   * Update an existing exercise
+   * Archive/unarchive exercise for user
    */
-  async updateExercise(id: string, updates: ExerciseUpdate): Promise<Exercise> {
-    // Get existing exercise
-    const existing = await this.getExerciseById(id);
-    if (!existing) {
-      throw new Error(`Exercise with ID "${id}" not found`);
-    }
+  async toggleExerciseArchive(exerciseId: string, userId: string, archived: boolean): Promise<boolean> {
+    const key = `${userId}-${exerciseId}`;
+    this.userPreferences.set(key, { archived, updatedAt: new Date() });
+    return true;
+  }
 
-    // Validate updates
-    const validation = validateExerciseUpdate(updates);
-    if (!validation.success) {
-      throw new Error(`Invalid update data: ${validation.errors?.join(', ')}`);
-    }
-
-    // Merge updates with existing data
-    const updated: Exercise = {
-      ...existing,
-      ...validation.data!,
-      updated_at: new Date(),
-    };
-
-    // Validate complete updated exercise
-    const exerciseValidation = validateExercise(updated);
-    if (!exerciseValidation.success) {
-      throw new Error(`Invalid updated exercise: ${exerciseValidation.errors?.join(', ')}`);
-    }
-
-    // Save to database
-    await dbManager.put(STORES.EXERCISES, updated);
+  /**
+   * Get user's archived exercises
+   */
+  async getUserArchivedExercises(userId: string): Promise<string[]> {
+    const archived: string[] = [];
     
-    logger.info('Exercise updated', { id, updates });
-    return updated;
+    for (const [key, prefs] of this.userPreferences.entries()) {
+      if (key.startsWith(userId + '-') && prefs.archived) {
+        const exerciseId = key.substring(userId.length + 1);
+        archived.push(exerciseId);
+      }
+    }
+    
+    return archived;
   }
 
   /**
-   * Delete an exercise
+   * Bulk import exercises (for backward compatibility)
    */
-  async deleteExercise(id: string): Promise<void> {
-    const existing = await this.getExerciseById(id);
-    if (!existing) {
-      throw new Error(`Exercise with ID "${id}" not found`);
-    }
-
-    await dbManager.delete(STORES.EXERCISES, id);
-    logger.info('Exercise deleted', { id });
-  }
-
-  /**
-   * Get all exercises
-   */
-  async getAllExercises(): Promise<Exercise[]> {
-    const exercises = await dbManager.getAll<Exercise>(STORES.EXERCISES);
-    return exercises.map(exercise => transformExerciseData(exercise)).filter(Boolean) as Exercise[];
-  }
-
-  /**
-   * Search exercises with filters
-   */
-  async searchExercises(filters: ExerciseFilter = {}): Promise<Exercise[]> {
-    // Validate filters
-    const validation = validateExerciseFilter(filters);
-    if (!validation.success) {
-      throw new Error(`Invalid filter data: ${validation.errors?.join(', ')}`);
-    }
-
-    const validFilters = validation.data!;
-    let exercises = await this.getAllExercises();
-
-    // Apply filters
-    if (validFilters.search) {
-      exercises = exercises.filter(exercise => 
-        matchesSearchCriteria(exercise, validFilters.search!)
-      );
-    }
-
-    if (validFilters.type) {
-      exercises = exercises.filter(exercise => exercise.type === validFilters.type);
-    }
-
-    if (validFilters.category) {
-      exercises = exercises.filter(exercise => exercise.category === validFilters.category);
-    }
-
-    if (validFilters.body_parts && validFilters.body_parts.length > 0) {
-      exercises = exercises.filter(exercise =>
-        validFilters.body_parts!.some(part => exercise.body_parts.includes(part))
-      );
-    }
-
-    if (validFilters.muscle_groups && validFilters.muscle_groups.length > 0) {
-      exercises = exercises.filter(exercise =>
-        validFilters.muscle_groups!.some(muscle => exercise.muscle_groups.includes(muscle))
-      );
-    }
-
-    if (validFilters.equipment && validFilters.equipment.length > 0) {
-      exercises = exercises.filter(exercise =>
-        validFilters.equipment!.includes(exercise.equipment)
-      );
-    }
-
-    if (validFilters.difficulty_level && validFilters.difficulty_level.length > 0) {
-      exercises = exercises.filter(exercise =>
-        validFilters.difficulty_level!.includes(exercise.difficulty_level)
-      );
-    }
-
-    if (validFilters.is_custom !== undefined) {
-      exercises = exercises.filter(exercise => exercise.is_custom === validFilters.is_custom);
-    }
-
-    if (validFilters.tags && validFilters.tags.length > 0) {
-      exercises = exercises.filter(exercise =>
-        validFilters.tags!.some(tag => exercise.tags.includes(tag))
-      );
-    }
-
-    logger.debug('Exercise search completed', { 
-      filters: validFilters, 
-      resultCount: exercises.length 
-    });
-
-    return exercises;
-  }
-
-  /**
-   * Get exercises by body part
-   */
-  async getExercisesByBodyPart(bodyPart: string): Promise<Exercise[]> {
-    return dbManager.queryByIndex<Exercise>(STORES.EXERCISES, 'body_parts', bodyPart);
-  }
-
-  /**
-   * Get exercises by muscle group
-   */
-  async getExercisesByMuscleGroup(muscleGroup: string): Promise<Exercise[]> {
-    return dbManager.queryByIndex<Exercise>(STORES.EXERCISES, 'muscle_groups', muscleGroup);
-  }
-
-  /**
-   * Get exercises by equipment
-   */
-  async getExercisesByEquipment(equipment: string): Promise<Exercise[]> {
-    return dbManager.queryByIndex<Exercise>(STORES.EXERCISES, 'equipment', equipment);
-  }
-
-  /**
-   * Get exercises by difficulty level
-   */
-  async getExercisesByDifficulty(level: number): Promise<Exercise[]> {
-    return dbManager.queryByIndex<Exercise>(STORES.EXERCISES, 'difficulty_level', level);
-  }
-
-  /**
-   * Get custom exercises only
-   */
-  async getCustomExercises(): Promise<Exercise[]> {
-    return dbManager.queryByIndex<Exercise>(STORES.EXERCISES, 'is_custom', true);
-  }
-
-  /**
-   * Get verified exercises only
-   */
-  async getVerifiedExercises(): Promise<Exercise[]> {
-    const exercises = await this.getAllExercises();
-    return exercises.filter(exercise => exercise.is_verified);
-  }
-
-  /**
-   * Bulk import exercises
-   */
-  async bulkImportExercises(exercises: ExerciseCreate[]): Promise<Exercise[]> {
-    const processedExercises: Exercise[] = [];
+  async bulkImportExercises(exercises: any[]): Promise<Exercise[]> {
+    await this.init();
+    const imported: Exercise[] = [];
     
     for (const exerciseData of exercises) {
       try {
-        // Validate each exercise
-        const validation = validateExerciseCreate(exerciseData);
-        if (!validation.success) {
-          logger.warn('Skipping invalid exercise during bulk import', { 
-            name: exerciseData.name, 
-            errors: validation.errors 
-          });
-          continue;
-        }
-
-        // Generate ID and timestamps
-        const id = generateExerciseId(exerciseData.name);
-        const now = new Date();
-        
-        const exercise: Exercise = {
-          ...validation.data!,
-          id,
-          created_at: now,
-          updated_at: now,
-        };
-
-        processedExercises.push(exercise);
+        const exercise = this.mapImportDataToExercise(exerciseData);
+        this.sampleExercises.push(exercise);
+        imported.push(exercise);
       } catch (error) {
-        logger.warn('Error processing exercise during bulk import', { 
-          name: exerciseData.name, 
-          error 
-        });
+        console.error('Error importing exercise:', exerciseData.name, error);
       }
     }
 
-    // Insert to database or memory store
-    if (this.fallbackMode) {
-      this.memoryStore.push(...processedExercises);
-    } else {
-      await dbManager.bulkPut(STORES.EXERCISES, processedExercises);
-    }
-    
-    logger.info('Bulk import completed', { 
-      total: exercises.length, 
-      imported: processedExercises.length,
-      fallbackMode: this.fallbackMode
-    });
-
-    return processedExercises;
+    return imported;
   }
 
   /**
-   * Get exercise count
+   * Get exercise count (for backward compatibility)
    */
   async getExerciseCount(): Promise<number> {
-    if (this.fallbackMode) {
-      return this.memoryStore.length;
-    }
-    return dbManager.count(STORES.EXERCISES);
+    const exercises = await this.getAllExercises();
+    return exercises.length;
   }
 
   /**
-   * Clear all exercises
+   * Map database row to Exercise object
    */
-  async clearAllExercises(): Promise<void> {
-    await dbManager.clear(STORES.EXERCISES);
-    logger.info('All exercises cleared');
+  private mapDatabaseToExercise(row: any): Exercise {
+    return {
+      id: row.id,
+      name: row.name,
+      type: this.inferTypeFromEquipment(row.equipment),
+      category: row.category || 'strength',
+      body_parts: [row.bodyPart || 'full_body'],
+      muscle_groups: ['pectorals'],
+      equipment: row.equipment || 'none',
+      difficulty_level: row.difficulty || 2,
+      instructions: [{ step_number: 1, instruction: row.instructions || 'No instructions available' }],
+      tips: [],
+      variations: [],
+      created_at: new Date(row.createdAt || Date.now()),
+      created_by: row.createdBy,
+      is_custom: Boolean(row.isCustom),
+      is_verified: !row.isCustom,
+      tags: [],
+      aliases: [],
+      safety_notes: [],
+      contraindications: [],
+      prerequisites: []
+    };
   }
 
   /**
-   * Get random exercises
+   * Map import data to Exercise object
    */
-  async getRandomExercises(count: number = 5): Promise<Exercise[]> {
-    const allExercises = await this.getAllExercises();
-    const shuffled = [...allExercises].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, count);
+  private mapImportDataToExercise(data: any): Exercise {
+    return {
+      id: data.id || `imported-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: data.name,
+      type: data.type || 'bodyweight',
+      category: data.category || 'strength',
+      body_parts: data.body_parts || ['full_body'],
+      muscle_groups: data.muscle_groups || ['pectorals'],
+      equipment: data.equipment || 'none',
+      difficulty_level: data.difficulty_level || 2,
+      instructions: data.instructions || [{ step_number: 1, instruction: 'No instructions available' }],
+      tips: data.tips || [],
+      variations: data.variations || [],
+      created_at: new Date(),
+      created_by: data.created_by,
+      is_custom: Boolean(data.is_custom),
+      is_verified: Boolean(data.is_verified),
+      tags: data.tags || [],
+      aliases: data.aliases || [],
+      safety_notes: data.safety_notes || [],
+      contraindications: data.contraindications || [],
+      prerequisites: data.prerequisites || []
+    };
   }
 
-  /**
-   * Get popular exercises (most used - placeholder for future implementation)
-   */
-  async getPopularExercises(limit: number = 10): Promise<Exercise[]> {
-    // For now, return random exercises
-    // In the future, this could be based on usage statistics
-    return this.getRandomExercises(limit);
+  private getTypeDisplayName(type: string): string {
+    const displayNames: Record<string, string> = {
+      barbell: 'Barbell',
+      dumbbell: 'Dumbbell',
+      machine: 'Machine',
+      bodyweight: 'Bodyweight',
+      cable: 'Cable',
+      cardio: 'Cardio'
+    };
+    return displayNames[type] || type;
   }
 
-  /**
-   * Get recommended exercises based on user preferences (placeholder)
-   */
-  async getRecommendedExercises(
-    userPreferences: { 
-      bodyParts?: string[], 
-      equipment?: string[], 
-      difficulty?: number 
-    } = {},
-    limit: number = 10
-  ): Promise<Exercise[]> {
-    const filters: ExerciseFilter = {};
-    
-    if (userPreferences.bodyParts) {
-      filters.body_parts = userPreferences.bodyParts as any;
-    }
-    
-    if (userPreferences.equipment) {
-      filters.equipment = userPreferences.equipment as any;
-    }
-    
-    if (userPreferences.difficulty) {
-      filters.difficulty_level = [userPreferences.difficulty as any];
-    }
+  private getBodyPartDisplayName(bodyPart: BodyPart): string {
+    const displayNames: Record<BodyPart, string> = {
+      chest: 'Chest', back: 'Back', shoulders: 'Shoulders', arms: 'Arms',
+      biceps: 'Biceps', triceps: 'Triceps', forearms: 'Forearms', abs: 'Abs',
+      core: 'Core', legs: 'Legs', quadriceps: 'Quadriceps', hamstrings: 'Hamstrings',
+      glutes: 'Glutes', calves: 'Calves', full_body: 'Full Body'
+    };
+    return displayNames[bodyPart] || bodyPart;
+  }
 
-    const exercises = await this.searchExercises(filters);
-    return exercises.slice(0, limit);
+  private inferTypeFromEquipment(equipment: string): any {
+    const typeMap: Record<string, string> = {
+      barbell: 'barbell',
+      dumbbell: 'dumbbell',
+      machine: 'machine',
+      leg_press: 'machine',
+      lat_pulldown: 'machine',
+      cable_machine: 'cable',
+      pull_up_bar: 'bodyweight',
+      dip_station: 'bodyweight',
+      none: 'bodyweight'
+    };
+    return typeMap[equipment] || 'bodyweight';
   }
 }
 
-// Export singleton instance
-export const exerciseService = new ExerciseService();
+// Export singleton instance for backward compatibility
+export const exerciseService = ExerciseService.getInstance();

@@ -5,7 +5,7 @@
  * Integrates with the gamification system to award XP and achievements.
  */
 
-import { GamificationService } from '@/services/GamificationService';
+import { MockGamificationService } from '@/services/MockGamificationService';
 import { DEFAULT_STREAK_REWARD_CONFIG } from '@/data/streakRewards';
 
 import type {
@@ -23,12 +23,12 @@ import type { StreakStats } from '@/types/streaks';
 
 export class StreakRewardService {
   private static instance: StreakRewardService;
-  private gamificationService: GamificationService;
+  private gamificationService: MockGamificationService;
   private config: StreakRewardConfig;
   private userRewards: Map<string, UserStreakRewards> = new Map();
 
   private constructor() {
-    this.gamificationService = GamificationService.getInstance();
+    this.gamificationService = MockGamificationService.getInstance();
     this.config = DEFAULT_STREAK_REWARD_CONFIG;
   }
 

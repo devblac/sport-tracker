@@ -1,28 +1,17 @@
 import React from 'react';
-import { Card, CardContent, Button } from '@/components/ui';
-import { StreakCounter } from '@/components/gamification/StreakCounter';
-import { XPBar } from '@/components/gamification/XPBar';
-import { ActivitySummary } from '@/components/dashboard/ActivitySummary';
+import { Card, CardContent } from '@/components/ui';
 import { WorkoutSuggestions } from '@/components/recommendations/WorkoutSuggestions';
-
-import { RealTimeWorkoutProgress } from '@/components/realtime/RealTimeWorkoutProgress';
-import { TrendingUp, Zap, Target } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { TrendingUp } from 'lucide-react';
 import { useAuthStore } from '@/stores';
-import { useFeatureFlag, useExperiment, useExperimentTracking } from '@/hooks/useExperiment';
+import { useSettingsStore } from '@/stores/useSettingsStore';
+import { useFeatureFlag } from '@/hooks/useExperiment';
 
 export const Home: React.FC = () => {
-  const navigate = useNavigate();
   const { user } = useAuthStore();
+  const { enableAIWorkoutSuggestions } = useSettingsStore();
   
-  // Feature flags for A/B testing
-  const { value: showNewWorkoutUI } = useFeatureFlag('new_workout_ui', false);
+  // Feature flags
   const { value: showAIRecommendationsV2 } = useFeatureFlag('ai_recommendations_v2', false);
-  const { value: showRealTimeFeatures } = useFeatureFlag('real_time_features', false); // Temporarily disabled to fix infinite loop
-  
-  // A/B test for new workout UI
-  const { variant: workoutUIVariant } = useExperiment('exp_workout_ui_test');
-  const { track: trackWorkoutUIEvent } = useExperimentTracking('exp_workout_ui_test');
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -49,138 +38,68 @@ export const Home: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Welcome Header */}
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-foreground mb-2">
-          {getGreeting()}, {user?.profile.display_name || 'User'}! 💪
-        </h1>
-        <p className="text-muted-foreground">
-          Ready to crush your fitness goals?
-        </p>
-      </div>
+      {/* Compact Hero Section */}
+      <Card className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-blue-200/50 dark:border-blue-500/20">
+        <CardContent className="p-6">
+          {/* Welcome Header */}
+          <div className="text-center mb-4">
+            <h1 className="text-2xl font-bold text-foreground mb-2">
+              {getGreeting()}, {user?.profile.display_name || 'juli'}! 💪
+            </h1>
+            <p className="text-muted-foreground">
+              Ready to crush your fitness goals?
+            </p>
+          </div>
 
-      {/* Current Streak */}
-      <Card variant="gradient" className="text-center">
-        <CardContent>
-          <StreakCounter 
-            currentStreak={user?.gamification.current_streak || 0}
-            bestStreak={user?.gamification.best_streak || 0}
-            size="lg"
-            animated={true}
-          />
+          {/* Current Streak - Essential Only */}
+          <div className="flex items-center justify-center mb-4">
+            <div className="text-center">
+              <div className="flex items-center justify-center space-x-2 mb-1">
+                <span className="text-2xl">🔥</span>
+                <span className="text-2xl font-bold text-foreground">
+                  {user?.gamification.current_streak || 0}
+                </span>
+              </div>
+              <div className="text-sm text-muted-foreground">Day Streak</div>
+            </div>
+          </div>
+
+          {/* Today's Goals */}
+          <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-lg">🎯</span>
+              <span className="text-sm font-semibold text-foreground">Today's Goals</span>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between p-2 bg-white/70 dark:bg-gray-700/70 rounded">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm">Complete a workout</span>
+                </div>
+                <span className="text-xs text-muted-foreground">0/1</span>
+              </div>
+              <div className="flex items-center justify-between p-2 bg-white/70 dark:bg-gray-700/70 rounded">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <span className="text-sm">Maintain streak</span>
+                </div>
+                <span className="text-xs text-green-600 font-medium">On track</span>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
-      {/* XP Progress */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-              <span className="text-lg">🏆</span>
-            </div>
-            <div>
-              <h3 className="font-semibold text-foreground">Level Progress</h3>
-              <p className="text-sm text-muted-foreground">Keep going to level up!</p>
-            </div>
-          </div>
-          <XPBar 
-            currentXP={user?.gamification.total_xp || 0}
-            levelXP={100}
-            level={user?.gamification.level || 1}
-            showAnimation={true}
-          />
-        </CardContent>
-      </Card>
 
-      {/* Quick Actions - A/B Testing Different Layouts */}
-      {workoutUIVariant === 'treatment' ? (
-        // New UI variant - horizontal layout with icons
-        <div className="space-y-3">
-          <h3 className="text-lg font-semibold text-foreground">Quick Actions</h3>
-          <div className="space-y-2">
-            <Button 
-              variant="primary" 
-              size="lg" 
-              fullWidth
-              onClick={() => {
-                trackWorkoutUIEvent('workout_button_clicked', 1, { variant: 'treatment' });
-                navigate('/workout');
-              }}
-              className="h-16 justify-start px-6"
-            >
-              <div className="flex items-center space-x-4">
-                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                  <Zap className="w-5 h-5" />
-                </div>
-                <div className="text-left">
-                  <div className="font-semibold">Start Workout</div>
-                  <div className="text-sm opacity-80">Begin your training session</div>
-                </div>
-              </div>
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              size="lg" 
-              fullWidth
-              onClick={() => {
-                trackWorkoutUIEvent('templates_button_clicked', 1, { variant: 'treatment' });
-                navigate('/workout-templates');
-              }}
-              className="h-16 justify-start px-6"
-            >
-              <div className="flex items-center space-x-4">
-                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                  <Target className="w-5 h-5 text-primary" />
-                </div>
-                <div className="text-left">
-                  <div className="font-semibold">Browse Templates</div>
-                  <div className="text-sm opacity-70">Find the perfect workout</div>
-                </div>
-              </div>
-            </Button>
-          </div>
-        </div>
-      ) : (
-        // Control variant - original grid layout
-        <div className="grid grid-cols-2 gap-4">
-          <Button 
-            variant="primary" 
-            size="lg" 
-            fullWidth
-            onClick={() => {
-              trackWorkoutUIEvent('workout_button_clicked', 1, { variant: 'control' });
-              navigate('/workout');
-            }}
-            className="h-20 flex-col py-3"
-          >
-            <span className="text-xl mb-1">🏋️</span>
-            <span className="text-base font-semibold">Start Workout</span>
-            <span className="text-sm opacity-70">Begin training</span>
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            size="lg" 
-            fullWidth
-            onClick={() => {
-              trackWorkoutUIEvent('templates_button_clicked', 1, { variant: 'control' });
-              navigate('/workout-templates');
-            }}
-            className="h-20 flex-col py-3"
-          >
-            <span className="text-xl mb-1">📋</span>
-            <span className="text-base font-semibold">Templates</span>
-            <span className="text-sm opacity-70">Browse & Create</span>
-          </Button>
-        </div>
-      )}
 
-      {/* Activity Summary */}
-      <ActivitySummary />
 
-      {/* AI Workout Suggestions - Feature Flag Controlled */}
-      {showAIRecommendationsV2 ? (
+
+
+
+
+
+      {/* AI Workout Suggestions - User Setting Controlled */}
+      {enableAIWorkoutSuggestions && showAIRecommendationsV2 ? (
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center space-x-2 mb-4">
@@ -207,53 +126,13 @@ export const Home: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-      ) : (
+      ) : enableAIWorkoutSuggestions ? (
         <WorkoutSuggestions />
-      )}
-
-      {/* Real-Time Features - Feature Flag Controlled */}
-      {showRealTimeFeatures && (
-        <>
-          {/* Real-Time Workout Progress */}
-          <RealTimeWorkoutProgress 
-            workoutId="current-workout"
-            showHeartRate={true}
-            showCalories={true}
-            showEstimatedTime={true}
-          />
+      ) : null}
 
 
-        </>
-      )}
 
-      {/* Recent Activity Summary */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 bg-secondary/10 rounded-full flex items-center justify-center">
-              <span className="text-lg">📈</span>
-            </div>
-            <div>
-              <h3 className="font-semibold text-foreground">This Week</h3>
-              <p className="text-sm text-muted-foreground">Your fitness summary</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <div className="text-2xl font-bold text-foreground">3</div>
-              <div className="text-sm text-muted-foreground">Workouts</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-foreground">4.2k</div>
-              <div className="text-sm text-muted-foreground">Volume (lbs)</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-foreground">2h 15m</div>
-              <div className="text-sm text-muted-foreground">Time</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+
 
       {/* Today's Motivation */}
       <Card variant="glass" className="bg-gradient-to-r from-primary/5 to-secondary/5">

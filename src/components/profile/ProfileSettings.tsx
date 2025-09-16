@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent, Button, Input } from '@/components/ui';
+import { Card, CardHeader, CardTitle, CardContent, Button, Input, Switch } from '@/components/ui';
 import { useAuthStore } from '@/stores';
+import { useSettingsStore } from '@/stores/useSettingsStore';
 import { 
   User, 
   Mail, 
@@ -11,7 +12,12 @@ import {
   Save,
   Edit3,
   Check,
-  X
+  X,
+  Bug,
+  Monitor,
+  Settings,
+  Brain,
+  Zap
 } from 'lucide-react';
 
 interface ProfileSettingsProps {
@@ -22,6 +28,14 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
   className 
 }) => {
   const { user, updateUserProfile } = useAuthStore();
+  const { 
+    showDevTools, 
+    showCacheMonitor, 
+    enableAIWorkoutSuggestions,
+    toggleDevTools, 
+    toggleCacheMonitor,
+    toggleAIWorkoutSuggestions
+  } = useSettingsStore();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
@@ -349,6 +363,83 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
                   </span>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+
+        {/* AI Features Section */}
+        <div className="space-y-4 pt-4 border-t border-border">
+          <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+            <Brain className="w-5 h-5" />
+            AI Features
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Control AI-powered features and recommendations
+          </p>
+          
+          <div className="space-y-3">
+            {/* AI Workout Suggestions Toggle */}
+            <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
+              <div className="flex items-center gap-3">
+                <Zap className="w-4 h-4 text-muted-foreground" />
+                <div>
+                  <div className="font-medium text-foreground">AI Workout Suggestions</div>
+                  <div className="text-sm text-muted-foreground">
+                    Show AI-powered workout recommendations throughout the app
+                  </div>
+                </div>
+              </div>
+              <Switch
+                checked={enableAIWorkoutSuggestions}
+                onCheckedChange={toggleAIWorkoutSuggestions}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Developer Tools Section */}
+        <div className="space-y-4 pt-4 border-t border-border">
+          <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+            <Settings className="w-5 h-5" />
+            Developer Tools
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Control visibility of development and debugging tools
+          </p>
+          
+          <div className="space-y-3">
+            {/* DevTools Toggle */}
+            <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
+              <div className="flex items-center gap-3">
+                <Bug className="w-4 h-4 text-muted-foreground" />
+                <div>
+                  <div className="font-medium text-foreground">DevTools Panel</div>
+                  <div className="text-sm text-muted-foreground">
+                    Show debugging tools and logs
+                  </div>
+                </div>
+              </div>
+              <Switch
+                checked={showDevTools}
+                onCheckedChange={toggleDevTools}
+              />
+            </div>
+
+            {/* Cache Monitor Toggle */}
+            <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
+              <div className="flex items-center gap-3">
+                <Monitor className="w-4 h-4 text-muted-foreground" />
+                <div>
+                  <div className="font-medium text-foreground">Cache Monitor</div>
+                  <div className="text-sm text-muted-foreground">
+                    Show performance and cache statistics
+                  </div>
+                </div>
+              </div>
+              <Switch
+                checked={showCacheMonitor}
+                onCheckedChange={toggleCacheMonitor}
+              />
             </div>
           </div>
         </div>

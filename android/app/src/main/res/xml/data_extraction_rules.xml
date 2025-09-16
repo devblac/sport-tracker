@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup>
+        <!-- Exclude sensitive data from cloud backup -->
+        <exclude domain="sharedpref" path="SportTrackerPrefs" />
+        <exclude domain="database" />
+        <exclude domain="file" path="." />
+    </cloud-backup>
+    <device-transfer>
+        <!-- Allow basic app data transfer between devices -->
+        <include domain="sharedpref" path="." />
+        <exclude domain="database" />
+    </device-transfer>
+</data-extraction-rules>

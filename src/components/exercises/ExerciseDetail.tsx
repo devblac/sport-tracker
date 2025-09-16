@@ -6,6 +6,7 @@ import { ExerciseHistoryTab } from './ExerciseHistoryTab';
 import { ExerciseChartsTab } from './ExerciseChartsTab';
 import { ExerciseRecordsTab } from './ExerciseRecordsTab';
 import { PlateauBreaker } from '@/components/recommendations/PlateauBreaker';
+import { useSettingsStore } from '@/stores/useSettingsStore';
 import type { Exercise } from '@/schemas/exercise';
 import { getDifficultyDisplay, EXERCISE_CATEGORIES } from '@/utils';
 
@@ -24,6 +25,7 @@ export const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
   onToggleFavorite,
   isFavorite = false,
 }) => {
+  const { enableAIWorkoutSuggestions } = useSettingsStore();
   const categoryInfo = EXERCISE_CATEGORIES[exercise.category] || { name: exercise.category, icon: '💪' };
 
   const handleShare = async () => {
@@ -53,44 +55,42 @@ export const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          {onBack && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onBack}
-              className="p-2"
+      <div className="flex items-start gap-3 w-full sticky top-0 z-10 py-2 mb-4">
+        {onBack && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onBack}
+            className="p-2 flex-shrink-0"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+        )}
+        
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">
+            {exercise.name}
+          </h1>
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            <span className="flex items-center gap-1 text-sm text-muted-foreground">
+              {categoryInfo.icon}
+              {categoryInfo.name}
+            </span>
+            <span className="text-muted-foreground">•</span>
+            <Badge 
+              variant={exercise.difficulty_level <= 2 ? 'secondary' : 
+                      exercise.difficulty_level <= 3 ? 'default' : 'outline'}
+              className={`text-xs ${
+                exercise.difficulty_level >= 4 ? 'border-orange-500 text-orange-600 dark:text-orange-400' : ''
+              }`}
             >
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-          )}
-          
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold text-foreground truncate">
-              {exercise.name}
-            </h1>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                {categoryInfo.icon}
-                {categoryInfo.name}
-              </span>
-              <span className="text-muted-foreground">•</span>
-              <Badge 
-                variant={exercise.difficulty_level <= 2 ? 'secondary' : 
-                        exercise.difficulty_level <= 3 ? 'default' : 'outline'}
-                className={`text-xs ${
-                  exercise.difficulty_level >= 4 ? 'border-orange-500 text-orange-600 dark:text-orange-400' : ''
-                }`}
-              >
-                {getDifficultyDisplay(exercise.difficulty_level)}
-              </Badge>
-            </div>
+              {getDifficultyDisplay(exercise.difficulty_level)}
+            </Badge>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 flex-shrink-0">
           {onToggleFavorite && (
             <Button
               variant="ghost"
@@ -120,10 +120,11 @@ export const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
               variant="primary"
               size="sm"
               onClick={() => onAddToWorkout(exercise)}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 whitespace-nowrap"
             >
               <Plus className="w-4 h-4" />
-              Add to Workout
+              <span className="hidden sm:inline">Add to Workout</span>
+              <span className="sm:hidden">Add</span>
             </Button>
           )}
         </div>
@@ -144,7 +145,7 @@ export const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
           <TabsTrigger value="history">History</TabsTrigger>
           <TabsTrigger value="charts">Charts</TabsTrigger>
           <TabsTrigger value="records">Records</TabsTrigger>
-          <TabsTrigger value="plateau">Plateau</TabsTrigger>
+          {enableAIWorkoutSuggestions && <TabsTrigger value="plateau">Plateau</TabsTrigger>}
         </TabsList>
         
         <TabsContent value="about" className="mt-4">
@@ -163,16 +164,18 @@ export const ExerciseDetail: React.FC<ExerciseDetailProps> = ({
           <ExerciseRecordsTab exercise={exercise} />
         </TabsContent>
         
-        <TabsContent value="plateau" className="mt-4">
-          <PlateauBreaker 
-            exerciseId={exercise.id}
-            exerciseName={exercise.name}
-            onApplyStrategy={(strategy) => {
-              console.log('Applied plateau strategy:', strategy);
-              // TODO: Implement strategy application logic
-            }}
-          />
-        </TabsContent>
+        {enableAIWorkoutSuggestions && (
+          <TabsContent value="plateau" className="mt-4">
+            <PlateauBreaker 
+              exerciseId={exercise.id}
+              exerciseName={exercise.name}
+              onApplyStrategy={(strategy) => {
+                console.log('Applied plateau strategy:', strategy);
+                // TODO: Implement strategy application logic
+              }}
+            />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

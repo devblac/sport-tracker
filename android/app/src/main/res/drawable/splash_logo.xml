@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="200dp"
+    android:viewportHeight="200"
+    android:viewportWidth="200">
+    
+    <!-- Background circle -->
+    <path
+        android:fillColor="#374151"
+        android:pathData="M100,100m-90,0a90,90 0,1 1,180 0a90,90 0,1 1,-180 0" />
+    
+    <!-- Sport Tracker Logo -->
+    <group android:translateX="100" android:translateY="100">
+        <!-- Main dumbbell -->
+        <path
+            android:fillColor="#3b82f6"
+            android:pathData="M-40,-12 L-25,-12 L-25,12 L-40,12 Z" />
+        <path
+            android:fillColor="#1d4ed8"
+            android:pathData="M-45,-8 L-40,-8 L-40,8 L-45,8 Z" />
+        
+        <!-- Bar -->
+        <path
+            android:fillColor="#f3f4f6"
+            android:pathData="M-25,-3 L25,-3 L25,3 L-25,3 Z" />
+        
+        <!-- Right weight -->
+        <path
+            android:fillColor="#3b82f6"
+            android:pathData="M25,-12 L40,-12 L40,12 L25,12 Z" />
+        <path
+            android:fillColor="#1d4ed8"
+            android:pathData="M40,-8 L45,-8 L45,8 L40,8 Z" />
+        
+        <!-- Trophy accent -->
+        <path
+            android:fillColor="#10b981"
+            android:pathData="M-8,-25 L8,-25 L6,-18 L-6,-18 Z" />
+        <path
+            android:fillColor="#059669"
+            android:pathData="M-3,-18 L3,-18 L3,-12 L-3,-12 Z" />
+        
+        <!-- XP Stars -->
+        <path
+            android:fillColor="#fbbf24"
+            android:pathData="M0,20 L3,28 L12,28 L5,34 L8,42 L0,37 L-8,42 L-5,34 L-12,28 L-3,28 Z" />
+        
+        <!-- Side accent stars -->
+        <path
+            android:fillColor="#f59e0b"
+            android:pathData="M-30,25 L-28,30 L-23,30 L-27,33 L-25,38 L-30,35 L-35,38 L-33,33 L-37,30 L-32,30 Z" />
+        <path
+            android:fillColor="#f59e0b"
+            android:pathData="M30,25 L32,30 L37,30 L33,33 L35,38 L30,35 L25,38 L27,33 L23,30 L28,30 Z" />
+    </group>
+    
+    <!-- App name text placeholder (will be handled by system) -->
+</vector>

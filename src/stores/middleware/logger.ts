@@ -1,4 +1,4 @@
-import { StateCreator } from 'zustand';
+import type { StateCreator } from 'zustand';
 import { logger as appLogger } from '@/utils/logger';
 
 export interface LoggerConfig {

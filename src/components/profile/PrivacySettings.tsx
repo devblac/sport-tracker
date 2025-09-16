@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent, Button } from '@/components/ui';
+import { Card, CardHeader, CardTitle, CardContent, Button, Switch } from '@/components/ui';
 import { useAuthStore } from '@/stores';
 import { 
   Shield, 
@@ -67,27 +67,7 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
     { value: 'private', label: 'Private', icon: Lock, description: 'Only you can see' },
   ];
 
-  const ToggleSwitch: React.FC<{
-    enabled: boolean;
-    onChange: () => void;
-    disabled?: boolean;
-  }> = ({ enabled, onChange, disabled = false }) => (
-    <button
-      onClick={onChange}
-      disabled={disabled}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-        enabled 
-          ? 'bg-primary' 
-          : 'bg-secondary'
-      } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-    >
-      <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-          enabled ? 'translate-x-6' : 'translate-x-1'
-        }`}
-      />
-    </button>
-  );
+
 
   const VisibilitySelector: React.FC<{
     value: string;
@@ -188,9 +168,9 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
                   </div>
                 </div>
               </div>
-              <ToggleSwitch
-                enabled={settings.show_personal_records}
-                onChange={() => handleToggle('show_personal_records')}
+              <Switch
+                checked={settings.show_personal_records}
+                onCheckedChange={() => handleToggle('show_personal_records')}
               />
             </div>
 
@@ -204,9 +184,9 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
                   </div>
                 </div>
               </div>
-              <ToggleSwitch
-                enabled={settings.show_workout_history}
-                onChange={() => handleToggle('show_workout_history')}
+              <Switch
+                checked={settings.show_workout_history}
+                onCheckedChange={() => handleToggle('show_workout_history')}
               />
             </div>
 
@@ -220,9 +200,9 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
                   </div>
                 </div>
               </div>
-              <ToggleSwitch
-                enabled={settings.allow_friend_requests}
-                onChange={() => handleToggle('allow_friend_requests')}
+              <Switch
+                checked={settings.allow_friend_requests}
+                onCheckedChange={() => handleToggle('allow_friend_requests')}
               />
             </div>
 
@@ -238,9 +218,9 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
                   </div>
                 </div>
               </div>
-              <ToggleSwitch
-                enabled={settings.show_online_status}
-                onChange={() => handleToggle('show_online_status')}
+              <Switch
+                checked={settings.show_online_status}
+                onCheckedChange={() => handleToggle('show_online_status')}
               />
             </div>
           </div>
@@ -262,9 +242,9 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
                 </div>
               </div>
             </div>
-            <ToggleSwitch
-              enabled={settings.data_collection}
-              onChange={() => handleToggle('data_collection')}
+            <Switch
+              checked={settings.data_collection}
+              onCheckedChange={() => handleToggle('data_collection')}
             />
           </div>
         </div>

@@ -6,7 +6,7 @@ import {
   ChallengeRequirement, 
   ChallengeReward,
   CreateChallengeRequest 
-} from '../types/challenges';
+} from '@/types';
 
 // XP rewards for different challenge activities
 export const CHALLENGE_XP_REWARDS = {

@@ -1,0 +1,36 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <!-- App Identity -->
+    <string name="app_name">Sport Tracker</string>
+    <string name="app_name_full">Sport Tracker - Fitness Gamificada</string>
+    <string name="title_activity_main">Sport Tracker</string>
+    <string name="package_name">com.sporttracker.fitness</string>
+    <string name="custom_url_scheme">com.sporttracker.fitness</string>
+    
+    <!-- App Description -->
+    <string name="app_description">Gamified fitness tracking with social features, achievements, and workout analytics</string>
+    <string name="app_short_description">Gamified Fitness Tracker</string>
+    
+    <!-- Features -->
+    <string name="feature_offline">Works offline</string>
+    <string name="feature_gamification">XP, levels, and achievements</string>
+    <string name="feature_social">Connect with gym friends</string>
+    <string name="feature_analytics">Progress tracking and analytics</string>
+    
+    <!-- Permissions descriptions -->
+    <string name="permission_camera_description">Take photos for profile and workout progress</string>
+    <string name="permission_storage_description">Save workout data and progress photos</string>
+    <string name="permission_activity_description">Track fitness activities and steps</string>
+    <string name="permission_sensors_description">Monitor heart rate and fitness metrics</string>
+    <string name="permission_vibrate_description">Provide workout notifications and feedback</string>
+    
+    <!-- Notifications -->
+    <string name="notification_workout_reminder">Time for your workout!</string>
+    <string name="notification_streak_risk">Don\'t break your streak!</string>
+    <string name="notification_achievement">New achievement unlocked!</string>
+    
+    <!-- Error messages -->
+    <string name="error_network">Check your internet connection</string>
+    <string name="error_sync">Failed to sync data</string>
+    <string name="error_generic">Something went wrong. Please try again.</string>
+</resources>

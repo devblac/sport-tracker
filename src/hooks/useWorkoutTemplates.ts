@@ -12,6 +12,10 @@ interface UseWorkoutTemplatesReturn {
   createWorkoutFromTemplate: (templateId: string, userId: string) => Promise<Workout | null>;
   saveTemplate: (template: WorkoutTemplate) => Promise<boolean>;
   deleteTemplate: (id: string) => Promise<boolean>;
+  archiveTemplate: (id: string) => Promise<boolean>;
+  unarchiveTemplate: (id: string) => Promise<boolean>;
+  renameTemplate: (id: string, newName: string) => Promise<boolean>;
+  duplicateTemplate: (id: string, newName?: string) => Promise<string | null>;
 }
 
 export const useWorkoutTemplates = (): UseWorkoutTemplatesReturn => {
@@ -97,9 +101,90 @@ export const useWorkoutTemplates = (): UseWorkoutTemplatesReturn => {
     }
   }, [workoutService, refreshTemplates]);
 
+  const archiveTemplate = useCallback(async (id: string): Promise<boolean> => {
+    try {
+      setError(null);
+      const success = await workoutService.archiveTemplate(id);
+      
+      if (success) {
+        await refreshTemplates();
+      }
+      
+      return success;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error archiving template');
+      console.error('Error archiving template:', err);
+      return false;
+    }
+  }, [workoutService, refreshTemplates]);
+
+  const unarchiveTemplate = useCallback(async (id: string): Promise<boolean> => {
+    try {
+      setError(null);
+      const success = await workoutService.unarchiveTemplate(id);
+      
+      if (success) {
+        await refreshTemplates();
+      }
+      
+      return success;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error unarchiving template');
+      console.error('Error unarchiving template:', err);
+      return false;
+    }
+  }, [workoutService, refreshTemplates]);
+
+  const renameTemplate = useCallback(async (id: string, newName: string): Promise<boolean> => {
+    try {
+      setError(null);
+      const success = await workoutService.renameTemplate(id, newName);
+      
+      if (success) {
+        await refreshTemplates();
+      }
+      
+      return success;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error renaming template');
+      console.error('Error renaming template:', err);
+      return false;
+    }
+  }, [workoutService, refreshTemplates]);
+
+  const duplicateTemplate = useCallback(async (id: string, newName?: string): Promise<string | null> => {
+    try {
+      setError(null);
+      const newTemplateId = await workoutService.duplicateTemplate(id, newName);
+      
+      if (newTemplateId) {
+        await refreshTemplates();
+      }
+      
+      return newTemplateId;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error duplicating template');
+      console.error('Error duplicating template:', err);
+      return null;
+    }
+  }, [workoutService, refreshTemplates]);
+
   // Load templates on mount
   useEffect(() => {
     refreshTemplates();
+  }, [refreshTemplates]);
+
+  // Listen for template updates from other parts of the app
+  useEffect(() => {
+    const handleTemplatesUpdated = () => {
+      refreshTemplates();
+    };
+
+    window.addEventListener('templatesUpdated', handleTemplatesUpdated);
+    
+    return () => {
+      window.removeEventListener('templatesUpdated', handleTemplatesUpdated);
+    };
   }, [refreshTemplates]);
 
   return {
@@ -112,5 +197,9 @@ export const useWorkoutTemplates = (): UseWorkoutTemplatesReturn => {
     createWorkoutFromTemplate,
     saveTemplate,
     deleteTemplate,
+    archiveTemplate,
+    unarchiveTemplate,
+    renameTemplate,
+    duplicateTemplate,
   };
 };

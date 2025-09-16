@@ -1,0 +1,45 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportHeight="108"
+    android:viewportWidth="108">
+    
+    <!-- Sport Tracker Fitness Icon - Dumbbell with Trophy -->
+    
+    <!-- Dumbbell -->
+    <group android:translateX="54" android:translateY="54">
+        <!-- Left weight -->
+        <path
+            android:fillColor="#3b82f6"
+            android:pathData="M-28,-8 L-20,-8 L-20,8 L-28,8 Z" />
+        <path
+            android:fillColor="#1d4ed8"
+            android:pathData="M-32,-6 L-28,-6 L-28,6 L-32,6 Z" />
+        
+        <!-- Bar -->
+        <path
+            android:fillColor="#e5e7eb"
+            android:pathData="M-20,-2 L20,-2 L20,2 L-20,2 Z" />
+        
+        <!-- Right weight -->
+        <path
+            android:fillColor="#3b82f6"
+            android:pathData="M20,-8 L28,-8 L28,8 L20,8 Z" />
+        <path
+            android:fillColor="#1d4ed8"
+            android:pathData="M28,-6 L32,-6 L32,6 L28,6 Z" />
+        
+        <!-- Trophy accent -->
+        <path
+            android:fillColor="#10b981"
+            android:pathData="M-6,-18 L6,-18 L4,-12 L-4,-12 Z" />
+        <path
+            android:fillColor="#059669"
+            android:pathData="M-2,-12 L2,-12 L2,-8 L-2,-8 Z" />
+        
+        <!-- XP Star -->
+        <path
+            android:fillColor="#fbbf24"
+            android:pathData="M0,12 L2,18 L8,18 L3,22 L5,28 L0,24 L-5,28 L-3,22 L-8,18 L-2,18 Z" />
+    </group>
+</vector>

@@ -1,0 +1,33 @@
+{
+  "enabled": true,
+  "name": "Test Case Review & Enhancement",
+  "description": "Reviews all test files to identify working and failing test cases, creates world-class test coverage for app functionality, and ensures proper mocking of external services like Supabase",
+  "version": "1",
+  "when": {
+    "type": "userTriggered",
+    "patterns": [
+      "src/test/**/*.{ts",
+      "tsx",
+      "js",
+      "jsx}",
+      "src/tests/**/*.{ts",
+      "tsx",
+      "js",
+      "jsx}",
+      "src/**/*.test.{ts",
+      "tsx",
+      "js",
+      "jsx}",
+      "src/**/*.spec.{ts",
+      "tsx",
+      "js",
+      "jsx}",
+      "vitest.config.ts",
+      "package.json"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Review all test files in the codebase and analyze:\n\n1. **Test Coverage Analysis**: \n   - Identify which test cases are currently working vs failing\n   - Assess test coverage for core features (authentication, workouts, gamification, social features)\n   - Review test quality and completeness\n   - Ensure at least 90% code coverage across the entire codebase\n\n2. **Create World-Class Test Cases**:\n   - Design comprehensive test suites for all major app functionality\n   - Ensure tests cover edge cases and error scenarios\n   - Create integration tests for user workflows\n   - Add performance and accessibility tests where appropriate\n\n3. **Mock External Dependencies**:\n   - Implement proper mocking for Supabase calls and database operations\n   - Mock authentication services and API endpoints\n   - Create test fixtures for consistent test data\n   - Ensure tests run quickly without external dependencies\n\n4. **Test Structure & Organization**:\n   - Organize tests by feature/component following the project structure\n   - Implement test utilities and helpers for common operations\n   - Set up proper test configuration and environment\n   - Add snapshot testing for UI components where beneficial\n\n5. **Specific Focus Areas**:\n   - Authentication flows (login, logout, guest mode)\n   - Workout tracking and exercise database\n   - Gamification system (XP, achievements, streaks)\n   - Social features (friends, leaderboards, sharing)\n   - Offline functionality and PWA features\n   - Real-time features and state management\n\nProvide detailed test implementation recommendations with code examples, focusing on React Testing Library, Vitest, and proper TypeScript typing for all tests."
+  }
+}

@@ -165,6 +165,10 @@ export const WorkoutTemplateSchema = WorkoutSchema.extend({
   created_by: z.string().optional(), // User ID of creator
   is_public_template: z.boolean().default(false),
   tags: z.array(z.string()).optional(),
+  
+  // Archive functionality
+  is_archived: z.boolean().default(false),
+  archived_at: z.date().optional(),
 });
 
 // Workout creation schema (for new workouts)

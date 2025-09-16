@@ -33,13 +33,13 @@ const ExerciseBrowser = React.lazy(() => import('@/pages/ExerciseBrowser').then(
 const ExerciseDetailPage = React.lazy(() => import('@/pages/ExerciseDetailPage').then(m => ({ default: m.ExerciseDetailPage })));
 
 // Workout pages
-const WorkoutTemplates = React.lazy(() => import('@/pages/WorkoutTemplates').then(m => ({ default: m.WorkoutTemplates })));
+
 const WorkoutPlayerPage = React.lazy(() => import('@/pages/WorkoutPlayerPage').then(m => ({ default: m.WorkoutPlayerPage })));
 const WorkoutSummary = React.lazy(() => import('@/pages/WorkoutSummary').then(m => ({ default: m.WorkoutSummary })));
 
 // Analytics pages
 const PercentileAnalytics = React.lazy(() => import('@/pages/PercentileAnalytics').then(m => ({ default: m.PercentileAnalytics })));
-const ChallengeHub = React.lazy(() => import('@/pages/ChallengeHub').then(m => ({ default: m.ChallengeHub })));
+const ChallengeHub = React.lazy(() => import('@/pages/ChallengeHub'));
 
 // Marketplace demo
 const MarketplaceDemo = React.lazy(() => import('@/components/marketplace/MarketplaceDemo').then(m => ({ default: m.MarketplaceDemo })));
@@ -162,7 +162,7 @@ function App() {
                     <Route path="/exercises/:exerciseId" element={<ExerciseDetailPage />} />
                     
                     {/* Workout Pages */}
-                    <Route path="/workout-templates" element={<WorkoutTemplates />} />
+
                     <Route path="/workout/:workoutId" element={<WorkoutPlayerPage />} />
                     <Route path="/workout-summary" element={<WorkoutSummary />} />
                     
