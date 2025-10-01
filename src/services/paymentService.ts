@@ -13,9 +13,9 @@ import type {
   PremiumContent
 } from '@/types/marketplace';
 
-// Stripe configuration - In production, these would come from environment variables
+// Stripe configuration - Only public key should be in frontend
 const STRIPE_PUBLIC_KEY = import.meta.env.VITE_STRIPE_PUBLIC_KEY || 'pk_test_mock_key';
-const STRIPE_SECRET_KEY = import.meta.env.VITE_STRIPE_SECRET_KEY || 'sk_test_mock_key';
+// SECURITY: Secret key should NEVER be in frontend code - handle server-side only
 
 export interface PaymentIntent {
   id: string;

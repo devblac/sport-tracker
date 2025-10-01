@@ -9,7 +9,7 @@ import {
   CHALLENGE_CATEGORIES,
   CHALLENGE_TYPES 
 } from '../../constants/challenges';
-import ChallengeCard from './ChallengeCard';
+import { ChallengeCard } from './ChallengeCard';
 
 interface ChallengeListProps {
   challenges: Challenge[];
@@ -84,7 +84,7 @@ export const ChallengeList: React.FC<ChallengeListProps> = ({
 
     // Apply sorting
     filtered.sort((a, b) => {
-      let aValue: any, bValue: any;
+      let aValue: string | number, bValue: string | number;
       
       switch (sortBy) {
         case 'created_at':
@@ -119,7 +119,7 @@ export const ChallengeList: React.FC<ChallengeListProps> = ({
     onFiltersChange?.(filters);
   }, [filters, onFiltersChange]);
 
-  const handleFilterChange = (key: keyof ChallengeFilters, value: any) => {
+  const handleFilterChange = (key: keyof ChallengeFilters, value: string | string[] | undefined) => {
     setFilters(prev => ({
       ...prev,
       [key]: value === '' ? undefined : value
@@ -240,7 +240,7 @@ export const ChallengeList: React.FC<ChallengeListProps> = ({
               </label>
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
+                onChange={(e) => setSortBy(e.target.value as 'newest' | 'oldest' | 'difficulty' | 'participants' | 'ending_soon')}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
                 <option value="start_date">Start Date</option>

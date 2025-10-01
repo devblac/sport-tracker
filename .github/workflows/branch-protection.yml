@@ -1,0 +1,202 @@
+name: Branch Protection Quality Gates
+
+on:
+  pull_request:
+    branches: [ main ]
+    types: [opened, synchronize, reopened]
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  quality-gate-check:
+    name: Quality Gate Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    
+    outputs:
+      coverage-passed: ${{ steps.coverage-check.outputs.passed }}
+      reliability-passed: ${{ steps.reliability-check.outputs.passed }}
+      accessibility-passed: ${{ steps.accessibility-check.outputs.passed }}
+      overall-passed: ${{ steps.quality-gate.outputs.passed }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 50
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Type checking
+        run: npm run type-check
+      
+      - name: Lint checking
+        run: npm run lint
+      
+      - name: Run tests with coverage
+        run: npm run test:coverage -- --run
+        env:
+          CI: true
+      
+      - name: Coverage threshold enforcement
+        id: coverage-check
+        run: |
+          npm run coverage:enforce-per-module
+          echo "passed=true" >> $GITHUB_OUTPUT
+        continue-on-error: true
+      
+      - name: Test reliability validation
+        id: reliability-check
+        run: |
+          npm run test:reliability-check
+          npm run reliability:validate-trends
+          echo "passed=true" >> $GITHUB_OUTPUT
+        continue-on-error: true
+      
+      - name: Accessibility validation
+        id: accessibility-check
+        run: |
+          npm run a11y:automated-checks
+          npm run a11y:generate-manual-checklist
+          echo "passed=true" >> $GITHUB_OUTPUT
+        continue-on-error: true
+      
+      - name: Performance validation
+        run: |
+          npm run test:performance -- --run
+          npm run performance:check-regression
+        continue-on-error: true
+      
+      - name: Security validation
+        run: |
+          npm audit --audit-level moderate
+          npm run test:security -- --run
+        continue-on-error: true
+      
+      - name: Quality gate evaluation
+        id: quality-gate
+        run: |
+          npm run quality-gate:evaluate
+          echo "passed=true" >> $GITHUB_OUTPUT
+        continue-on-error: true
+      
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: quality-gate-results
+          path: |
+            coverage/
+            test-results/
+            quality-gate-report.json
+          retention-days: 30
+      
+      - name: Generate quality report comment
+        if: always()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            
+            let reportContent = '## 🧪 Quality Gate Report\n\n';
+            
+            try {
+              const report = JSON.parse(fs.readFileSync('quality-gate-report.json', 'utf8'));
+              
+              // Overall status
+              const overallStatus = report.passed ? '✅ PASSED' : '❌ FAILED';
+              reportContent += `### Overall Status: ${overallStatus}\n\n`;
+              
+              // Coverage metrics
+              reportContent += '### 📊 Coverage Metrics\n';
+              reportContent += `- **Overall Coverage**: ${report.coverage.overall}% (Target: 90%+)\n`;
+              reportContent += `- **Components**: ${report.coverage.components.toFixed(1)}% (Target: 75%+)\n`;
+              reportContent += `- **Utilities**: ${report.coverage.utilities.toFixed(1)}% (Target: 85%+)\n`;
+              reportContent += `- **Files Below Threshold**: ${report.coverage.violations.length}\n\n`;
+              
+              // Reliability metrics
+              reportContent += '### 🎯 Reliability Metrics\n';
+              reportContent += `- **Test Reliability**: ${report.reliability.current}% (Target: 99%+)\n`;
+              reportContent += `- **Flaky Tests**: ${report.reliability.flakyTests.length} (Target: <1%)\n\n`;
+              
+              // Accessibility metrics
+              reportContent += '### ♿ Accessibility Metrics\n';
+              reportContent += `- **Automated Score**: ${report.accessibility.automatedScore}% (Target: 95%+)\n`;
+              reportContent += `- **Manual Tests Required**: ${report.accessibility.manualTestsRequired}\n\n`;
+              
+              // Alerts
+              if (report.alerts.length > 0) {
+                reportContent += '### ⚠️ Quality Alerts\n';
+                report.alerts.forEach(alert => {
+                  const icon = alert.severity === 'critical' ? '🚨' : 
+                              alert.severity === 'high' ? '⚠️' : 
+                              alert.severity === 'medium' ? '⚡' : 'ℹ️';
+                  reportContent += `- ${icon} **${alert.type}**: ${alert.message}\n`;
+                });
+                reportContent += '\n';
+              }
+              
+              // Remediation steps
+              if (!report.passed) {
+                reportContent += '### 🔧 Remediation Steps\n';
+                report.alerts.forEach(alert => {
+                  reportContent += `- ${alert.remediation}\n`;
+                });
+                reportContent += '\n';
+              }
+              
+              // Quality gate details
+              reportContent += '### 📋 Quality Gate Details\n';
+              reportContent += `- **Coverage Gate**: ${report.coverage.overall >= 90 ? '✅' : '❌'} (${report.coverage.overall}% / 90%)\n`;
+              reportContent += `- **Reliability Gate**: ${report.reliability.current >= 99 ? '✅' : '❌'} (${report.reliability.current}% / 99%)\n`;
+              reportContent += `- **Accessibility Gate**: ${report.accessibility.automatedScore >= 95 ? '✅' : '❌'} (${report.accessibility.automatedScore}% / 95%)\n`;
+              reportContent += `- **Flaky Test Gate**: ${report.reliability.flakyTests.length === 0 ? '✅' : '❌'} (${report.reliability.flakyTests.length} flaky tests)\n\n`;
+              
+            } catch (error) {
+              reportContent += '⚠️ Could not read quality gate report. Check workflow logs for details.\n\n';
+            }
+            
+            // Add workflow status
+            reportContent += '### 🔄 Workflow Status\n';
+            reportContent += `- **Coverage Check**: ${{ steps.coverage-check.outputs.passed == 'true' && '✅ Passed' || '❌ Failed' }}\n`;
+            reportContent += `- **Reliability Check**: ${{ steps.reliability-check.outputs.passed == 'true' && '✅ Passed' || '❌ Failed' }}\n`;
+            reportContent += `- **Accessibility Check**: ${{ steps.accessibility-check.outputs.passed == 'true' && '✅ Passed' || '❌ Failed' }}\n`;
+            reportContent += `- **Quality Gate**: ${{ steps.quality-gate.outputs.passed == 'true' && '✅ Passed' || '❌ Failed' }}\n\n`;
+            
+            reportContent += '---\n';
+            reportContent += '*This report was generated automatically by the Quality Gate workflow.*';
+            
+            // Post comment
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: reportContent
+            });
+
+  block-merge-on-failure:
+    name: Block Merge on Quality Gate Failure
+    runs-on: ubuntu-latest
+    needs: quality-gate-check
+    if: always()
+    
+    steps:
+      - name: Check quality gate status
+        run: |
+          if [ "${{ needs.quality-gate-check.outputs.overall-passed }}" != "true" ]; then
+            echo "❌ Quality gates failed. Blocking merge."
+            echo "Coverage: ${{ needs.quality-gate-check.outputs.coverage-passed }}"
+            echo "Reliability: ${{ needs.quality-gate-check.outputs.reliability-passed }}"
+            echo "Accessibility: ${{ needs.quality-gate-check.outputs.accessibility-passed }}"
+            exit 1
+          else
+            echo "✅ All quality gates passed. Merge allowed."
+          fi

@@ -1,0 +1,39 @@
+{
+  "buildNumber": "suite-test-build",
+  "timestamp": "2025-09-30T22:43:30.175Z",
+  "summary": {
+    "totalTests": 1,
+    "passedTests": 1,
+    "failedTests": 0,
+    "regressions": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    }
+  },
+  "alerts": [],
+  "details": {
+    "regressionReport": {
+      "buildNumber": "suite-test-build",
+      "timestamp": "2025-09-30T22:43:30.173Z",
+      "totalTests": 1,
+      "regressions": [],
+      "summary": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      }
+    },
+    "testResults": [
+      {
+        "component": "Button",
+        "passed": true,
+        "renderTime": 3,
+        "memoryUsage": 5120,
+        "violations": []
+      }
+    ]
+  }
+}

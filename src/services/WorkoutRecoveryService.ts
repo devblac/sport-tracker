@@ -1,22 +1,43 @@
-import type { Workout } from '@/schemas/workout';
-import { WorkoutService } from './WorkoutService';
-import { workoutAutoSaveService } from './WorkoutAutoSaveService';
-import { notificationService } from './NotificationService';
+/**
+ * WorkoutRecoveryService - Handles workout session recovery and restoration
+ * 
+ * Provides functionality to recover interrupted workout sessions from various
+ * storage mechanisms and restore them to a consistent state.
+ */
 
-export interface RecoveryData {
+import { workoutPlayerService } from './WorkoutPlayerService';
+import { enhancedWorkoutService } from './EnhancedWorkoutService';
+import { dbManager } from '@/db/IndexedDBManager';
+import type { Workout } from '@/schemas/workout';
+import type { WorkoutSession } from './WorkoutPlayerService';
+import { logger } from '@/utils/logger';
+
+export interface RecoveryCandidate {
+  id: string;
   workout: Workout;
-  timestamp: Date;
-  source: 'database' | 'localStorage' | 'sessionStorage';
-  isValid: boolean;
+  lastSaved: Date;
+  source: 'localStorage' | 'indexedDB' | 'supabase';
+  isCorrupted: boolean;
+  canRecover: boolean;
+  estimatedProgress: number;
+}
+
+export interface RecoveryResult {
+  success: boolean;
+  recoveredSessions: WorkoutSession[];
+  failedRecoveries: Array<{
+    id: string;
+    error: string;
+    source: string;
+  }>;
+  totalCandidates: number;
+  corruptedSessions: number;
 }
 
 export class WorkoutRecoveryService {
   private static instance: WorkoutRecoveryService;
-  private workoutService: WorkoutService;
 
-  private constructor() {
-    this.workoutService = WorkoutService.getInstance();
-  }
+  private constructor() {}
 
   public static getInstance(): WorkoutRecoveryService {
     if (!WorkoutRecoveryService.instance) {
@@ -25,337 +46,435 @@ export class WorkoutRecoveryService {
     return WorkoutRecoveryService.instance;
   }
 
-  public async checkForRecoverableWorkouts(): Promise<RecoveryData[]> {
+  // ============================================================================
+  // Main Recovery Methods
+  // ============================================================================
+
+  async recoverAllWorkoutSessions(): Promise<RecoveryResult> {
+    logger.info('Starting comprehensive workout session recovery');
+
+    const result: RecoveryResult = {
+      success: true,
+      recoveredSessions: [],
+      failedRecoveries: [],
+      totalCandidates: 0,
+      corruptedSessions: 0
+    };
+
     try {
-      const recoveryData: RecoveryData[] = [];
+      // Find all recovery candidates from different sources
+      const candidates = await this.findRecoveryCandidates();
+      result.totalCandidates = candidates.length;
 
-      // Check localStorage for active workout
-      const activeWorkoutId = localStorage.getItem('activeWorkoutId');
-      const workoutStartTime = localStorage.getItem('workoutStartTime');
+      logger.info(`Found ${candidates.length} recovery candidates`);
 
-      if (activeWorkoutId && workoutStartTime) {
-        // Try to recover from database first
-        const dbRecovery = await this.recoverFromDatabase(activeWorkoutId);
-        if (dbRecovery) {
-          recoveryData.push(dbRecovery);
-        } else {
-          // Fallback to localStorage backup
-          const localRecovery = this.recoverFromLocalStorage(activeWorkoutId);
-          if (localRecovery) {
-            recoveryData.push(localRecovery);
-          }
-        }
-      }
-
-      // Check for other workout backups in localStorage
-      const localBackups = this.findLocalStorageBackups();
-      recoveryData.push(...localBackups);
-
-      return recoveryData.filter(data => data.isValid);
-    } catch (error) {
-      console.error('Error checking for recoverable workouts:', error);
-      return [];
-    }
-  }
-
-  private async recoverFromDatabase(workoutId: string): Promise<RecoveryData | null> {
-    try {
-      const workout = await this.workoutService.getWorkoutById(workoutId);
-      
-      if (workout && (workout.status === 'in_progress' || workout.status === 'paused')) {
-        // Handle date conversion for timestamp
-        let timestamp = new Date();
-        if (workout.started_at) {
-          if (workout.started_at instanceof Date) {
-            timestamp = workout.started_at;
-          } else if (typeof workout.started_at === 'string') {
-            timestamp = new Date(workout.started_at);
-          }
-        }
-        
-        return {
-          workout,
-          timestamp,
-          source: 'database',
-          isValid: this.validateWorkoutRecovery(workout)
-        };
-      }
-    } catch (error) {
-      console.error('Error recovering workout from database:', error);
-    }
-    
-    return null;
-  }
-
-  private recoverFromLocalStorage(workoutId: string): RecoveryData | null {
-    try {
-      const backup = workoutAutoSaveService.getWorkoutFromLocalStorage(workoutId);
-      
-      if (backup) {
-        // Handle date conversion for timestamp
-        let timestamp = new Date();
-        if (backup.started_at) {
-          if (backup.started_at instanceof Date) {
-            timestamp = backup.started_at;
-          } else if (typeof backup.started_at === 'string') {
-            timestamp = new Date(backup.started_at);
-          }
-        }
-        
-        return {
-          workout: backup,
-          timestamp,
-          source: 'localStorage',
-          isValid: this.validateWorkoutRecovery(backup)
-        };
-      }
-    } catch (error) {
-      console.error('Error recovering workout from localStorage:', error);
-    }
-    
-    return null;
-  }
-
-  private findLocalStorageBackups(): RecoveryData[] {
-    const backups: RecoveryData[] = [];
-    
-    try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        
-        if (key && key.startsWith('workout_backup_')) {
-          const workoutId = key.replace('workout_backup_', '');
-          const backupData = localStorage.getItem(key);
-          
-          if (backupData) {
-            try {
-              const parsed = JSON.parse(backupData);
-              const workout = parsed.workout;
-              
-              if (workout && (workout.status === 'in_progress' || workout.status === 'paused')) {
-                backups.push({
-                  workout,
-                  timestamp: new Date(parsed.timestamp),
-                  source: 'localStorage',
-                  isValid: this.validateWorkoutRecovery(workout)
-                });
-              }
-            } catch (parseError) {
-              console.error(`Error parsing backup data for key ${key}:`, parseError);
-              // Skip this backup and continue with others
+      // Process each candidate
+      for (const candidate of candidates) {
+        try {
+          if (candidate.canRecover && !candidate.isCorrupted) {
+            const session = await this.recoverWorkoutSession(candidate);
+            if (session) {
+              result.recoveredSessions.push(session);
+              logger.info(`Successfully recovered session: ${candidate.id}`);
+            }
+          } else {
+            if (candidate.isCorrupted) {
+              result.corruptedSessions++;
+              logger.warn(`Skipping corrupted session: ${candidate.id}`);
+            } else {
+              logger.info(`Skipping non-recoverable session: ${candidate.id}`);
             }
           }
+        } catch (error) {
+          result.failedRecoveries.push({
+            id: candidate.id,
+            error: error instanceof Error ? error.message : 'Unknown error',
+            source: candidate.source
+          });
+          logger.error(`Failed to recover session ${candidate.id}:`, error);
         }
       }
+
+      // Clean up old/corrupted data
+      await this.cleanupCorruptedSessions(candidates.filter(c => c.isCorrupted));
+
+      result.success = result.failedRecoveries.length === 0;
+
+      logger.info('Workout session recovery completed', {
+        recovered: result.recoveredSessions.length,
+        failed: result.failedRecoveries.length,
+        corrupted: result.corruptedSessions,
+        total: result.totalCandidates
+      });
+
+      return result;
+
     } catch (error) {
-      console.error('Error finding localStorage backups:', error);
+      logger.error('Error during workout session recovery:', error);
+      result.success = false;
+      return result;
     }
-    
-    return backups;
   }
 
-  private validateWorkoutRecovery(workout: Workout): boolean {
+  async recoverSpecificSession(sessionId: string): Promise<WorkoutSession | null> {
+    logger.info(`Attempting to recover specific session: ${sessionId}`);
+
     try {
-      // Check if workout is not too old (e.g., more than 24 hours)
-      const maxAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-      
-      // Handle both Date objects and string dates from localStorage
-      let startedAtTime = 0;
-      if (workout.started_at) {
-        if (workout.started_at instanceof Date) {
-          startedAtTime = workout.started_at.getTime();
-        } else if (typeof workout.started_at === 'string') {
-          const parsedDate = new Date(workout.started_at);
-          if (!isNaN(parsedDate.getTime())) {
-            startedAtTime = parsedDate.getTime();
-          }
-        }
-      }
-      
-      const workoutAge = new Date().getTime() - startedAtTime;
-    
-    if (workoutAge > maxAge) {
-      console.log(`Workout ${workout.id} is too old for recovery (${Math.round(workoutAge / (60 * 60 * 1000))} hours)`);
-      return false;
-    }
+      const candidates = await this.findRecoveryCandidates();
+      const candidate = candidates.find(c => c.id === sessionId);
 
-    // Check if workout has valid structure
-    if (!workout.id || !workout.name || !Array.isArray(workout.exercises)) {
-      console.log(`Workout ${workout.id} has invalid structure`);
-      return false;
-    }
-
-      // Check if workout status is recoverable
-      if (workout.status !== 'in_progress' && workout.status !== 'paused') {
-        console.log(`Workout ${workout.id} status is not recoverable: ${workout.status}`);
-        return false;
+      if (!candidate) {
+        logger.warn(`No recovery candidate found for session: ${sessionId}`);
+        return null;
       }
 
-      return true;
+      if (!candidate.canRecover || candidate.isCorrupted) {
+        logger.warn(`Session ${sessionId} cannot be recovered (corrupted: ${candidate.isCorrupted})`);
+        return null;
+      }
+
+      return await this.recoverWorkoutSession(candidate);
+
     } catch (error) {
-      console.error('Error validating workout recovery:', error);
-      return false;
-    }
-  }
-
-  public async presentRecoveryOptions(recoveryData: RecoveryData[]): Promise<RecoveryData | null> {
-    if (recoveryData.length === 0) {
+      logger.error(`Error recovering specific session ${sessionId}:`, error);
       return null;
     }
-
-    // If only one recovery option, show notification
-    if (recoveryData.length === 1) {
-      const data = recoveryData[0];
-      await notificationService.showWorkoutRecoveryNotification(data.workout.name);
-      return data;
-    }
-
-    // Multiple recovery options - would need UI component
-    // For now, return the most recent one
-    return recoveryData.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
   }
 
-  public async recoverWorkout(recoveryData: RecoveryData): Promise<boolean> {
-    try {
-      const { workout, source } = recoveryData;
-      
-      console.log(`Recovering workout ${workout.id} from ${source}`);
+  // ============================================================================
+  // Recovery Candidate Discovery
+  // ============================================================================
 
-      // Ensure workout is saved to database
-      if (source !== 'database') {
-        await this.workoutService.saveWorkout(workout);
-      }
+  private async findRecoveryCandidates(): Promise<RecoveryCandidate[]> {
+    const candidates: RecoveryCandidate[] = [];
 
-      // Restore localStorage state
-      localStorage.setItem('activeWorkoutId', workout.id);
-      if (workout.started_at) {
-        // Handle both Date objects and string dates
-        const startTimeString = workout.started_at instanceof Date 
-          ? workout.started_at.toISOString()
-          : workout.started_at;
-        localStorage.setItem('workoutStartTime', startTimeString);
-      }
+    // Check localStorage
+    const localStorageCandidates = await this.findLocalStorageCandidates();
+    candidates.push(...localStorageCandidates);
 
-      // Clean up backup if it was from localStorage
-      if (source === 'localStorage') {
-        workoutAutoSaveService.clearWorkoutBackup(workout.id);
-      }
+    // Check IndexedDB
+    const indexedDBCandidates = await this.findIndexedDBCandidates();
+    candidates.push(...indexedDBCandidates);
 
-      console.log(`Workout ${workout.id} recovered successfully`);
-      return true;
-    } catch (error) {
-      console.error('Error recovering workout:', error);
-      return false;
-    }
+    // TODO: Check Supabase for cloud-stored sessions
+    // const supabaseCandidates = await this.findSupabaseCandidates();
+    // candidates.push(...supabaseCandidates);
+
+    // Deduplicate candidates (prefer most recent)
+    const deduplicatedCandidates = this.deduplicateCandidates(candidates);
+
+    return deduplicatedCandidates;
   }
 
-  public async discardRecovery(recoveryData: RecoveryData): Promise<void> {
-    try {
-      const { workout, source } = recoveryData;
-      
-      console.log(`Discarding recovery for workout ${workout.id} from ${source}`);
-
-      // Mark workout as cancelled in database
-      const cancelledWorkout = {
-        ...workout,
-        status: 'cancelled' as const,
-        cancelled_at: new Date()
-      };
-      
-      await this.workoutService.saveWorkout(cancelledWorkout);
-
-      // Clean up localStorage
-      localStorage.removeItem('activeWorkoutId');
-      localStorage.removeItem('workoutStartTime');
-      workoutAutoSaveService.clearWorkoutBackup(workout.id);
-
-      console.log(`Recovery discarded for workout ${workout.id}`);
-    } catch (error) {
-      console.error('Error discarding recovery:', error);
-    }
-  }
-
-  public async cleanupOldRecoveryData(): Promise<void> {
-    try {
-      const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
-      const cutoffTime = new Date().getTime() - maxAge;
-
-      // Clean up old localStorage backups
-      for (let i = localStorage.length - 1; i >= 0; i--) {
-        const key = localStorage.key(i);
-        
-        if (key && key.startsWith('workout_backup_')) {
-          const backupData = localStorage.getItem(key);
-          
-          if (backupData) {
-            try {
-              const parsed = JSON.parse(backupData);
-              const timestamp = new Date(parsed.timestamp).getTime();
-              
-              if (timestamp < cutoffTime) {
-                localStorage.removeItem(key);
-                console.log(`Cleaned up old backup: ${key}`);
-              }
-            } catch (error) {
-              // Invalid backup data, remove it
-              localStorage.removeItem(key);
-              console.log(`Removed invalid backup: ${key}`);
-            }
-          }
-        }
-      }
-
-      console.log('Recovery data cleanup completed');
-    } catch (error) {
-      console.error('Error cleaning up recovery data:', error);
-    }
-  }
-
-  public getRecoveryStats(): {
-    totalBackups: number;
-    oldestBackup: Date | null;
-    newestBackup: Date | null;
-  } {
-    let totalBackups = 0;
-    let oldestBackup: Date | null = null;
-    let newestBackup: Date | null = null;
+  private async findLocalStorageCandidates(): Promise<RecoveryCandidate[]> {
+    const candidates: RecoveryCandidate[] = [];
 
     try {
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        
-        if (key && key.startsWith('workout_backup_')) {
-          const backupData = localStorage.getItem(key);
-          
-          if (backupData) {
-            try {
-              const parsed = JSON.parse(backupData);
-              const timestamp = new Date(parsed.timestamp);
-              
-              totalBackups++;
-              
-              if (!oldestBackup || timestamp < oldestBackup) {
-                oldestBackup = timestamp;
+        if (key?.startsWith('workout_session_')) {
+          try {
+            const sessionData = localStorage.getItem(key);
+            if (sessionData) {
+              const parsed = JSON.parse(sessionData);
+              const candidate = await this.validateAndCreateCandidate(parsed, 'localStorage');
+              if (candidate) {
+                candidates.push(candidate);
               }
-              
-              if (!newestBackup || timestamp > newestBackup) {
-                newestBackup = timestamp;
-              }
-            } catch (error) {
-              // Invalid backup data
             }
+          } catch (error) {
+            logger.warn(`Failed to parse localStorage session data for key: ${key}`, error);
           }
         }
       }
     } catch (error) {
-      console.error('Error getting recovery stats:', error);
+      logger.error('Error scanning localStorage for recovery candidates:', error);
     }
 
-    return {
-      totalBackups,
-      oldestBackup,
-      newestBackup
+    return candidates;
+  }
+
+  private async findIndexedDBCandidates(): Promise<RecoveryCandidate[]> {
+    const candidates: RecoveryCandidate[] = [];
+
+    try {
+      await dbManager.init();
+      const sessions = await dbManager.getAll<WorkoutSession>('workoutSessions');
+
+      for (const session of sessions) {
+        if (session.isActive && session.workout.status === 'in_progress') {
+          const candidate = await this.validateAndCreateCandidate(session, 'indexedDB');
+          if (candidate) {
+            candidates.push(candidate);
+          }
+        }
+      }
+    } catch (error) {
+      logger.error('Error scanning IndexedDB for recovery candidates:', error);
+    }
+
+    return candidates;
+  }
+
+  private async validateAndCreateCandidate(
+    sessionData: any, 
+    source: 'localStorage' | 'indexedDB' | 'supabase'
+  ): Promise<RecoveryCandidate | null> {
+    try {
+      // Basic validation
+      if (!sessionData || !sessionData.id || !sessionData.workout) {
+        return null;
+      }
+
+      const workout = sessionData.workout;
+      
+      // Check if workout is in a recoverable state
+      const isRecoverable = workout.status === 'in_progress' || workout.status === 'paused';
+      if (!isRecoverable) {
+        return null;
+      }
+
+      // Validate workout structure
+      const isCorrupted = this.isWorkoutDataCorrupted(workout);
+      
+      // Calculate estimated progress
+      const estimatedProgress = this.calculateWorkoutProgress(workout);
+
+      // Parse dates
+      const lastSaved = sessionData.lastSaveTime 
+        ? new Date(sessionData.lastSaveTime)
+        : new Date(sessionData.startTime || Date.now());
+
+      return {
+        id: sessionData.id,
+        workout,
+        lastSaved,
+        source,
+        isCorrupted,
+        canRecover: !isCorrupted && isRecoverable,
+        estimatedProgress
+      };
+
+    } catch (error) {
+      logger.warn(`Failed to validate recovery candidate from ${source}:`, error);
+      return null;
+    }
+  }
+
+  private isWorkoutDataCorrupted(workout: any): boolean {
+    try {
+      // Check required fields
+      if (!workout.id || !workout.user_id || !workout.exercises) {
+        return true;
+      }
+
+      // Check exercises structure
+      if (!Array.isArray(workout.exercises)) {
+        return true;
+      }
+
+      // Check each exercise
+      for (const exercise of workout.exercises) {
+        if (!exercise.id || !exercise.exercise_id || !exercise.sets) {
+          return true;
+        }
+
+        if (!Array.isArray(exercise.sets)) {
+          return true;
+        }
+
+        // Check each set
+        for (const set of exercise.sets) {
+          if (!set.id || typeof set.set_number !== 'number') {
+            return true;
+          }
+        }
+      }
+
+      return false;
+    } catch (error) {
+      return true;
+    }
+  }
+
+  private calculateWorkoutProgress(workout: any): number {
+    try {
+      const totalSets = workout.exercises.reduce((sum: number, ex: any) => 
+        sum + (ex.sets?.length || 0), 0);
+      
+      const completedSets = workout.exercises.reduce((sum: number, ex: any) => 
+        sum + (ex.sets?.filter((set: any) => set.completed).length || 0), 0);
+
+      return totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0;
+    } catch (error) {
+      return 0;
+    }
+  }
+
+  private deduplicateCandidates(candidates: RecoveryCandidate[]): RecoveryCandidate[] {
+    const candidateMap = new Map<string, RecoveryCandidate>();
+
+    for (const candidate of candidates) {
+      const existing = candidateMap.get(candidate.id);
+      
+      if (!existing || candidate.lastSaved > existing.lastSaved) {
+        candidateMap.set(candidate.id, candidate);
+      }
+    }
+
+    return Array.from(candidateMap.values());
+  }
+
+  // ============================================================================
+  // Session Recovery
+  // ============================================================================
+
+  private async recoverWorkoutSession(candidate: RecoveryCandidate): Promise<WorkoutSession | null> {
+    try {
+      logger.info(`Recovering workout session from ${candidate.source}:`, candidate.id);
+
+      // Restore the workout session through the player service
+      const session = await workoutPlayerService.startWorkoutSession(candidate.workout);
+
+      // Restore session state
+      if (candidate.workout.status === 'paused') {
+        await workoutPlayerService.pauseWorkoutSession(session.id);
+      }
+
+      logger.info(`Successfully recovered session: ${candidate.id} (${candidate.estimatedProgress}% complete)`);
+      
+      return session;
+
+    } catch (error) {
+      logger.error(`Failed to recover session ${candidate.id}:`, error);
+      return null;
+    }
+  }
+
+  // ============================================================================
+  // Cleanup Methods
+  // ============================================================================
+
+  private async cleanupCorruptedSessions(corruptedCandidates: RecoveryCandidate[]): Promise<void> {
+    logger.info(`Cleaning up ${corruptedCandidates.length} corrupted sessions`);
+
+    for (const candidate of corruptedCandidates) {
+      try {
+        if (candidate.source === 'localStorage') {
+          const key = `workout_session_${candidate.id}`;
+          localStorage.removeItem(key);
+        } else if (candidate.source === 'indexedDB') {
+          await dbManager.init();
+          await dbManager.delete('workoutSessions', candidate.id);
+        }
+        
+        logger.info(`Cleaned up corrupted session: ${candidate.id}`);
+      } catch (error) {
+        logger.error(`Failed to cleanup corrupted session ${candidate.id}:`, error);
+      }
+    }
+  }
+
+  async cleanupOldSessions(olderThanDays: number = 7): Promise<number> {
+    logger.info(`Cleaning up workout sessions older than ${olderThanDays} days`);
+
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
+
+    let cleanedCount = 0;
+
+    try {
+      // Clean localStorage
+      const keysToRemove: string[] = [];
+      
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith('workout_session_')) {
+          try {
+            const sessionData = localStorage.getItem(key);
+            if (sessionData) {
+              const parsed = JSON.parse(sessionData);
+              const lastSaved = new Date(parsed.lastSaveTime || parsed.startTime);
+              
+              if (lastSaved < cutoffDate) {
+                keysToRemove.push(key);
+              }
+            }
+          } catch (error) {
+            // If we can't parse it, it's probably corrupted, so remove it
+            keysToRemove.push(key);
+          }
+        }
+      }
+
+      keysToRemove.forEach(key => {
+        localStorage.removeItem(key);
+        cleanedCount++;
+      });
+
+      // Clean IndexedDB
+      await dbManager.init();
+      const sessions = await dbManager.getAll<WorkoutSession>('workoutSessions');
+      
+      for (const session of sessions) {
+        const lastSaved = new Date(session.lastSaveTime);
+        if (lastSaved < cutoffDate) {
+          await dbManager.delete('workoutSessions', session.id);
+          cleanedCount++;
+        }
+      }
+
+      logger.info(`Cleaned up ${cleanedCount} old workout sessions`);
+      return cleanedCount;
+
+    } catch (error) {
+      logger.error('Error cleaning up old sessions:', error);
+      return cleanedCount;
+    }
+  }
+
+  // ============================================================================
+  // Recovery Statistics
+  // ============================================================================
+
+  async getRecoveryStatistics(): Promise<{
+    totalCandidates: number;
+    recoverableSessions: number;
+    corruptedSessions: number;
+    sourceBreakdown: Record<string, number>;
+    progressDistribution: Record<string, number>;
+  }> {
+    const candidates = await this.findRecoveryCandidates();
+    
+    const stats = {
+      totalCandidates: candidates.length,
+      recoverableSessions: candidates.filter(c => c.canRecover).length,
+      corruptedSessions: candidates.filter(c => c.isCorrupted).length,
+      sourceBreakdown: {} as Record<string, number>,
+      progressDistribution: {} as Record<string, number>
     };
+
+    // Source breakdown
+    candidates.forEach(candidate => {
+      stats.sourceBreakdown[candidate.source] = (stats.sourceBreakdown[candidate.source] || 0) + 1;
+    });
+
+    // Progress distribution
+    candidates.forEach(candidate => {
+      const progressRange = this.getProgressRange(candidate.estimatedProgress);
+      stats.progressDistribution[progressRange] = (stats.progressDistribution[progressRange] || 0) + 1;
+    });
+
+    return stats;
+  }
+
+  private getProgressRange(progress: number): string {
+    if (progress === 0) return '0%';
+    if (progress <= 25) return '1-25%';
+    if (progress <= 50) return '26-50%';
+    if (progress <= 75) return '51-75%';
+    if (progress <= 99) return '76-99%';
+    return '100%';
   }
 }
 

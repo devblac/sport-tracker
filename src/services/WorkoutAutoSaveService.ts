@@ -1,5 +1,7 @@
 import type { Workout } from '@/schemas/workout';
 import { WorkoutService } from './WorkoutService';
+import { workoutPlayerService } from './WorkoutPlayerService';
+import { logger } from '@/utils/logger';
 
 export interface AutoSaveState {
   workoutId: string;
@@ -32,7 +34,7 @@ export class WorkoutAutoSaveService {
   }
 
   public startAutoSave(workout: Workout): void {
-    console.log(`Starting auto-save for workout: ${workout.id}`);
+    logger.info(`Starting enhanced auto-save for workout: ${workout.id}`);
     
     // Initialize save state
     this.saveStates.set(workout.id, {
@@ -46,6 +48,13 @@ export class WorkoutAutoSaveService {
 
     // Add to save queue
     this.saveQueue.set(workout.id, workout);
+
+    // Start workout session in player service if not already active
+    if (!workoutPlayerService.isSessionActive(workout.id)) {
+      workoutPlayerService.startWorkoutSession(workout).catch(error => {
+        logger.error('Failed to start workout session', { error, workoutId: workout.id });
+      });
+    }
 
     // Start auto-save interval if not already running
     if (!this.autoSaveInterval) {
@@ -65,12 +74,17 @@ export class WorkoutAutoSaveService {
       saveState.isDirty = true;
       this.saveQueue.set(workout.id, workout);
       
-      console.log(`Workout ${workout.id} marked as dirty for auto-save`);
+      // Update workout session in player service
+      workoutPlayerService.updateWorkoutSession(workout.id, workout).catch(error => {
+        logger.error('Failed to update workout session', { error, workoutId: workout.id });
+      });
+      
+      logger.info(`Workout ${workout.id} marked as dirty for enhanced auto-save`);
     }
   }
 
   public stopAutoSave(workoutId: string): void {
-    console.log(`Stopping auto-save for workout: ${workoutId}`);
+    logger.info(`Stopping enhanced auto-save for workout: ${workoutId}`);
     
     // Remove from queue and states
     this.saveQueue.delete(workoutId);
@@ -120,9 +134,9 @@ export class WorkoutAutoSaveService {
     saveState.saveInProgress = true;
 
     try {
-      console.log(`Auto-saving workout: ${workout.id}`);
+      logger.info(`Enhanced auto-saving workout: ${workout.id}`);
       
-      // Save to IndexedDB
+      // Save to IndexedDB through workout service
       const success = await this.workoutService.saveWorkout(workout);
       
       if (success) {
@@ -135,26 +149,26 @@ export class WorkoutAutoSaveService {
         // Also save to localStorage as backup
         this.saveToLocalStorage(workout);
 
-        console.log(`Workout ${workout.id} auto-saved successfully`);
+        logger.info(`Workout ${workout.id} enhanced auto-saved successfully`);
         return true;
       } else {
         throw new Error('Failed to save workout to database');
       }
     } catch (error) {
-      console.error(`Error auto-saving workout ${workout.id}:`, error);
+      logger.error(`Error in enhanced auto-saving workout ${workout.id}:`, error);
       
       saveState.retryCount++;
       saveState.saveInProgress = false;
 
       // Retry logic
       if (saveState.retryCount < saveState.maxRetries) {
-        console.log(`Retrying save for workout ${workout.id} (attempt ${saveState.retryCount}/${saveState.maxRetries})`);
+        logger.info(`Retrying enhanced save for workout ${workout.id} (attempt ${saveState.retryCount}/${saveState.maxRetries})`);
         
         setTimeout(() => {
           this.saveWorkoutImmediate(workout);
         }, this.RETRY_DELAY * saveState.retryCount);
       } else {
-        console.error(`Max retries reached for workout ${workout.id}. Saving to localStorage as fallback.`);
+        logger.error(`Max retries reached for workout ${workout.id}. Saving to localStorage as fallback.`);
         this.saveToLocalStorage(workout);
       }
 
@@ -172,9 +186,9 @@ export class WorkoutAutoSaveService {
       };
       
       localStorage.setItem(key, JSON.stringify(backupData));
-      console.log(`Workout ${workout.id} saved to localStorage as backup`);
+      logger.info(`Workout ${workout.id} saved to localStorage as backup`);
     } catch (error) {
-      console.error(`Failed to save workout ${workout.id} to localStorage:`, error);
+      logger.error(`Failed to save workout ${workout.id} to localStorage:`, error);
     }
   }
 
@@ -188,7 +202,7 @@ export class WorkoutAutoSaveService {
         return parsed.workout;
       }
     } catch (error) {
-      console.error(`Failed to retrieve workout ${workoutId} from localStorage:`, error);
+      logger.error(`Failed to retrieve workout ${workoutId} from localStorage:`, error);
     }
     
     return null;
@@ -198,9 +212,9 @@ export class WorkoutAutoSaveService {
     try {
       const key = `workout_backup_${workoutId}`;
       localStorage.removeItem(key);
-      console.log(`Cleared backup for workout ${workoutId}`);
+      logger.info(`Cleared backup for workout ${workoutId}`);
     } catch (error) {
-      console.error(`Failed to clear backup for workout ${workoutId}:`, error);
+      logger.error(`Failed to clear backup for workout ${workoutId}:`, error);
     }
   }
 

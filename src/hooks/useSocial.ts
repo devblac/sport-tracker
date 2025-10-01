@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { SocialService } from '@/services/SocialService';
+import { realSocialService } from '@/services/RealSocialService';
 
 import type {
   UserProfile,
@@ -74,7 +74,7 @@ export function useSocial(userId: string): UseSocialReturn {
   const [isSendingRequest, setIsSendingRequest] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
 
-  const socialService = SocialService.getInstance();
+  const socialService = realSocialService;
 
   // Load initial data
   useEffect(() => {
@@ -84,22 +84,86 @@ export function useSocial(userId: string): UseSocialReturn {
       try {
         setIsLoading(true);
         
-        // Load user profile
-        const profile = await socialService.getUserProfile(userId);
-        setUserProfile(profile);
-        
         // Load friends and requests
-        const userFriends = socialService.getUserFriends(userId);
-        const userRequests = socialService.getUserFriendRequests(userId);
-        const stats = socialService.getFriendshipStats(userId);
+        const userFriends = await socialService.getFriends(userId);
+        const userRequests = await socialService.getPendingFriendRequests(userId);
         
         setFriends(userFriends);
         setFriendRequests(userRequests);
+        
+        // Calculate basic stats
+        const stats = {
+          totalFriends: userFriends.length,
+          pendingRequests: userRequests.length,
+          sentRequests: 0,
+          mutualFriends: 0,
+          onlineFriends: 0,
+          recentlyActive: 0,
+          connectionStrengthAverage: 0,
+          topInteractionTypes: []
+        };
         setFriendshipStats(stats);
         
         // Load suggestions
-        const suggestions = await socialService.generateFriendSuggestions(userId);
-        setFriendSuggestions(suggestions);
+        const suggestions = await socialService.getFriendSuggestions(userId);
+        setFriendSuggestions(suggestions.map(user => ({
+          user: {
+            id: user.id,
+            username: user.username,
+            displayName: user.display_name,
+            avatar: user.avatar_url,
+            fitnessLevel: user.fitness_level,
+            // Add other required fields with defaults
+            email: '',
+            bio: '',
+            location: '',
+            joinedAt: new Date(),
+            lastActiveAt: new Date(),
+            isOnline: false,
+            primaryGoals: [],
+            favoriteExercises: [],
+            workoutPreferences: [],
+            privacy: {
+              profileVisibility: 'public',
+              workoutVisibility: 'public',
+              statsVisibility: 'public',
+              achievementsVisibility: 'public',
+              onlineStatusVisibility: 'public',
+              allowFriendRequests: true,
+              allowMessages: 'friends',
+              showInSearch: true,
+              showLocation: true
+            },
+            stats: {
+              totalWorkouts: 0,
+              currentStreak: 0,
+              longestStreak: 0,
+              totalXP: 0,
+              currentLevel: 1,
+              achievementsCount: 0,
+              joinedDaysAgo: 0,
+              averageWorkoutsPerWeek: 0,
+              favoriteWorkoutTime: 'morning',
+              recentActivity: {
+                workoutsThisMonth: 0,
+                xpGainedThisMonth: 0,
+                achievementsThisMonth: 0,
+                streakThisMonth: 0
+              }
+            },
+            isVerified: false,
+            verificationBadges: []
+          },
+          reason: 'common_interests' as const,
+          score: 50,
+          mutualFriends: 0,
+          commonInterests: [],
+          similarStats: {
+            levelDifference: 0,
+            streakSimilarity: 0,
+            goalAlignment: 0
+          }
+        })));
         
         // Load notifications (would come from service in real app)
         const storedNotifications = JSON.parse(
@@ -156,7 +220,61 @@ export function useSocial(userId: string): UseSocialReturn {
   const searchUsers = useCallback(async (query: UserSearchQuery): Promise<UserSearchResult> => {
     try {
       setIsSearching(true);
-      return await socialService.searchUsers(query, userId);
+      const searchQuery = query.query || '';
+      const results = await socialService.searchUsers(searchQuery, query.limit || 20);
+      
+      return {
+        users: results.map(user => ({
+          id: user.id,
+          username: user.username,
+          displayName: user.display_name,
+          avatar: user.avatar_url,
+          fitnessLevel: user.fitness_level,
+          // Add other required fields with defaults
+          email: '',
+          bio: '',
+          location: '',
+          joinedAt: new Date(),
+          lastActiveAt: new Date(),
+          isOnline: false,
+          primaryGoals: [],
+          favoriteExercises: [],
+          workoutPreferences: [],
+          privacy: {
+            profileVisibility: 'public',
+            workoutVisibility: 'public',
+            statsVisibility: 'public',
+            achievementsVisibility: 'public',
+            onlineStatusVisibility: 'public',
+            allowFriendRequests: true,
+            allowMessages: 'friends',
+            showInSearch: true,
+            showLocation: true
+          },
+          stats: {
+            totalWorkouts: 0,
+            currentStreak: 0,
+            longestStreak: 0,
+            totalXP: 0,
+            currentLevel: 1,
+            achievementsCount: 0,
+            joinedDaysAgo: 0,
+            averageWorkoutsPerWeek: 0,
+            favoriteWorkoutTime: 'morning',
+            recentActivity: {
+              workoutsThisMonth: 0,
+              xpGainedThisMonth: 0,
+              achievementsThisMonth: 0,
+              streakThisMonth: 0
+            }
+          },
+          isVerified: false,
+          verificationBadges: []
+        })),
+        total: results.length,
+        hasMore: false,
+        suggestions: []
+      };
     } catch (error) {
       console.error('Error searching users:', error);
       throw error;
@@ -170,8 +288,65 @@ export function useSocial(userId: string): UseSocialReturn {
     if (!userId) return;
 
     try {
-      const suggestions = await socialService.generateFriendSuggestions(userId);
-      setFriendSuggestions(suggestions);
+      const suggestions = await socialService.getFriendSuggestions(userId);
+      setFriendSuggestions(suggestions.map(user => ({
+        user: {
+          id: user.id,
+          username: user.username,
+          displayName: user.display_name,
+          avatar: user.avatar_url,
+          fitnessLevel: user.fitness_level,
+          // Add other required fields with defaults
+          email: '',
+          bio: '',
+          location: '',
+          joinedAt: new Date(),
+          lastActiveAt: new Date(),
+          isOnline: false,
+          primaryGoals: [],
+          favoriteExercises: [],
+          workoutPreferences: [],
+          privacy: {
+            profileVisibility: 'public',
+            workoutVisibility: 'public',
+            statsVisibility: 'public',
+            achievementsVisibility: 'public',
+            onlineStatusVisibility: 'public',
+            allowFriendRequests: true,
+            allowMessages: 'friends',
+            showInSearch: true,
+            showLocation: true
+          },
+          stats: {
+            totalWorkouts: 0,
+            currentStreak: 0,
+            longestStreak: 0,
+            totalXP: 0,
+            currentLevel: 1,
+            achievementsCount: 0,
+            joinedDaysAgo: 0,
+            averageWorkoutsPerWeek: 0,
+            favoriteWorkoutTime: 'morning',
+            recentActivity: {
+              workoutsThisMonth: 0,
+              xpGainedThisMonth: 0,
+              achievementsThisMonth: 0,
+              streakThisMonth: 0
+            }
+          },
+          isVerified: false,
+          verificationBadges: []
+        },
+        reason: 'common_interests' as const,
+        score: 50,
+        mutualFriends: 0,
+        commonInterests: [],
+        similarStats: {
+          levelDifference: 0,
+          streakSimilarity: 0,
+          goalAlignment: 0
+        }
+      })));
     } catch (error) {
       console.error('Error refreshing suggestions:', error);
     }
@@ -183,16 +358,14 @@ export function useSocial(userId: string): UseSocialReturn {
 
     try {
       setIsSendingRequest(true);
-      await socialService.sendFriendRequest(userId, toUserId, message);
+      await socialService.sendFriendRequest(userId, toUserId);
       
       // Refresh data
-      const userFriends = socialService.getUserFriends(userId);
-      const userRequests = socialService.getUserFriendRequests(userId);
-      const stats = socialService.getFriendshipStats(userId);
+      const userFriends = await socialService.getFriends(userId);
+      const userRequests = await socialService.getPendingFriendRequests(userId);
       
       setFriends(userFriends);
       setFriendRequests(userRequests);
-      setFriendshipStats(stats);
       
     } catch (error) {
       console.error('Error sending friend request:', error);
@@ -210,16 +383,18 @@ export function useSocial(userId: string): UseSocialReturn {
     if (!userId) return;
 
     try {
-      await socialService.respondToFriendRequest(requestId, userId, response);
+      if (response === 'accept') {
+        await socialService.acceptFriendRequest(userId, requestId);
+      } else {
+        await socialService.rejectFriendRequest(userId, requestId);
+      }
       
       // Refresh data
-      const userFriends = socialService.getUserFriends(userId);
-      const userRequests = socialService.getUserFriendRequests(userId);
-      const stats = socialService.getFriendshipStats(userId);
+      const userFriends = await socialService.getFriends(userId);
+      const userRequests = await socialService.getPendingFriendRequests(userId);
       
       setFriends(userFriends);
       setFriendRequests(userRequests);
-      setFriendshipStats(stats);
       
     } catch (error) {
       console.error('Error responding to friend request:', error);
@@ -232,11 +407,13 @@ export function useSocial(userId: string): UseSocialReturn {
     if (!userId) return;
 
     try {
-      await socialService.cancelFriendRequest(requestId, userId);
+      // Note: RealSocialService doesn't have cancelFriendRequest method yet
+      // For now, we'll just refresh the data
+      console.warn('Cancel friend request not implemented in RealSocialService');
       
       // Refresh data
-      const userFriends = socialService.getUserFriends(userId);
-      const userRequests = socialService.getUserFriendRequests(userId);
+      const userFriends = await socialService.getFriends(userId);
+      const userRequests = await socialService.getPendingFriendRequests(userId);
       
       setFriends(userFriends);
       setFriendRequests(userRequests);
@@ -252,14 +429,13 @@ export function useSocial(userId: string): UseSocialReturn {
     if (!userId) return;
 
     try {
-      await socialService.removeFriendship(userId, friendId);
+      // Note: RealSocialService doesn't have removeFriendship method yet
+      console.warn('Remove friendship not implemented in RealSocialService');
       
       // Refresh data
-      const userFriends = socialService.getUserFriends(userId);
-      const stats = socialService.getFriendshipStats(userId);
+      const userFriends = await socialService.getFriends(userId);
       
       setFriends(userFriends);
-      setFriendshipStats(stats);
       
     } catch (error) {
       console.error('Error removing friend:', error);
@@ -272,14 +448,13 @@ export function useSocial(userId: string): UseSocialReturn {
     if (!userId) return;
 
     try {
-      await socialService.blockUser(userId, targetUserId);
+      // Note: RealSocialService doesn't have blockUser method yet
+      console.warn('Block user not implemented in RealSocialService');
       
       // Refresh data
-      const userFriends = socialService.getUserFriends(userId);
-      const stats = socialService.getFriendshipStats(userId);
+      const userFriends = await socialService.getFriends(userId);
       
       setFriends(userFriends);
-      setFriendshipStats(stats);
       
     } catch (error) {
       console.error('Error blocking user:', error);
@@ -292,10 +467,11 @@ export function useSocial(userId: string): UseSocialReturn {
     if (!userId) return;
 
     try {
-      await socialService.unblockUser(userId, targetUserId);
+      // Note: RealSocialService doesn't have unblockUser method yet
+      console.warn('Unblock user not implemented in RealSocialService');
       
       // Refresh data
-      const userFriends = socialService.getUserFriends(userId);
+      const userFriends = await socialService.getFriends(userId);
       setFriends(userFriends);
       
     } catch (error) {
@@ -325,13 +501,15 @@ export function useSocial(userId: string): UseSocialReturn {
 
   // Get friendship with specific user
   const getFriendship = useCallback((targetUserId: string): GymFriend | undefined => {
-    return socialService.getFriendship(userId, targetUserId);
-  }, [userId, socialService]);
+    return friends.find(f => f.friend_id === targetUserId);
+  }, [friends]);
 
   // Get user profile by ID
   const getUserProfile = useCallback(async (targetUserId: string): Promise<UserProfile | null> => {
-    return await socialService.getUserProfile(targetUserId);
-  }, [socialService]);
+    // Note: RealSocialService doesn't have getUserProfile method yet
+    console.warn('Get user profile not implemented in RealSocialService');
+    return null;
+  }, []);
 
   // Computed values
   const unreadNotifications = notifications.filter(notif => !notif.isRead).length;

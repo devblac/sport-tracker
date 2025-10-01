@@ -301,42 +301,67 @@ export class RealTimeManager {
   }
 
   private startEventProcessor(): void {
+    let isProcessorRunning = false;
+    
     const processEvents = () => {
-      if (this.isVisible && this.eventQueue.length > 0) {
-        this.processEventQueue();
+      if (isProcessorRunning) return; // Prevent multiple processors
+      
+      if (this.isVisible && this.eventQueue.length > 0 && !this.isProcessing) {
+        isProcessorRunning = true;
+        this.processEventQueue().finally(() => {
+          isProcessorRunning = false;
+        });
       }
       
-      // Use requestAnimationFrame for smooth 60fps processing
-      requestAnimationFrame(processEvents);
+      // Use setTimeout instead of requestAnimationFrame to prevent infinite loops
+      // Only schedule next check if we have active subscriptions
+      if (this.subscriptions.size > 0) {
+        setTimeout(processEvents, 16); // ~60fps
+      }
     };
 
-    requestAnimationFrame(processEvents);
+    // Start the processor
+    setTimeout(processEvents, 16);
   }
 
-  private processEventQueue(): void {
+  private async processEventQueue(): Promise<void> {
     if (this.isProcessing || !this.isVisible) return;
 
     this.isProcessing = true;
     const startTime = performance.now();
 
     try {
+      // Limit batch size to prevent overwhelming the system
+      const maxBatchSize = 10;
+      const eventsToProcess = this.eventQueue.splice(0, maxBatchSize);
+      
+      if (eventsToProcess.length === 0) {
+        return;
+      }
+
       // Process events in priority order
-      const sortedEvents = this.eventQueue.sort((a, b) => {
+      const sortedEvents = eventsToProcess.sort((a, b) => {
         const priorityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
         return priorityOrder[b.priority] - priorityOrder[a.priority];
       });
 
-      for (const event of sortedEvents) {
+      // Process events with small delays to prevent blocking
+      for (let i = 0; i < sortedEvents.length; i++) {
+        const event = sortedEvents[i];
         this.processEvent(event);
+        
+        // Add small delay between events to prevent blocking
+        if (i < sortedEvents.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1));
+        }
       }
-
-      // Clear processed events
-      this.eventQueue = [];
 
       // Update performance stats
       const processingTime = performance.now() - startTime;
       this.stats.eventsProcessed += sortedEvents.length;
       this.stats.totalLatency += processingTime;
+
+      logger.debug(`Processed ${sortedEvents.length} events in ${processingTime.toFixed(2)}ms`);
 
     } catch (error) {
       logger.error('Error processing event queue', error);

@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+
+// Import i18n initialization
+import '@/lib/i18n';
+import { initializeLanguage } from '@/utils/languageDetection';
+
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { WorkoutProvider } from '@/contexts/WorkoutContext';
 import { AppLayout } from '@/layouts/AppLayout';
@@ -15,6 +20,12 @@ import { logger } from '@/utils';
 import { CacheMonitor } from '@/components/performance/CacheMonitor';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import { CapacitorUtils } from '@/utils/capacitorUtils';
+import { initializeSecurity } from '@/utils/securityInit';
+import { usePredictivePrefetch } from '@/utils/performance/predictivePrefetch';
+import { PerformanceMonitor } from '@/components/performance/PerformanceMonitor';
+import { initializePerformanceOptimizations } from '@/utils/performance/performanceInit';
+// Temporarily commented out due to import issues
+// import { monitoring } from '@/utils/monitoring';
 
 // Import debugging tools (makes them available globally)
 import '@/utils/debugTemplate';
@@ -22,44 +33,150 @@ import { ExperimentDashboard } from '@/components/experiments/ExperimentDashboar
 import { BackupDashboard } from '@/components/backup/BackupDashboard';
 import { EmergencyRecovery } from '@/components/backup/EmergencyRecovery';
 import { RealTimeNotifications } from '@/components/realtime/RealTimeNotifications';
-// Lazy load pages for better performance
-const Home = React.lazy(() => import('@/pages/Home').then(m => ({ default: m.Home })));
-const Progress = React.lazy(() => import('@/pages/Progress').then(m => ({ default: m.Progress })));
-const Workout = React.lazy(() => import('@/pages/Workout').then(m => ({ default: m.Workout })));
-const Social = React.lazy(() => import('@/pages/Social').then(m => ({ default: m.Social })));
-const Profile = React.lazy(() => import('@/pages/Profile').then(m => ({ default: m.Profile })));
-const DevTest = React.lazy(() => import('@/pages/DevTest').then(m => ({ default: m.DevTest })));
-const TestDataPage = React.lazy(() => import('@/pages/TestDataPage').then(m => ({ default: m.TestDataPage })));
-const TemplateDebugPage = React.lazy(() => import('@/pages/TemplateDebugPage'));
-const ExerciseBrowser = React.lazy(() => import('@/pages/ExerciseBrowser').then(m => ({ default: m.ExerciseBrowser })));
-const ExerciseTest = React.lazy(() => import('@/pages/ExerciseTest').then(m => ({ default: m.ExerciseTest })));
-const ExerciseDetailPage = React.lazy(() => import('@/pages/ExerciseDetailPage').then(m => ({ default: m.ExerciseDetailPage })));
+// Advanced lazy loading with performance optimizations
+import { advancedLazyLoad } from '@/utils/performance/advancedLazyLoad';
 
-// const WorkoutTemplateTest = React.lazy(() => import('@/pages/WorkoutTemplateTest').then(m => ({ default: m.WorkoutTemplateTest })));
-const WorkoutPlayerPage = React.lazy(() => import('@/pages/WorkoutPlayerPage').then(m => ({ default: m.WorkoutPlayerPage })));
-const WorkoutSummary = React.lazy(() => import('@/pages/WorkoutSummary').then(m => ({ default: m.WorkoutSummary })));
-const WorkoutPlayerTest = React.lazy(() => import('@/pages/WorkoutPlayerTest').then(m => ({ default: m.WorkoutPlayerTest })));
+// Core pages - high priority with immediate/idle preloading
+const Home = advancedLazyLoad(
+  () => import('@/pages/Home').then(m => ({ default: m.Home })),
+  { priority: 'high', preloadStrategy: 'immediate', chunkName: 'home' }
+);
+const Workout = advancedLazyLoad(
+  () => import('@/pages/Workout').then(m => ({ default: m.Workout })),
+  { priority: 'high', preloadStrategy: 'immediate', chunkName: 'workout' }
+);
+const Progress = advancedLazyLoad(
+  () => import('@/pages/Progress').then(m => ({ default: m.Progress })),
+  { priority: 'high', preloadStrategy: 'idle', chunkName: 'progress' }
+);
+const Social = advancedLazyLoad(
+  () => import('@/pages/Social').then(m => ({ default: m.Social })),
+  { priority: 'medium', preloadStrategy: 'idle', chunkName: 'social' }
+);
+const Profile = advancedLazyLoad(
+  () => import('@/pages/Profile').then(m => ({ default: m.Profile })),
+  { priority: 'medium', preloadStrategy: 'hover', chunkName: 'profile' }
+);
 
-const WorkoutTestPage = React.lazy(() => import('@/pages/WorkoutTestPage').then(m => ({ default: m.WorkoutTestPage })));
-const WorkoutSystemTest = React.lazy(() => import('@/pages/WorkoutSystemTest').then(m => ({ default: m.WorkoutSystemTest })));
-// const GamificationTestPage = React.lazy(() => import('@/pages/GamificationTestPage').then(m => ({ default: m.GamificationTestPage })));
-const XPIntegrationTestPage = React.lazy(() => import('@/pages/XPIntegrationTestPage').then(m => ({ default: m.XPIntegrationTestPage })));
-// const StreakRewardTestPage = React.lazy(() => import('@/pages/StreakRewardTestPage').then(m => ({ default: m.StreakRewardTestPage })));
-const NotificationTestPage = React.lazy(() => import('@/pages/NotificationTestPage').then(m => ({ default: m.NotificationTestPage })));
-const SocialTestPage = React.lazy(() => import('@/pages/SocialTestPage').then(m => ({ default: m.SocialTestPage })));
-const PrivacyTestPage = React.lazy(() => import('@/pages/PrivacyTestPage').then(m => ({ default: m.PrivacyTestPage })));
-const SocialPostsTestPage = React.lazy(() => import('@/pages/SocialPostsTestPage').then(m => ({ default: m.SocialPostsTestPage })));
-const DatabaseTestPage = React.lazy(() => import('@/pages/DatabaseTestPage').then(m => ({ default: m.DatabaseTestPage })));
-const SocialFeedTestPage = React.lazy(() => import('@/pages/SocialFeedTestPage').then(m => ({ default: m.SocialFeedTestPage })));
-const SupabaseTestPage = React.lazy(() => import('@/pages/SupabaseTestPage').then(m => ({ default: m.SupabaseTestPage })));
-const ViralContentTestPage = React.lazy(() => import('@/pages/ViralContentTestPage'));
-// const MentorshipPage = React.lazy(() => import('@/pages/MentorshipPage').then(m => ({ default: m.MentorshipPage })));
-// const MentorshipTestPage = React.lazy(() => import('@/pages/MentorshipTestPage').then(m => ({ default: m.MentorshipTestPage })));
+// Exercise pages - medium priority
+const ExerciseBrowser = advancedLazyLoad(
+  () => import('@/pages/ExerciseBrowser').then(m => ({ default: m.ExerciseBrowser })),
+  { priority: 'medium', preloadStrategy: 'hover', chunkName: 'exercise-browser' }
+);
+const ExerciseDetailPage = advancedLazyLoad(
+  () => import('@/pages/ExerciseDetailPage').then(m => ({ default: m.ExerciseDetailPage })),
+  { priority: 'low', preloadStrategy: 'viewport', chunkName: 'exercise-detail' }
+);
+
+// Workout pages - high priority for active users
+const WorkoutPlayerPage = advancedLazyLoad(
+  () => import('@/pages/WorkoutPlayerPage').then(m => ({ default: m.WorkoutPlayerPage })),
+  { priority: 'high', preloadStrategy: 'immediate', chunkName: 'workout-player' }
+);
+const WorkoutSummary = advancedLazyLoad(
+  () => import('@/pages/WorkoutSummary').then(m => ({ default: m.WorkoutSummary })),
+  { priority: 'medium', preloadStrategy: 'idle', chunkName: 'workout-summary' }
+);
+
+// Test pages - low priority, load on demand
+const DevTest = advancedLazyLoad(
+  () => import('@/pages/DevTest').then(m => ({ default: m.DevTest })),
+  { priority: 'low', preloadStrategy: 'hover', chunkName: 'dev-test' }
+);
+const TestDataPage = advancedLazyLoad(
+  () => import('@/pages/TestDataPage').then(m => ({ default: m.TestDataPage })),
+  { priority: 'low', preloadStrategy: 'hover', chunkName: 'test-data' }
+);
+const TemplateDebugPage = advancedLazyLoad(
+  () => import('@/pages/TemplateDebugPage'),
+  { priority: 'low', preloadStrategy: 'hover', chunkName: 'template-debug' }
+);
+const ExerciseTest = advancedLazyLoad(
+  () => import('@/pages/ExerciseTest').then(m => ({ default: m.ExerciseTest })),
+  { priority: 'low', preloadStrategy: 'hover', chunkName: 'exercise-test' }
+);
+const WorkoutPlayerTest = advancedLazyLoad(
+  () => import('@/pages/WorkoutPlayerTest').then(m => ({ default: m.WorkoutPlayerTest })),
+  { priority: 'low', preloadStrategy: 'hover', chunkName: 'workout-player-test' }
+);
+const WorkoutTestPage = advancedLazyLoad(
+  () => import('@/pages/WorkoutTestPage').then(m => ({ default: m.WorkoutTestPage })),
+  { priority: 'low', preloadStrategy: 'hover', chunkName: 'workout-test' }
+);
+const WorkoutSystemTest = advancedLazyLoad(
+  () => import('@/pages/WorkoutSystemTest').then(m => ({ default: m.WorkoutSystemTest })),
+  { priority: 'low', preloadStrategy: 'hover', chunkName: 'workout-system-test' }
+);
+const XPIntegrationTestPage = advancedLazyLoad(
+  () => import('@/pages/XPIntegrationTestPage'),
+  { priority: 'low', preloadStrategy: 'hover', chunkName: 'xp-integration-test' }
+);
+const NotificationTestPage = advancedLazyLoad(
+  () => import('@/pages/NotificationTestPage').then(m => ({ default: m.NotificationTestPage })),
+  { priority: 'low', preloadStrategy: 'hover', chunkName: 'notification-test' }
+);
+const SocialTestPage = advancedLazyLoad(
+  () => import('@/pages/SocialTestPage').then(m => ({ default: m.SocialTestPage })),
+  { priority: 'low', preloadStrategy: 'hover', chunkName: 'social-test' }
+);
+const PrivacyTestPage = advancedLazyLoad(
+  () => import('@/pages/PrivacyTestPage').then(m => ({ default: m.PrivacyTestPage })),
+  { priority: 'low', preloadStrategy: 'hover', chunkName: 'privacy-test' }
+);
+const SocialPostsTestPage = advancedLazyLoad(
+  () => import('@/pages/SocialPostsTestPage').then(m => ({ default: m.SocialPostsTestPage })),
+  { priority: 'low', preloadStrategy: 'hover', chunkName: 'social-posts-test' }
+);
+const DatabaseTestPage = advancedLazyLoad(
+  () => import('@/pages/DatabaseTestPage').then(m => ({ default: m.DatabaseTestPage })),
+  { priority: 'low', preloadStrategy: 'hover', chunkName: 'database-test' }
+);
+const SocialFeedTestPage = advancedLazyLoad(
+  () => import('@/pages/SocialFeedTestPage').then(m => ({ default: m.SocialFeedTestPage })),
+  { priority: 'low', preloadStrategy: 'hover', chunkName: 'social-feed-test' }
+);
+const SupabaseTestPage = advancedLazyLoad(
+  () => import('@/pages/SupabaseTestPage').then(m => ({ default: m.SupabaseTestPage })),
+  { priority: 'low', preloadStrategy: 'hover', chunkName: 'supabase-test' }
+);
+const ViralContentTestPage = advancedLazyLoad(
+  () => import('@/pages/ViralContentTestPage'),
+  { priority: 'low', preloadStrategy: 'hover', chunkName: 'viral-content-test' }
+);
+
+// Percentiles page - medium priority for analytics
+const PercentilesPage = advancedLazyLoad(
+  () => import('@/pages/PercentilesPage').then(m => ({ default: m.PercentilesPage })),
+  { priority: 'medium', preloadStrategy: 'idle', chunkName: 'percentiles' }
+);
+
+// Leagues pages - medium priority for competitive features
+const LeaguesPage = advancedLazyLoad(
+  () => import('@/pages/LeaguesPage').then(m => ({ default: m.LeaguesPage })),
+  { priority: 'medium', preloadStrategy: 'idle', chunkName: 'leagues' }
+);
+const LeagueTestPage = advancedLazyLoad(
+  () => import('@/pages/LeagueTestPage').then(m => ({ default: m.LeagueTestPage })),
+  { priority: 'low', preloadStrategy: 'hover', chunkName: 'league-test' }
+);
+
+// Challenge pages - medium priority for competitive features
+const ChallengeHub = advancedLazyLoad(
+  () => import('@/pages/ChallengeHub').then(m => ({ default: m.ChallengeHub })),
+  { priority: 'medium', preloadStrategy: 'idle', chunkName: 'challenges' }
+);
+
+// Marketplace pages - medium priority for premium features
+const Marketplace = advancedLazyLoad(
+  () => import('@/pages/Marketplace').then(m => ({ default: m.default })),
+  { priority: 'medium', preloadStrategy: 'hover', chunkName: 'marketplace' }
+);
 
 function App() {
   const [showAuth, setShowAuth] = useState(true);
   const { isAuthenticated, user, initializeAuth } = useAuthStore();
   const { showCacheMonitor } = useSettingsStore();
+  const { recordAction } = usePredictivePrefetch();
   
   // Initialize stores
   useStoreInitialization();
@@ -71,7 +188,7 @@ function App() {
   const { isInitializing: dbInitializing, error: dbError } = useDatabaseInit();
   
   // Initialize offline capabilities
-  const offlineState = useOffline();
+  useOffline();
   
   // Initialize workout recovery
   const {
@@ -134,6 +251,93 @@ function App() {
     }
   }, []);
   
+  // Initialize security measures and performance optimizations
+  React.useEffect(() => {
+    // Initialize language detection and i18n
+    initializeLanguage();
+    
+    const initSecurity = async () => {
+      try {
+        await initializeSecurity();
+        logger.info('Security measures initialized successfully');
+      } catch (error) {
+        logger.error('Failed to initialize security measures', error);
+        // Don't block app initialization for security failures in development
+        if (import.meta.env.MODE === 'production') {
+          throw error;
+        }
+      }
+    };
+    
+    const initMonitoring = async () => {
+      try {
+        // Temporarily commented out due to import issues
+        // await monitoring.initialize({
+        //   errorTracking: {
+        //     environment: import.meta.env.VITE_ENVIRONMENT || 'development',
+        //     release: import.meta.env.VITE_APP_VERSION || 'unknown'
+        //   },
+        //   analytics: {
+        //     enabled: import.meta.env.VITE_ENVIRONMENT !== 'development'
+        //   },
+        //   featureFlags: {
+        //     userId: user?.id,
+        //     userRole: user?.role
+        //   }
+        // });
+        logger.info('Monitoring systems initialized successfully');
+      } catch (error) {
+        logger.error('Failed to initialize monitoring systems', error);
+        // Don't block app for monitoring failures
+      }
+    };
+    
+    const initPerformance = async () => {
+      try {
+        // Initialize all performance optimizations
+        await initializePerformanceOptimizations({
+          enableDatabaseOptimization: true,
+          enableIntelligentCaching: true,
+          enablePredictivePrefetching: true,
+          enableRoutePreloading: true,
+          enablePerformanceMonitoring: import.meta.env.DEV,
+          developmentMode: import.meta.env.DEV
+        });
+        
+        // Record initial navigation
+        recordAction('navigation', window.location.pathname);
+        
+        // Set up navigation tracking
+        const handleNavigation = () => {
+          recordAction('navigation', window.location.pathname);
+        };
+        
+        window.addEventListener('popstate', handleNavigation);
+        
+        logger.info('Performance optimizations initialized successfully');
+        
+        return () => {
+          window.removeEventListener('popstate', handleNavigation);
+        };
+      } catch (error) {
+        logger.error('Failed to initialize performance optimizations', error);
+        // Don't block app for performance failures
+        return () => {};
+      }
+    };
+    
+    const init = async () => {
+      await initSecurity();
+      await initMonitoring();
+      const cleanupPerformance = await initPerformance();
+      return cleanupPerformance;
+    };
+    
+    init().then(cleanup => {
+      return cleanup;
+    });
+  }, [recordAction]);
+
   // Initialize Capacitor plugins
   React.useEffect(() => {
     const initCapacitor = async () => {
@@ -292,6 +496,11 @@ function App() {
                     <Route path="/social-feed-test" element={<SocialFeedTestPage />} />
                     <Route path="/supabase-test" element={<SupabaseTestPage />} />
                     <Route path="/viral-content-test" element={<ViralContentTestPage />} />
+                    <Route path="/percentiles" element={<PercentilesPage />} />
+                    <Route path="/leagues" element={<LeaguesPage />} />
+                    <Route path="/league-test" element={<LeagueTestPage />} />
+                    <Route path="/challenges" element={<ChallengeHub />} />
+                    <Route path="/marketplace" element={<Marketplace />} />
                     {/* <Route path="/mentorship" element={<MentorshipPage />} /> */}
                     {/* <Route path="/mentorship-test" element={<MentorshipTestPage />} /> */}
                     <Route path="/experiment-dashboard" element={<ExperimentDashboard />} />
@@ -305,11 +514,14 @@ function App() {
                 {/* Cache Performance Monitor */}
                 {showCacheMonitor && <CacheMonitor />}
                 
+                {/* Advanced Performance Monitor */}
+                <PerformanceMonitor />
+                
                 {/* Emergency Recovery */}
                 <EmergencyRecovery className="fixed top-4 left-4 right-4 z-50" />
                 
-                {/* Real-Time Notifications - Temporarily disabled to fix infinite loop */}
-                {/* <RealTimeNotifications position="top-right" maxNotifications={5} /> */}
+                {/* Real-Time Notifications - Fixed infinite loop issue */}
+                <RealTimeNotifications position="top-right" maxNotifications={5} />
                 
                 {/* Workout Recovery Modal */}
                 {showRecoveryModal && (

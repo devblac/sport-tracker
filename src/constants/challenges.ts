@@ -273,6 +273,12 @@ export const CHALLENGE_TEMPLATES: Omit<CreateChallengeRequest, 'start_date' | 'e
   }
 ];
 
+// Challenge types
+export const CHALLENGE_TYPES = ['individual', 'group', 'global'] as const;
+
+// Challenge categories
+export const CHALLENGE_CATEGORIES = ['strength', 'consistency', 'volume', 'endurance'] as const;
+
 // Challenge categories with descriptions and icons
 export const CHALLENGE_CATEGORIES_INFO = {
   strength: {

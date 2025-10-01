@@ -17,6 +17,7 @@ import {
 import { SocialPostComponent } from './SocialPost';
 import { useSocialPosts } from '@/hooks/useSocialPosts';
 import { useSocial } from '@/hooks/useSocial';
+import { sanitizeUserContent } from '@/utils/xssProtection';
 
 import type { SocialPost, PostType } from '@/types/socialPosts';
 import type { GymFriend } from '@/types/social';

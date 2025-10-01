@@ -1,0 +1,227 @@
+{
+  "categories": {
+    "consistency": "Consistency",
+    "strength": "Strength",
+    "volume": "Volume",
+    "milestone": "Milestone",
+    "social": "Social",
+    "special": "Special",
+    "endurance": "Endurance",
+    "technique": "Technique"
+  },
+  "rarity": {
+    "common": "Common",
+    "uncommon": "Uncommon",
+    "rare": "Rare",
+    "epic": "Epic",
+    "legendary": "Legendary"
+  },
+  "achievements": {
+    "streak_3_days": {
+      "name": "Getting Started",
+      "description": "Complete workouts for 3 consecutive days"
+    },
+    "streak_7_days": {
+      "name": "Week Warrior",
+      "description": "Maintain a 7-day workout streak"
+    },
+    "streak_14_days": {
+      "name": "Two Week Fortress",
+      "description": "Maintain a 14-day workout streak"
+    },
+    "streak_30_days": {
+      "name": "Month Master",
+      "description": "Maintain a 30-day workout streak"
+    },
+    "streak_60_days": {
+      "name": "Two Month Legend",
+      "description": "Maintain a 60-day workout streak"
+    },
+    "streak_100_days": {
+      "name": "Fitness Centurion",
+      "description": "Maintain a 100-day workout streak"
+    },
+    "first_workout": {
+      "name": "First Step",
+      "description": "Complete your first workout"
+    },
+    "workout_10": {
+      "name": "Perfect Ten",
+      "description": "Complete 10 workouts"
+    },
+    "workout_50": {
+      "name": "Half Century",
+      "description": "Complete 50 workouts"
+    },
+    "workout_100": {
+      "name": "Century Complete",
+      "description": "Complete 100 workouts"
+    },
+    "workout_250": {
+      "name": "Quarter Thousand",
+      "description": "Complete 250 workouts"
+    },
+    "workout_500": {
+      "name": "Half Thousand",
+      "description": "Complete 500 workouts"
+    },
+    "workout_1000": {
+      "name": "Thousand Master",
+      "description": "Complete 1000 workouts"
+    },
+    "volume_1000kg": {
+      "name": "First Ton",
+      "description": "Lift a total of 1,000 kg"
+    },
+    "volume_10000kg": {
+      "name": "Ten Tons",
+      "description": "Lift a total of 10,000 kg"
+    },
+    "volume_50000kg": {
+      "name": "Fifty Tons",
+      "description": "Lift a total of 50,000 kg"
+    },
+    "volume_100000kg": {
+      "name": "Hundred Tons",
+      "description": "Lift a total of 100,000 kg"
+    },
+    "bench_bodyweight": {
+      "name": "Bodyweight Bench",
+      "description": "Bench press your bodyweight"
+    },
+    "squat_bodyweight": {
+      "name": "Bodyweight Squat",
+      "description": "Squat your bodyweight"
+    },
+    "deadlift_bodyweight": {
+      "name": "Bodyweight Deadlift",
+      "description": "Deadlift your bodyweight"
+    },
+    "bench_1_5x_bodyweight": {
+      "name": "Bench 1.5x",
+      "description": "Bench press 1.5 times your bodyweight"
+    },
+    "squat_1_5x_bodyweight": {
+      "name": "Squat 1.5x",
+      "description": "Squat 1.5 times your bodyweight"
+    },
+    "deadlift_2x_bodyweight": {
+      "name": "Deadlift 2x",
+      "description": "Deadlift 2 times your bodyweight"
+    },
+    "first_friend": {
+      "name": "First Buddy",
+      "description": "Add your first gym friend"
+    },
+    "social_butterfly": {
+      "name": "Social Butterfly",
+      "description": "Add 10 gym friends"
+    },
+    "gym_family": {
+      "name": "Gym Family",
+      "description": "Add 25 gym friends"
+    },
+    "first_like": {
+      "name": "First Approval",
+      "description": "Receive your first like on a post"
+    },
+    "popular_post": {
+      "name": "Popular Post",
+      "description": "Receive 50 likes on a single post"
+    },
+    "viral_content": {
+      "name": "Viral Content",
+      "description": "Receive 100 likes on a single post"
+    },
+    "early_bird": {
+      "name": "Early Bird",
+      "description": "Complete 10 workouts before 7 AM"
+    },
+    "night_owl": {
+      "name": "Night Owl",
+      "description": "Complete 10 workouts after 9 PM"
+    },
+    "weekend_warrior": {
+      "name": "Weekend Warrior",
+      "description": "Complete 20 weekend workouts"
+    },
+    "perfect_week": {
+      "name": "Perfect Week",
+      "description": "Work out every day of a week"
+    },
+    "challenge_winner": {
+      "name": "Challenge Winner",
+      "description": "Win your first group challenge"
+    },
+    "challenge_champion": {
+      "name": "Challenge Champion",
+      "description": "Win 5 group challenges"
+    },
+    "mentor": {
+      "name": "Mentor",
+      "description": "Help 5 beginner users"
+    },
+    "fitness_guru": {
+      "name": "Fitness Guru",
+      "description": "Reach level 50"
+    },
+    "xp_master": {
+      "name": "XP Master",
+      "description": "Accumulate 100,000 experience points"
+    }
+  },
+  "titles": {
+    "consistent": "Consistent",
+    "warrior": "Warrior",
+    "champion": "Champion",
+    "master": "Master",
+    "legend": "Legend",
+    "guru": "Guru",
+    "mentor": "Mentor",
+    "beast": "Beast",
+    "iron": "Iron",
+    "steel": "Steel",
+    "diamond": "Diamond",
+    "elite": "Elite",
+    "pro": "Pro",
+    "veteran": "Veteran",
+    "rookie": "Rookie"
+  },
+  "requirements": {
+    "types": {
+      "streak_days": "Streak days",
+      "workout_count": "Workout count",
+      "total_volume": "Total volume",
+      "exercise_pr": "Exercise personal record",
+      "social_friends": "Friends added",
+      "social_likes": "Likes received",
+      "time_based": "Time based",
+      "level_reached": "Level reached",
+      "xp_earned": "XP earned",
+      "challenge_wins": "Challenge wins"
+    }
+  },
+  "rewards": {
+    "xp": "XP",
+    "title": "Title",
+    "badge": "Badge",
+    "unlock": "Unlock"
+  },
+  "status": {
+    "locked": "Locked",
+    "unlocked": "Unlocked",
+    "in_progress": "In Progress",
+    "completed": "Completed",
+    "secret": "Secret"
+  },
+  "progress": {
+    "current": "Current",
+    "target": "Target",
+    "remaining": "Remaining",
+    "percentage": "Percentage",
+    "days_left": "Days left",
+    "almost_there": "Almost there!",
+    "keep_going": "Keep going!",
+    "well_done": "Well done!"
+  }
+}

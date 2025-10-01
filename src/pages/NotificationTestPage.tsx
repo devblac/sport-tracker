@@ -19,6 +19,9 @@ import {
 import { useNotifications } from '@/hooks/useNotifications';
 import { NotificationSettings } from '@/components/notifications/NotificationSettings';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
+import { notificationService } from '@/services/NotificationService';
+import { streakNotificationService } from '@/services/StreakNotificationService';
+
 
 const TEST_USER_ID = 'test-user-notifications';
 
@@ -75,12 +78,49 @@ export const NotificationTestPage: React.FC = () => {
           success = await sendLevelUpCelebration(5, 250);
           message = success ? 'Celebración de nivel enviada' : 'Error al enviar celebración';
           break;
+        
+        case 'streak_at_risk_urgent':
+          success = await notificationService.showStreakAtRiskNotification(15, 2);
+          message = success ? 'Notificación urgente de racha enviada' : 'Error al enviar notificación urgente';
+          break;
+        
+        case 'streak_milestone':
+          success = await notificationService.showStreakMilestoneApproachingNotification(27, 30);
+          message = success ? 'Notificación de hito próximo enviada' : 'Error al enviar notificación de hito';
+          break;
+        
+        case 'test_basic':
+          success = await notificationService.testNotification();
+          message = success ? 'Notificación de prueba enviada' : 'Error al enviar notificación de prueba';
+          break;
       }
 
       setTestResults(prev => [...prev, { type, success, message }]);
     } catch (error) {
       setTestResults(prev => [...prev, { type, success: false, message: `Error: ${error}` }]);
     }
+  };
+
+  const handleDoNotDisturbTest = () => {
+    const isEnabled = notificationService.getDoNotDisturbMode();
+    notificationService.setDoNotDisturbMode(!isEnabled, isEnabled ? undefined : 30);
+    const message = !isEnabled ? 'Do Not Disturb activado por 30 min' : 'Do Not Disturb desactivado';
+    setTestResults(prev => [...prev, { type: 'dnd_toggle', success: true, message }]);
+  };
+
+  const handleStreakMonitoringTest = () => {
+    streakNotificationService.setupStreakMonitoring({
+      userId: TEST_USER_ID,
+      currentStreak: 15,
+      scheduledDays: [1, 3, 5], // Monday, Wednesday, Friday
+      enableRiskNotifications: true,
+      warningThresholds: {
+        early: 6,
+        urgent: 3,
+        critical: 1
+      }
+    });
+    setTestResults(prev => [...prev, { type: 'streak_monitoring', success: true, message: 'Monitoreo de racha configurado' }]);
   };
 
   const clearTestResults = () => {
@@ -312,6 +352,110 @@ export const NotificationTestPage: React.FC = () => {
                     >
                       Enviar
                     </button>
+                  </div>
+
+                  {/* Streak At Risk Urgent */}
+                  <div className="p-4 border border-red-300 dark:border-red-700 rounded-lg bg-red-50 dark:bg-red-900/20">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <Flame className="w-5 h-5 text-red-700" />
+                      <h4 className="font-medium text-red-900 dark:text-red-300">
+                        Racha Urgente
+                      </h4>
+                    </div>
+                    <p className="text-sm text-red-700 dark:text-red-400 mb-3">
+                      Notificación urgente de racha (15 días, 2h restantes)
+                    </p>
+                    <button
+                      onClick={() => handleTestNotification('streak_at_risk_urgent')}
+                      className="w-full px-3 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors"
+                    >
+                      Enviar Urgente
+                    </button>
+                  </div>
+
+                  {/* Streak Milestone */}
+                  <div className="p-4 border border-blue-300 dark:border-blue-700 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <Trophy className="w-5 h-5 text-blue-700" />
+                      <h4 className="font-medium text-blue-900 dark:text-blue-300">
+                        Hito Próximo
+                      </h4>
+                    </div>
+                    <p className="text-sm text-blue-700 dark:text-blue-400 mb-3">
+                      Notificación de hito próximo (27→30 días)
+                    </p>
+                    <button
+                      onClick={() => handleTestNotification('streak_milestone')}
+                      className="w-full px-3 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition-colors"
+                    >
+                      Enviar Hito
+                    </button>
+                  </div>
+
+                  {/* Test Basic */}
+                  <div className="p-4 border border-gray-300 dark:border-gray-600 rounded-lg">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <Send className="w-5 h-5 text-gray-600" />
+                      <h4 className="font-medium text-gray-900 dark:text-white">
+                        Prueba Básica
+                      </h4>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                      Notificación de prueba del sistema
+                    </p>
+                    <button
+                      onClick={() => handleTestNotification('test_basic')}
+                      className="w-full px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                    >
+                      Probar Sistema
+                    </button>
+                  </div>
+                </div>
+
+                {/* Enhanced Features Section */}
+                <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 mt-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                    Funciones Avanzadas
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Do Not Disturb Toggle */}
+                    <div className="p-4 border border-orange-300 dark:border-orange-700 rounded-lg bg-orange-50 dark:bg-orange-900/20">
+                      <div className="flex items-center space-x-2 mb-3">
+                        <Bell className="w-5 h-5 text-orange-700" />
+                        <h4 className="font-medium text-orange-900 dark:text-orange-300">
+                          Modo No Molestar
+                        </h4>
+                      </div>
+                      <p className="text-sm text-orange-700 dark:text-orange-400 mb-3">
+                        Alternar modo no molestar (30 min)
+                      </p>
+                      <button
+                        onClick={handleDoNotDisturbTest}
+                        className="w-full px-3 py-2 bg-orange-700 text-white rounded-lg hover:bg-orange-800 transition-colors"
+                      >
+                        Alternar DND
+                      </button>
+                    </div>
+
+                    {/* Streak Monitoring */}
+                    <div className="p-4 border border-purple-300 dark:border-purple-700 rounded-lg bg-purple-50 dark:bg-purple-900/20">
+                      <div className="flex items-center space-x-2 mb-3">
+                        <BarChart3 className="w-5 h-5 text-purple-700" />
+                        <h4 className="font-medium text-purple-900 dark:text-purple-300">
+                          Monitoreo de Racha
+                        </h4>
+                      </div>
+                      <p className="text-sm text-purple-700 dark:text-purple-400 mb-3">
+                        Configurar monitoreo automático de racha
+                      </p>
+                      <button
+                        onClick={handleStreakMonitoringTest}
+                        className="w-full px-3 py-2 bg-purple-700 text-white rounded-lg hover:bg-purple-800 transition-colors"
+                      >
+                        Configurar Monitoreo
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

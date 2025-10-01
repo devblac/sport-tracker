@@ -2,7 +2,10 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, UserProfile, UserSettings } from '@/schemas/user';
 import { supabaseAuthService } from '@/services/supabaseAuthService';
-import { syncService } from '@/services/syncService';
+import { syncService } from '@/services/SyncService';
+import { authErrorHandler } from '@/utils/authErrorHandler';
+import { authSessionManager } from '@/services/AuthSessionManager';
+import type { AuthRecoveryOptions, AuthErrorContext } from '@/types/authErrors';
 import { logger } from '@/utils';
 
 interface AuthState {
@@ -11,6 +14,8 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  recoveryOptions: AuthRecoveryOptions | null;
+  sessionState: 'valid' | 'invalid' | 'recovering' | 'guest' | 'offline';
   
   // Actions
   login: (email: string, password: string) => Promise<void>;
@@ -21,6 +26,9 @@ interface AuthState {
   updateSettings: (settings: Partial<UserSettings>) => void;
   clearError: () => void;
   initializeAuth: () => Promise<void>;
+  retryLastOperation: () => Promise<void>;
+  forceGuestMode: () => void;
+  recoverSession: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -31,6 +39,8 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isLoading: false,
       error: null,
+      recoveryOptions: null,
+      sessionState: 'invalid',
 
       // Actions
       login: async (email, password) => {
@@ -38,6 +48,7 @@ export const useAuthStore = create<AuthState>()(
           ...state,
           isLoading: true,
           error: null,
+          recoveryOptions: null,
         }));
 
         try {
@@ -48,21 +59,45 @@ export const useAuthStore = create<AuthState>()(
             user: response.user,
             isAuthenticated: true,
             isLoading: false,
+            sessionState: 'valid',
           }));
+
+          // Clear any previous error tracking
+          authErrorHandler.resetRetryTracking('login', email);
 
           // Trigger sync for registered users
           if (response.user.role !== 'guest') {
-            syncService.syncNow();
+            syncService.getInstance().triggerSync().catch(error => {
+              logger.warn('Post-login sync failed', error);
+            });
           }
 
           logger.info('User logged in successfully', { userId: response.user.id });
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Login failed';
+          const context: AuthErrorContext = {
+            operation: 'login',
+            email,
+            timestamp: new Date(),
+            userAgent: navigator.userAgent
+          };
+
+          const recoveryOptions = authErrorHandler.handleAuthError(
+            error instanceof Error ? error : new Error('Login failed'),
+            context,
+            () => get().loginAsGuest(),
+            () => get().login(email, password)
+          );
+
           set((state) => ({
             ...state,
-            error: errorMessage,
+            error: recoveryOptions.recoveryActions.length > 0 
+              ? (error as any)?.userMessage || 'Login failed'
+              : error instanceof Error ? error.message : 'Login failed',
             isLoading: false,
+            recoveryOptions,
+            sessionState: 'invalid',
           }));
+
           logger.error('Login failed', error);
           
           // Re-throw error for form handling, but ensure state is set first
@@ -79,6 +114,9 @@ export const useAuthStore = create<AuthState>()(
             ...state,
             user: guestUser,
             isAuthenticated: true,
+            error: null,
+            recoveryOptions: null,
+            sessionState: 'guest',
           }));
 
           logger.info('User logged in as guest', { userId: guestUser.id });
@@ -87,6 +125,7 @@ export const useAuthStore = create<AuthState>()(
           set((state) => ({
             ...state,
             error: 'Failed to create guest session',
+            sessionState: 'invalid',
           }));
         }
       },
@@ -100,10 +139,16 @@ export const useAuthStore = create<AuthState>()(
           logger.error('Logout error', error);
         }
         
+        // Clear session manager
+        authSessionManager.clearSession();
+        
         set((state) => ({
           ...state,
           user: null,
           isAuthenticated: false,
+          error: null,
+          recoveryOptions: null,
+          sessionState: 'invalid',
         }));
 
         logger.info('User logged out', { userId: user?.id });
@@ -114,6 +159,7 @@ export const useAuthStore = create<AuthState>()(
           ...state,
           isLoading: true,
           error: null,
+          recoveryOptions: null,
         }));
 
         try {
@@ -130,16 +176,37 @@ export const useAuthStore = create<AuthState>()(
             user: response.user,
             isAuthenticated: true,
             isLoading: false,
+            sessionState: 'valid',
           }));
+
+          // Clear any previous error tracking
+          authErrorHandler.resetRetryTracking('register', email);
 
           logger.info('User registered successfully', { userId: response.user.id });
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Registration failed';
+          const context: AuthErrorContext = {
+            operation: 'register',
+            email,
+            timestamp: new Date(),
+            userAgent: navigator.userAgent
+          };
+
+          const recoveryOptions = authErrorHandler.handleAuthError(
+            error instanceof Error ? error : new Error('Registration failed'),
+            context,
+            () => get().loginAsGuest()
+          );
+
           set((state) => ({
             ...state,
-            error: errorMessage,
+            error: recoveryOptions.recoveryActions.length > 0 
+              ? (error as any)?.userMessage || 'Registration failed'
+              : error instanceof Error ? error.message : 'Registration failed',
             isLoading: false,
+            recoveryOptions,
+            sessionState: 'invalid',
           }));
+
           logger.error('Registration failed', error);
         }
       },
@@ -165,7 +232,11 @@ export const useAuthStore = create<AuthState>()(
 
           // Queue for sync if registered user
           if (user.role !== 'guest') {
-            syncService.queueForSync('profile', 'update', profile, user.id);
+            syncService.getInstance().queueOperation('UPDATE', 'profile', profile, {
+              triggerImmediateSync: false
+            }).catch(error => {
+              logger.warn('Profile sync queue failed', error);
+            });
           }
 
           logger.info('User profile updated', { userId: user.id, updates: profile });
@@ -205,11 +276,22 @@ export const useAuthStore = create<AuthState>()(
         set((state) => ({
           ...state,
           error: null,
+          recoveryOptions: null,
         }));
       },
 
       initializeAuth: async () => {
         try {
+          // Initialize session manager
+          authSessionManager.addListener((sessionState) => {
+            set((state) => ({
+              ...state,
+              sessionState: sessionState.isValid 
+                ? (sessionState.degradationLevel === 'guest' ? 'guest' : 'valid')
+                : (sessionState.isRecovering ? 'recovering' : 'invalid')
+            }));
+          });
+
           // Initialize Supabase auth state
           await supabaseAuthService.initializeAuth();
           const storedUser = supabaseAuthService.getCurrentUser();
@@ -220,30 +302,108 @@ export const useAuthStore = create<AuthState>()(
               ...state,
               user: storedUser,
               isAuthenticated: true,
+              sessionState: storedUser.role === 'guest' ? 'guest' : 'valid',
             }));
 
             // Start sync for registered users
             if (storedUser.role !== 'guest') {
-              syncService.syncNow();
+              syncService.getInstance().triggerSync().catch(error => {
+                logger.warn('Post-initialization sync failed', error);
+              });
             }
 
             logger.info('Auth initialized from storage', { userId: storedUser.id });
           } else {
-            set((state) => ({
-              ...state,
-              user: null,
-              isAuthenticated: false,
-            }));
+            // Try session recovery
+            const recovered = await authSessionManager.validateCurrentSession();
+            
+            if (!recovered) {
+              set((state) => ({
+                ...state,
+                user: null,
+                isAuthenticated: false,
+                sessionState: 'invalid',
+              }));
 
-            logger.info('Auth initialized - no valid session found');
+              logger.info('Auth initialized - no valid session found');
+            }
           }
         } catch (error) {
-          logger.error('Auth initialization failed', error);
+          const context: AuthErrorContext = {
+            operation: 'initialize',
+            timestamp: new Date(),
+            userAgent: navigator.userAgent
+          };
+
+          const recoveryOptions = authErrorHandler.handleAuthError(
+            error instanceof Error ? error : new Error('Auth initialization failed'),
+            context,
+            () => get().loginAsGuest()
+          );
+
           set((state) => ({
             ...state,
             user: null,
             isAuthenticated: false,
             error: 'Failed to initialize authentication',
+            recoveryOptions,
+            sessionState: 'invalid',
+          }));
+
+          logger.error('Auth initialization failed', error);
+        }
+      },
+
+      retryLastOperation: async () => {
+        const { recoveryOptions } = get();
+        
+        if (recoveryOptions?.canRetry) {
+          const retryAction = recoveryOptions.recoveryActions.find(action => action.type === 'retry');
+          if (retryAction) {
+            try {
+              await retryAction.action();
+            } catch (error) {
+              logger.error('Retry operation failed', error);
+            }
+          }
+        }
+      },
+
+      forceGuestMode: () => {
+        get().loginAsGuest();
+      },
+
+      recoverSession: async () => {
+        set((state) => ({
+          ...state,
+          sessionState: 'recovering',
+        }));
+
+        try {
+          const recovered = await authSessionManager.forceRecovery();
+          
+          if (recovered) {
+            const user = supabaseAuthService.getCurrentUser();
+            set((state) => ({
+              ...state,
+              user,
+              isAuthenticated: !!user,
+              sessionState: user?.role === 'guest' ? 'guest' : 'valid',
+              error: null,
+              recoveryOptions: null,
+            }));
+          } else {
+            set((state) => ({
+              ...state,
+              sessionState: 'invalid',
+            }));
+          }
+        } catch (error) {
+          logger.error('Session recovery failed', error);
+          set((state) => ({
+            ...state,
+            sessionState: 'invalid',
+            error: 'Session recovery failed',
           }));
         }
       },
@@ -254,6 +414,7 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,
+        sessionState: state.sessionState,
       }),
     }
   )

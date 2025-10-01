@@ -1,0 +1,162 @@
+{
+  "categories": {
+    "strength": "Strength",
+    "cardio": "Cardio",
+    "flexibility": "Flexibility",
+    "balance": "Balance",
+    "endurance": "Endurance",
+    "power": "Power",
+    "mobility": "Mobility"
+  },
+  "bodyParts": {
+    "chest": "Chest",
+    "back": "Back",
+    "shoulders": "Shoulders",
+    "arms": "Arms",
+    "legs": "Legs",
+    "core": "Core",
+    "glutes": "Glutes",
+    "calves": "Calves",
+    "forearms": "Forearms",
+    "neck": "Neck",
+    "full_body": "Full Body"
+  },
+  "muscleGroups": {
+    "pectorals": "Pectorals",
+    "latissimus_dorsi": "Latissimus Dorsi",
+    "rhomboids": "Rhomboids",
+    "trapezius": "Trapezius",
+    "deltoids": "Deltoids",
+    "biceps_brachii": "Biceps",
+    "triceps_brachii": "Triceps",
+    "quadriceps": "Quadriceps",
+    "hamstrings": "Hamstrings",
+    "glutes": "Glutes",
+    "calves": "Calves",
+    "abdominals": "Abdominals",
+    "obliques": "Obliques",
+    "lower_back": "Lower Back",
+    "serratus_anterior": "Serratus Anterior",
+    "teres_major": "Teres Major",
+    "infraspinatus": "Infraspinatus",
+    "supraspinatus": "Supraspinatus",
+    "subscapularis": "Subscapularis"
+  },
+  "equipment": {
+    "none": "No Equipment",
+    "barbell": "Barbell",
+    "dumbbell": "Dumbbell",
+    "machine": "Machine",
+    "cable": "Cable",
+    "kettlebell": "Kettlebell",
+    "resistance_band": "Resistance Band",
+    "medicine_ball": "Medicine Ball",
+    "bodyweight": "Bodyweight",
+    "bench": "Bench",
+    "pull_up_bar": "Pull-up Bar",
+    "smith_machine": "Smith Machine",
+    "suspension_trainer": "Suspension Trainer",
+    "foam_roller": "Foam Roller",
+    "stability_ball": "Stability Ball"
+  },
+  "exerciseTypes": {
+    "barbell": "Barbell",
+    "dumbbell": "Dumbbell",
+    "machine": "Machine",
+    "bodyweight": "Bodyweight",
+    "cable": "Cable",
+    "kettlebell": "Kettlebell",
+    "resistance_band": "Resistance Band"
+  },
+  "difficulty": {
+    "1": "Beginner",
+    "2": "Easy",
+    "3": "Intermediate",
+    "4": "Advanced",
+    "5": "Expert"
+  },
+  "setTypes": {
+    "normal": "Normal",
+    "warmup": "Warm-up",
+    "failure": "To Failure",
+    "dropset": "Drop Set",
+    "superset": "Superset",
+    "rest_pause": "Rest-Pause"
+  },
+  "exerciseNames": {
+    "push_ups": "Push-ups",
+    "bench_press": "Bench Press",
+    "squat": "Squat",
+    "deadlift": "Deadlift",
+    "pull_ups": "Pull-ups",
+    "overhead_press": "Overhead Press",
+    "barbell_row": "Barbell Row",
+    "dumbbell_curl": "Dumbbell Curl",
+    "tricep_dips": "Tricep Dips",
+    "lunges": "Lunges",
+    "plank": "Plank",
+    "burpees": "Burpees",
+    "mountain_climbers": "Mountain Climbers",
+    "jumping_jacks": "Jumping Jacks",
+    "russian_twists": "Russian Twists",
+    "leg_press": "Leg Press",
+    "lat_pulldown": "Lat Pulldown",
+    "chest_fly": "Chest Fly",
+    "shoulder_shrugs": "Shoulder Shrugs",
+    "calf_raises": "Calf Raises"
+  },
+  "instructions": {
+    "common": {
+      "start_position": "Starting position",
+      "movement": "Movement",
+      "return": "Return",
+      "breathing": "Breathing",
+      "keep_core_tight": "Keep core tight",
+      "control_movement": "Control the movement",
+      "full_range_motion": "Full range of motion",
+      "squeeze_at_top": "Squeeze at the top",
+      "slow_negative": "Slow negative",
+      "feet_flat_floor": "Feet flat on floor",
+      "straight_back": "Straight back",
+      "shoulders_back": "Shoulders back"
+    }
+  },
+  "tips": {
+    "categories": {
+      "form": "Form",
+      "breathing": "Breathing",
+      "progression": "Progression",
+      "safety": "Safety",
+      "variation": "Variation",
+      "common_mistakes": "Common Mistakes"
+    }
+  },
+  "variations": {
+    "easier": "Easier",
+    "harder": "Harder",
+    "different_angle": "Different Angle",
+    "different_grip": "Different Grip",
+    "unilateral": "Unilateral",
+    "isometric": "Isometric",
+    "explosive": "Explosive",
+    "slow_tempo": "Slow Tempo"
+  },
+  "tags": {
+    "bodyweight": "Bodyweight",
+    "upper_body": "Upper Body",
+    "lower_body": "Lower Body",
+    "full_body": "Full Body",
+    "beginner_friendly": "Beginner Friendly",
+    "advanced": "Advanced",
+    "compound": "Compound",
+    "isolation": "Isolation",
+    "functional": "Functional",
+    "core_stability": "Core Stability",
+    "balance": "Balance",
+    "flexibility": "Flexibility",
+    "cardio": "Cardio",
+    "strength": "Strength",
+    "power": "Power",
+    "endurance": "Endurance"
+  }
+}

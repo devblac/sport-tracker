@@ -1,1024 +1,349 @@
 /**
- * Supabase Database Types
+ * Database Entity Types
  * 
- * Auto-generated types for the Supabase database schema.
- * These types ensure type safety when working with the database.
+ * TypeScript interfaces for all database entities used in the fitness app.
  */
 
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[]
+// ============================================================================
+// Base Types
+// ============================================================================
 
-export interface Database {
-  public: {
-    Tables: {
-      achievements: {
-        Row: {
-          id: string
-          key: string
-          name: string
-          name_es: string
-          description: string | null
-          description_es: string | null
-          category: string
-          rarity: string
-          xp_reward: number
-          requirements: Json
-          icon: string | null
-          color: string | null
-          badge_url: string | null
-          is_active: boolean
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          key: string
-          name: string
-          name_es: string
-          description?: string | null
-          description_es?: string | null
-          category: string
-          rarity?: string
-          xp_reward?: number
-          requirements: Json
-          icon?: string | null
-          color?: string | null
-          badge_url?: string | null
-          is_active?: boolean
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          key?: string
-          name?: string
-          name_es?: string
-          description?: string | null
-          description_es?: string | null
-          category?: string
-          rarity?: string
-          xp_reward?: number
-          requirements?: Json
-          icon?: string | null
-          color?: string | null
-          badge_url?: string | null
-          is_active?: boolean
-          created_at?: string
-        }
-      }
-      challenge_participants: {
-        Row: {
-          id: string
-          challenge_id: string
-          user_id: string
-          progress: Json
-          is_completed: boolean
-          completed_at: string | null
-          score: number
-          rank: number | null
-          joined_at: string
-        }
-        Insert: {
-          id?: string
-          challenge_id: string
-          user_id: string
-          progress?: Json
-          is_completed?: boolean
-          completed_at?: string | null
-          score?: number
-          rank?: number | null
-          joined_at?: string
-        }
-        Update: {
-          id?: string
-          challenge_id?: string
-          user_id?: string
-          progress?: Json
-          is_completed?: boolean
-          completed_at?: string | null
-          score?: number
-          rank?: number | null
-          joined_at?: string
-        }
-      }
-      challenges: {
-        Row: {
-          id: string
-          created_by: string
-          title: string
-          description: string | null
-          type: string
-          requirements: Json
-          rewards: Json
-          start_date: string
-          end_date: string
-          max_participants: number | null
-          participants_count: number
-          status: string
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          created_by: string
-          title: string
-          description?: string | null
-          type: string
-          requirements: Json
-          rewards?: Json
-          start_date: string
-          end_date: string
-          max_participants?: number | null
-          participants_count?: number
-          status?: string
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          created_by?: string
-          title?: string
-          description?: string | null
-          type?: string
-          requirements?: Json
-          rewards?: Json
-          start_date?: string
-          end_date?: string
-          max_participants?: number | null
-          participants_count?: number
-          status?: string
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      comment_likes: {
-        Row: {
-          id: string
-          comment_id: string
-          user_id: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          comment_id: string
-          user_id: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          comment_id?: string
-          user_id?: string
-          created_at?: string
-        }
-      }
-      comments: {
-        Row: {
-          id: string
-          post_id: string
-          user_id: string
-          parent_comment_id: string | null
-          content: string
-          mentions: Json
-          likes_count: number
-          replies_count: number
-          is_edited: boolean
-          is_pinned: boolean
-          is_deleted: boolean
-          deleted_at: string | null
-          deleted_by: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          post_id: string
-          user_id: string
-          parent_comment_id?: string | null
-          content: string
-          mentions?: Json
-          likes_count?: number
-          replies_count?: number
-          is_edited?: boolean
-          is_pinned?: boolean
-          is_deleted?: boolean
-          deleted_at?: string | null
-          deleted_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          post_id?: string
-          user_id?: string
-          parent_comment_id?: string | null
-          content?: string
-          mentions?: Json
-          likes_count?: number
-          replies_count?: number
-          is_edited?: boolean
-          is_pinned?: boolean
-          is_deleted?: boolean
-          deleted_at?: string | null
-          deleted_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      equipment_types: {
-        Row: {
-          id: string
-          name: string
-          name_es: string
-          description: string | null
-          icon: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          name: string
-          name_es: string
-          description?: string | null
-          icon?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          name?: string
-          name_es?: string
-          description?: string | null
-          icon?: string | null
-          created_at?: string
-        }
-      }
-      exercise_categories: {
-        Row: {
-          id: string
-          name: string
-          name_es: string
-          description: string | null
-          icon: string | null
-          color: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          name: string
-          name_es: string
-          description?: string | null
-          icon?: string | null
-          color?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          name?: string
-          name_es?: string
-          description?: string | null
-          icon?: string | null
-          color?: string | null
-          created_at?: string
-        }
-      }
-      exercise_performances: {
-        Row: {
-          id: string
-          user_id: string
-          exercise_id: string
-          workout_session_id: string | null
-          sets_data: Json
-          max_weight: number | null
-          total_volume: number | null
-          total_reps: number | null
-          one_rep_max: number | null
-          is_pr_weight: boolean
-          is_pr_volume: boolean
-          is_pr_reps: boolean
-          performed_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          exercise_id: string
-          workout_session_id?: string | null
-          sets_data: Json
-          max_weight?: number | null
-          total_volume?: number | null
-          total_reps?: number | null
-          one_rep_max?: number | null
-          is_pr_weight?: boolean
-          is_pr_volume?: boolean
-          is_pr_reps?: boolean
-          performed_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          exercise_id?: string
-          workout_session_id?: string | null
-          sets_data?: Json
-          max_weight?: number | null
-          total_volume?: number | null
-          total_reps?: number | null
-          one_rep_max?: number | null
-          is_pr_weight?: boolean
-          is_pr_volume?: boolean
-          is_pr_reps?: boolean
-          performed_at?: string
-        }
-      }
-      exercises: {
-        Row: {
-          id: string
-          name: string
-          name_es: string
-          description: string | null
-          instructions: string | null
-          instructions_es: string | null
-          gif_url: string | null
-          image_urls: string[] | null
-          video_url: string | null
-          category_id: string | null
-          primary_muscle_groups: string[]
-          secondary_muscle_groups: string[]
-          equipment_id: string | null
-          difficulty_level: number
-          force_type: string | null
-          mechanics: string | null
-          is_verified: boolean
-          created_by: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          name: string
-          name_es: string
-          description?: string | null
-          instructions?: string | null
-          instructions_es?: string | null
-          gif_url?: string | null
-          image_urls?: string[] | null
-          video_url?: string | null
-          category_id?: string | null
-          primary_muscle_groups?: string[]
-          secondary_muscle_groups?: string[]
-          equipment_id?: string | null
-          difficulty_level?: number
-          force_type?: string | null
-          mechanics?: string | null
-          is_verified?: boolean
-          created_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          name?: string
-          name_es?: string
-          description?: string | null
-          instructions?: string | null
-          instructions_es?: string | null
-          gif_url?: string | null
-          image_urls?: string[] | null
-          video_url?: string | null
-          category_id?: string | null
-          primary_muscle_groups?: string[]
-          secondary_muscle_groups?: string[]
-          equipment_id?: string | null
-          difficulty_level?: number
-          force_type?: string | null
-          mechanics?: string | null
-          is_verified?: boolean
-          created_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      friendships: {
-        Row: {
-          id: string
-          requester_id: string
-          addressee_id: string
-          status: string
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          requester_id: string
-          addressee_id: string
-          status?: string
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          requester_id?: string
-          addressee_id?: string
-          status?: string
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      muscle_groups: {
-        Row: {
-          id: string
-          name: string
-          name_es: string
-          description: string | null
-          body_part: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          name: string
-          name_es: string
-          description?: string | null
-          body_part?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          name?: string
-          name_es?: string
-          description?: string | null
-          body_part?: string | null
-          created_at?: string
-        }
-      }
-      notifications: {
-        Row: {
-          id: string
-          user_id: string
-          type: string
-          title: string
-          message: string | null
-          data: Json
-          is_read: boolean
-          is_sent: boolean
-          sent_at: string | null
-          read_at: string | null
-          scheduled_for: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          type: string
-          title: string
-          message?: string | null
-          data?: Json
-          is_read?: boolean
-          is_sent?: boolean
-          sent_at?: string | null
-          read_at?: string | null
-          scheduled_for?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          type?: string
-          title?: string
-          message?: string | null
-          data?: Json
-          is_read?: boolean
-          is_sent?: boolean
-          sent_at?: string | null
-          read_at?: string | null
-          scheduled_for?: string | null
-          created_at?: string
-        }
-      }
-      post_likes: {
-        Row: {
-          id: string
-          post_id: string
-          user_id: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          post_id: string
-          user_id: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          post_id?: string
-          user_id?: string
-          created_at?: string
-        }
-      }
-      social_posts: {
-        Row: {
-          id: string
-          user_id: string
-          type: string
-          content: string | null
-          data: Json
-          image_urls: string[] | null
-          likes_count: number
-          comments_count: number
-          shares_count: number
-          visibility: string
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          type: string
-          content?: string | null
-          data?: Json
-          image_urls?: string[] | null
-          likes_count?: number
-          comments_count?: number
-          shares_count?: number
-          visibility?: string
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          type?: string
-          content?: string | null
-          data?: Json
-          image_urls?: string[] | null
-          likes_count?: number
-          comments_count?: number
-          shares_count?: number
-          visibility?: string
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      streak_history: {
-        Row: {
-          id: string
-          user_id: string
-          event_type: string
-          streak_count: number
-          workout_session_id: string | null
-          xp_earned: number
-          achievements_unlocked: string[]
-          event_date: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          event_type: string
-          streak_count: number
-          workout_session_id?: string | null
-          xp_earned?: number
-          achievements_unlocked?: string[]
-          event_date: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          event_type?: string
-          streak_count?: number
-          workout_session_id?: string | null
-          xp_earned?: number
-          achievements_unlocked?: string[]
-          event_date?: string
-          created_at?: string
-        }
-      }
-      user_achievements: {
-        Row: {
-          id: string
-          user_id: string
-          achievement_id: string
-          progress: Json
-          is_completed: boolean
-          completed_at: string | null
-          xp_earned: number
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          achievement_id: string
-          progress?: Json
-          is_completed?: boolean
-          completed_at?: string | null
-          xp_earned?: number
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          achievement_id?: string
-          progress?: Json
-          is_completed?: boolean
-          completed_at?: string | null
-          xp_earned?: number
-          created_at?: string
-        }
-      }
-      user_analytics: {
-        Row: {
-          id: string
-          user_id: string
-          date: string
-          workouts_completed: number
-          total_workout_time: number
-          total_volume_kg: number
-          total_reps: number
-          posts_created: number
-          comments_made: number
-          likes_given: number
-          likes_received: number
-          xp_earned: number
-          achievements_unlocked: number
-          session_count: number
-          total_session_time: number
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          date: string
-          workouts_completed?: number
-          total_workout_time?: number
-          total_volume_kg?: number
-          total_reps?: number
-          posts_created?: number
-          comments_made?: number
-          likes_given?: number
-          likes_received?: number
-          xp_earned?: number
-          achievements_unlocked?: number
-          session_count?: number
-          total_session_time?: number
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          date?: string
-          workouts_completed?: number
-          total_workout_time?: number
-          total_volume_kg?: number
-          total_reps?: number
-          posts_created?: number
-          comments_made?: number
-          likes_given?: number
-          likes_received?: number
-          xp_earned?: number
-          achievements_unlocked?: number
-          session_count?: number
-          total_session_time?: number
-          created_at?: string
-        }
-      }
-      user_profiles: {
-        Row: {
-          id: string
-          username: string
-          display_name: string
-          email: string
-          avatar_url: string | null
-          bio: string | null
-          birth_date: string | null
-          gender: string | null
-          height_cm: number | null
-          weight_kg: number | null
-          fitness_level: string
-          current_level: number
-          total_xp: number
-          current_xp: number
-          profile_visibility: string
-          workout_visibility: string
-          stats_visibility: string
-          created_at: string
-          updated_at: string
-          last_active_at: string
-          is_online: boolean
-        }
-        Insert: {
-          id: string
-          username: string
-          display_name: string
-          email: string
-          avatar_url?: string | null
-          bio?: string | null
-          birth_date?: string | null
-          gender?: string | null
-          height_cm?: number | null
-          weight_kg?: number | null
-          fitness_level?: string
-          current_level?: number
-          total_xp?: number
-          current_xp?: number
-          profile_visibility?: string
-          workout_visibility?: string
-          stats_visibility?: string
-          created_at?: string
-          updated_at?: string
-          last_active_at?: string
-          is_online?: boolean
-        }
-        Update: {
-          id?: string
-          username?: string
-          display_name?: string
-          email?: string
-          avatar_url?: string | null
-          bio?: string | null
-          birth_date?: string | null
-          gender?: string | null
-          height_cm?: number | null
-          weight_kg?: number | null
-          fitness_level?: string
-          current_level?: number
-          total_xp?: number
-          current_xp?: number
-          profile_visibility?: string
-          workout_visibility?: string
-          stats_visibility?: string
-          created_at?: string
-          updated_at?: string
-          last_active_at?: string
-          is_online?: boolean
-        }
-      }
-      user_settings: {
-        Row: {
-          id: string
-          user_id: string
-          theme: string
-          language: string
-          timezone: string
-          notifications_enabled: boolean
-          workout_reminders: boolean
-          achievement_notifications: boolean
-          social_notifications: boolean
-          friend_requests: boolean
-          default_rest_time: number
-          weight_unit: string
-          distance_unit: string
-          data_sharing: boolean
-          analytics_tracking: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          theme?: string
-          language?: string
-          timezone?: string
-          notifications_enabled?: boolean
-          workout_reminders?: boolean
-          achievement_notifications?: boolean
-          social_notifications?: boolean
-          friend_requests?: boolean
-          default_rest_time?: number
-          weight_unit?: string
-          distance_unit?: string
-          data_sharing?: boolean
-          analytics_tracking?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          theme?: string
-          language?: string
-          timezone?: string
-          notifications_enabled?: boolean
-          workout_reminders?: boolean
-          achievement_notifications?: boolean
-          social_notifications?: boolean
-          friend_requests?: boolean
-          default_rest_time?: number
-          weight_unit?: string
-          distance_unit?: string
-          data_sharing?: boolean
-          analytics_tracking?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      user_streaks: {
-        Row: {
-          id: string
-          user_id: string
-          target_days_per_week: number
-          scheduled_days: number[]
-          current_streak: number
-          longest_streak: number
-          sick_days_used: number
-          vacation_days_used: number
-          streak_shields: number
-          streak_start_date: string | null
-          last_workout_date: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          target_days_per_week?: number
-          scheduled_days?: number[]
-          current_streak?: number
-          longest_streak?: number
-          sick_days_used?: number
-          vacation_days_used?: number
-          streak_shields?: number
-          streak_start_date?: string | null
-          last_workout_date?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          target_days_per_week?: number
-          scheduled_days?: number[]
-          current_streak?: number
-          longest_streak?: number
-          sick_days_used?: number
-          vacation_days_used?: number
-          streak_shields?: number
-          streak_start_date?: string | null
-          last_workout_date?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      workout_sessions: {
-        Row: {
-          id: string
-          user_id: string
-          template_id: string | null
-          name: string | null
-          notes: string | null
-          started_at: string
-          completed_at: string | null
-          duration_seconds: number | null
-          exercises: Json
-          total_volume_kg: number
-          total_reps: number
-          total_sets: number
-          calories_burned: number | null
-          xp_earned: number
-          achievements_unlocked: string[]
-          status: string
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          template_id?: string | null
-          name?: string | null
-          notes?: string | null
-          started_at: string
-          completed_at?: string | null
-          duration_seconds?: number | null
-          exercises: Json
-          total_volume_kg?: number
-          total_reps?: number
-          total_sets?: number
-          calories_burned?: number | null
-          xp_earned?: number
-          achievements_unlocked?: string[]
-          status?: string
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          template_id?: string | null
-          name?: string | null
-          notes?: string | null
-          started_at?: string
-          completed_at?: string | null
-          duration_seconds?: number | null
-          exercises?: Json
-          total_volume_kg?: number
-          total_reps?: number
-          total_sets?: number
-          calories_burned?: number | null
-          xp_earned?: number
-          achievements_unlocked?: string[]
-          status?: string
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      workout_templates: {
-        Row: {
-          id: string
-          name: string
-          description: string | null
-          exercises: Json
-          estimated_duration: number | null
-          difficulty_level: number
-          category: string | null
-          tags: string[] | null
-          created_by: string | null
-          is_public: boolean
-          is_featured: boolean
-          usage_count: number
-          average_rating: number
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          name: string
-          description?: string | null
-          exercises: Json
-          estimated_duration?: number | null
-          difficulty_level?: number
-          category?: string | null
-          tags?: string[] | null
-          created_by?: string | null
-          is_public?: boolean
-          is_featured?: boolean
-          usage_count?: number
-          average_rating?: number
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          name?: string
-          description?: string | null
-          exercises?: Json
-          estimated_duration?: number | null
-          difficulty_level?: number
-          category?: string | null
-          tags?: string[] | null
-          created_by?: string | null
-          is_public?: boolean
-          is_featured?: boolean
-          usage_count?: number
-          average_rating?: number
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      xp_transactions: {
-        Row: {
-          id: string
-          user_id: string
-          amount: number
-          source: string
-          source_id: string | null
-          description: string | null
-          base_amount: number
-          multiplier: number
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          amount: number
-          source: string
-          source_id?: string | null
-          description?: string | null
-          base_amount: number
-          multiplier?: number
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          amount?: number
-          source?: string
-          source_id?: string | null
-          description?: string | null
-          base_amount?: number
-          multiplier?: number
-          created_at?: string
-        }
-      }
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      [_ in never]: never
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
+export interface BaseEntity {
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
+
+export interface UserOwnedEntity extends BaseEntity {
+  userId: string;
+}
+
+// ============================================================================
+// User System
+// ============================================================================
+
+export interface User extends BaseEntity {
+  username: string;
+  email: string;
+  role: 'guest' | 'basic' | 'premium';
+  isActive: boolean;
+  lastLoginAt?: Date;
+}
+
+export interface UserProfile extends UserOwnedEntity {
+  displayName: string;
+  bio?: string;
+  fitnessLevel: 'beginner' | 'intermediate' | 'advanced';
+  currentLevel: number;
+  profileImageUrl?: string;
+  dateOfBirth?: Date;
+  height?: number; // in cm
+  weight?: number; // in kg
+  fitnessGoals: string[];
+  preferredWorkoutDays: number[]; // 0-6 (Sunday-Saturday)
+}
+
+// ============================================================================
+// Exercise System
+// ============================================================================
+
+export interface Exercise extends BaseEntity {
+  name: string;
+  category: string;
+  bodyPart: string;
+  equipment: string;
+  muscleGroups: string[];
+  instructions: string[];
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  imageUrl?: string;
+  videoUrl?: string;
+  tips?: string[];
+}
+
+// ============================================================================
+// Workout System
+// ============================================================================
+
+export interface WorkoutTemplate extends UserOwnedEntity {
+  name: string;
+  description?: string;
+  category: string;
+  estimatedDuration: number; // in minutes
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  isPublic: boolean;
+  tags: string[];
+  exercises: WorkoutTemplateExercise[];
+}
+
+export interface WorkoutTemplateExercise {
+  exerciseId: string;
+  order: number;
+  sets: number;
+  reps?: number;
+  weight?: number;
+  duration?: number; // in seconds
+  restTime?: number; // in seconds
+  notes?: string;
+}
+
+export interface Workout extends UserOwnedEntity {
+  templateId?: string;
+  name: string;
+  startedAt: Date;
+  completedAt?: Date;
+  duration?: number; // in minutes
+  status: 'planned' | 'in_progress' | 'completed' | 'cancelled';
+  notes?: string;
+  totalVolume?: number;
+  caloriesBurned?: number;
+}
+
+export interface WorkoutExercise extends BaseEntity {
+  workoutId: string;
+  exerciseId: string;
+  order: number;
+  targetSets: number;
+  targetReps?: number;
+  targetWeight?: number;
+  targetDuration?: number;
+  restTime?: number;
+  notes?: string;
+}
+
+export interface WorkoutSet extends BaseEntity {
+  workoutExerciseId: string;
+  setNumber: number;
+  reps?: number;
+  weight?: number;
+  duration?: number;
+  rpe?: number; // Rate of Perceived Exertion (1-10)
+  completedAt?: Date;
+  notes?: string;
+}
+
+// ============================================================================
+// Social System
+// ============================================================================
+
+export interface SocialPost extends UserOwnedEntity {
+  type: 'workout_completed' | 'achievement_unlocked' | 'personal_record' | 'general';
+  content: string;
+  visibility: 'public' | 'friends' | 'private';
+  workoutId?: string;
+  achievementId?: string;
+  imageUrls?: string[];
+  tags?: string[];
+  isPinned: boolean;
+  likesCount: number;
+  commentsCount: number;
+  sharesCount: number;
+}
+
+export interface PostLike extends BaseEntity {
+  postId: string;
+  userId: string;
+}
+
+export interface PostComment extends BaseEntity {
+  postId: string;
+  userId: string;
+  parentCommentId?: string;
+  content: string;
+  isEdited: boolean;
+  likesCount: number;
+}
+
+export interface PostShare extends BaseEntity {
+  postId: string;
+  userId: string;
+  platform: 'internal' | 'facebook' | 'twitter' | 'instagram';
+  sharedAt: Date;
+}
+
+export interface Friendship extends BaseEntity {
+  userId: string;
+  friendId: string;
+  status: 'pending' | 'accepted' | 'blocked';
+  initiatedBy: string;
+}
+
+export interface FriendRequest extends BaseEntity {
+  senderId: string;
+  receiverId: string;
+  status: 'pending' | 'accepted' | 'declined';
+  message?: string;
+}
+
+// ============================================================================
+// Privacy System
+// ============================================================================
+
+export interface PrivacySettings extends UserOwnedEntity {
+  profileVisibility: 'public' | 'friends' | 'private';
+  workoutVisibility: 'public' | 'friends' | 'private';
+  achievementVisibility: 'public' | 'friends' | 'private';
+  allowFriendRequests: boolean;
+  allowWorkoutInvites: boolean;
+  showOnlineStatus: boolean;
+  dataProcessingConsent: boolean;
+  marketingConsent: boolean;
+}
+
+export interface BlockedUser extends BaseEntity {
+  userId: string;
+  blockedUserId: string;
+  reason?: string;
+  blockedAt: Date;
+}
+
+// ============================================================================
+// Gamification System
+// ============================================================================
+
+export interface UserXP extends UserOwnedEntity {
+  currentLevel: number;
+  totalXP: number;
+  currentLevelXP: number;
+  nextLevelXP: number;
+  weeklyXP: number;
+  monthlyXP: number;
+}
+
+export interface XPTransaction extends BaseEntity {
+  userId: string;
+  amount: number;
+  source: 'workout_completed' | 'achievement_unlocked' | 'streak_milestone' | 'social_interaction' | 'daily_login';
+  sourceId?: string;
+  description: string;
+  multiplier: number;
+}
+
+export interface Achievement extends BaseEntity {
+  name: string;
+  description: string;
+  category: 'workout' | 'social' | 'streak' | 'progress' | 'special';
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  type: 'count' | 'streak' | 'milestone' | 'special';
+  iconUrl: string;
+  xpReward: number;
+  requirements: Record<string, any>;
+  isHidden: boolean;
+}
+
+export interface UserAchievement extends BaseEntity {
+  userId: string;
+  achievementId: string;
+  unlockedAt: Date;
+  progress?: Record<string, any>;
+}
+
+export interface UserStreak extends BaseEntity {
+  userId: string;
+  type: 'workout' | 'login' | 'social';
+  currentStreak: number;
+  longestStreak: number;
+  lastActivityDate: Date;
+  isActive: boolean;
+  streakStartDate: Date;
+}
+
+export interface StreakEntry extends BaseEntity {
+  streakId: string;
+  date: Date;
+  activityType: string;
+  activityId?: string;
+  value?: number;
+}
+
+export interface StreakReward extends BaseEntity {
+  userId: string;
+  streakId: string;
+  milestone: number;
+  rewardType: 'xp' | 'achievement' | 'badge';
+  rewardValue: number;
+  claimedAt?: Date;
+}
+
+// ============================================================================
+// Progress Tracking
+// ============================================================================
+
+export interface PersonalRecord extends BaseEntity {
+  userId: string;
+  exerciseId: string;
+  recordType: 'max_weight' | 'max_reps' | 'max_duration' | 'max_volume';
+  value: number;
+  unit: string;
+  achievedAt: Date;
+  workoutId?: string;
+  previousRecord?: number;
+}
+
+export interface ProgressSnapshot extends BaseEntity {
+  userId: string;
+  date: Date;
+  type: 'weight' | 'body_fat' | 'measurements' | 'photos';
+  data: Record<string, any>;
+  notes?: string;
+}
+
+// ============================================================================
+// Sync System
+// ============================================================================
+
+export interface SyncOperation extends BaseEntity {
+  operation: 'create' | 'update' | 'delete';
+  entityType: string;
+  entityId: string;
+  data?: Record<string, any>;
+  status: 'pending' | 'syncing' | 'completed' | 'failed';
+  priority: number;
+  retryCount: number;
+  lastError?: string;
+}
+
+export interface SyncMetadata {
+  key: string;
+  lastSync: Date;
+  syncVersion: number;
+  checksum?: string;
+}
+
+// ============================================================================
+// Utility Types
+// ============================================================================
+
+export type DatabaseEntity = 
+  | User 
+  | UserProfile 
+  | Exercise 
+  | Workout 
+  | WorkoutExercise 
+  | WorkoutSet
+  | SocialPost 
+  | PostLike 
+  | PostComment 
+  | PostShare
+  | Friendship 
+  | FriendRequest
+  | PrivacySettings 
+  | BlockedUser
+  | UserXP 
+  | XPTransaction 
+  | Achievement 
+  | UserAchievement
+  | UserStreak 
+  | StreakEntry 
+  | StreakReward
+  | PersonalRecord 
+  | ProgressSnapshot
+  | SyncOperation 
+  | SyncMetadata;
+
+export type EntityId<T extends BaseEntity> = T['id'];
+
+export type CreateEntityInput<T extends BaseEntity> = Omit<T, 'id' | 'createdAt' | 'updatedAt'>;
+
+export type UpdateEntityInput<T extends BaseEntity> = Partial<Omit<T, 'id' | 'createdAt'>> & {
+  updatedAt?: Date;
+};

@@ -28,7 +28,7 @@ export const ChallengeJoinFlow: React.FC<ChallengeJoinFlowProps> = ({
   const [isJoining, setIsJoining] = useState(false);
 
   const categoryInfo = CHALLENGE_CATEGORIES_INFO[challenge.category];
-  const difficultyInfo = DIFFICULTY_INFO[challenge.difficulty_level];
+  const difficultyInfo = DIFFICULTY_INFO[challenge.difficulty_level] || DIFFICULTY_INFO[1]; // Fallback to beginner
 
   const handleJoin = async () => {
     setIsJoining(true);

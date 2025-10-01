@@ -2,6 +2,11 @@ module.exports = {
   ci: {
     collect: {
       url: ['http://localhost:4173'],
+      startServerReadyPattern: 'Local:',
+      startServerReadyTimeout: 30000,
+      settings: {
+        chromeFlags: '--no-sandbox --disable-dev-shm-usage',
+      },
       startServerCommand: 'npm run preview',
       numberOfRuns: 3,
     },

@@ -1,0 +1,176 @@
+name: Test Quality Gates
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  NODE_VERSION: '18'
+  COVERAGE_THRESHOLD: 90
+  RELIABILITY_THRESHOLD: 99
+  FLAKY_TEST_THRESHOLD: 1
+
+jobs:
+  test-quality-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 50  # Needed for reliability tracking over builds
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Type checking
+        run: npm run type-check
+      
+      - name: Lint checking
+        run: npm run lint
+      
+      - name: Run performance-optimized tests
+        run: npm run test:performance:ci
+        env:
+          CI: true
+          VITEST_PERFORMANCE_MODE: ci
+          NODE_OPTIONS: '--max-old-space-size=2048 --optimize-for-size'
+      
+      - name: Generate test reliability report
+        run: npm run test:reliability-check
+        continue-on-error: true
+      
+      - name: Run accessibility tests
+        run: npm run test:accessibility -- --run
+        continue-on-error: true
+      
+      - name: Enforce coverage thresholds
+        run: npm run coverage:enforce-per-module
+      
+      - name: Check test reliability
+        run: npm run reliability:validate-trends
+      
+      - name: Validate accessibility compliance
+        run: npm run a11y:validate-compliance
+      
+      - name: Quality gate decision
+        run: npm run quality-gate:evaluate
+      
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        if: always()
+        with:
+          file: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+      
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-results
+          path: |
+            coverage/
+            test-results/
+            quality-gate-report.json
+      
+      - name: Comment PR with quality metrics
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            try {
+              const report = JSON.parse(fs.readFileSync('quality-gate-report.json', 'utf8'));
+              const comment = `## 🧪 Test Quality Report
+              
+              ### Coverage Metrics
+              - **Overall Coverage**: ${report.coverage.overall}% (Target: ${process.env.COVERAGE_THRESHOLD}%)
+              - **Components**: ${report.coverage.components}% (Target: 75%+)
+              - **Utilities**: ${report.coverage.utilities}% (Target: 85%+)
+              - **Files Below Threshold**: ${report.coverage.violations.length}
+              
+              ### Reliability Metrics
+              - **Test Reliability**: ${report.reliability.current}% (Target: ${process.env.RELIABILITY_THRESHOLD}%+)
+              - **Flaky Tests**: ${report.reliability.flakyTests.length} (Target: <${process.env.FLAKY_TEST_THRESHOLD}%)
+              
+              ### Accessibility
+              - **Automated Checks**: ${report.accessibility.automatedScore}% passed
+              - **Manual Tests Required**: ${report.accessibility.manualTestsRequired}
+              
+              ### Quality Gate Status: ${report.passed ? '✅ PASSED' : '❌ FAILED'}
+              
+              ${report.alerts.length > 0 ? '### ⚠️ Alerts\n' + report.alerts.map(alert => `- **${alert.type}**: ${alert.message}`).join('\n') : ''}
+              `;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            } catch (error) {
+              console.log('Could not read quality gate report:', error.message);
+            }
+
+  performance-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run performance tests
+        run: node scripts/monitor-test-performance.js fast
+      
+      - name: Performance regression check
+        run: npm run performance:check-regression
+      
+      - name: Upload performance results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: performance-results
+          path: performance-results/
+
+  security-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Security audit
+        run: npm audit --audit-level moderate
+      
+      - name: Run security tests
+        run: npm run test:security -- --run

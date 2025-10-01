@@ -1,254 +1,308 @@
-import { useState, useEffect, useCallback } from 'react';
-import { syncQueue } from '@/utils/syncQueue';
+/**
+ * React Hook for Sync Service Integration
+ * Provides easy access to synchronization functionality with React state management
+ */
+
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { syncService } from '@/services/SyncService';
+import type { SyncResult, SyncStatus } from '@/services/SyncService';
+import type { SyncConflict } from '@/utils/syncManager';
 import type { SyncOperation } from '@/utils/syncQueue';
-import { syncManager } from '@/utils/syncManager';
-import type { SyncResult, SyncConflict } from '@/utils/syncManager';
 
-export interface SyncState {
-  isOnline: boolean;
-  isSyncing: boolean;
-  queueSize: number;
-  lastSyncTime: Date | null;
-  conflicts: SyncConflict[];
-  syncResult: SyncResult | null;
+export interface UseSyncOptions {
+  enableAutoSync?: boolean;
+  enableConflictNotifications?: boolean;
+  enableStatusUpdates?: boolean;
+  autoInitialize?: boolean;
 }
 
-export interface SyncActions {
-  addToQueue: (operation: Omit<SyncOperation, 'id' | 'timestamp' | 'retryCount' | 'status'>) => Promise<string>;
-  performSync: () => Promise<SyncResult>;
-  resolveConflict: (conflictId: string, strategy: 'local' | 'remote' | 'merge', mergedData?: any) => Promise<void>;
-  clearQueue: () => Promise<void>;
-  getQueueStats: () => Promise<any>;
+export interface UseSyncResult {
+  // Status
+  status: SyncStatus;
+  isInitialized: boolean;
+  
+  // Actions
+  queueOperation: (
+    type: SyncOperation['type'],
+    entity: SyncOperation['entity'],
+    data: any,
+    options?: {
+      priority?: SyncOperation['priority'];
+      maxRetries?: number;
+      triggerImmediateSync?: boolean;
+    }
+  ) => Promise<string>;
+  
+  triggerSync: () => Promise<SyncResult>;
+  resolveConflict: (
+    conflictId: string,
+    strategy: 'local_wins' | 'remote_wins' | 'merge',
+    mergedData?: any
+  ) => Promise<void>;
+  
+  // Data
+  pendingConflicts: SyncConflict[];
+  lastSyncResult: SyncResult | null;
+  
+  // Controls
+  setAutoSyncEnabled: (enabled: boolean) => void;
+  cleanup: (olderThanHours?: number) => Promise<void>;
 }
 
-export const useSync = () => {
-  const [state, setState] = useState<SyncState>({
-    isOnline: navigator.onLine,
-    isSyncing: false,
-    queueSize: 0,
-    lastSyncTime: null,
-    conflicts: [],
-    syncResult: null,
+const DEFAULT_STATUS: SyncStatus = {
+  isOnline: navigator.onLine,
+  isSyncing: false,
+  pendingOperations: 0,
+  lastSyncTime: 0,
+  hasConflicts: false,
+};
+
+export function useSync(options: UseSyncOptions = {}): UseSyncResult {
+  const {
+    enableAutoSync = true,
+    enableConflictNotifications = true,
+    enableStatusUpdates = true,
+    autoInitialize = true,
+  } = options;
+
+  // State
+  const [status, setStatus] = useState<SyncStatus>(DEFAULT_STATUS);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [pendingConflicts, setPendingConflicts] = useState<SyncConflict[]>([]);
+  const [lastSyncResult, setLastSyncResult] = useState<SyncResult | null>(null);
+
+  // Refs to prevent stale closures
+  const statusUpdateIntervalRef = useRef<NodeJS.Timeout>();
+  const conflictCheckIntervalRef = useRef<NodeJS.Timeout>();
+
+  // Initialize sync service
+  useEffect(() => {
+    if (!autoInitialize) return;
+
+    const initializeSync = async () => {
+      try {
+        await syncService.initialize();
+        setIsInitialized(true);
+        
+        // Update initial status
+        const initialStatus = await syncService.getSyncStatus();
+        setStatus(initialStatus);
+        
+        console.log('[useSync] Sync service initialized');
+      } catch (error) {
+        console.error('[useSync] Failed to initialize sync service:', error);
+      }
+    };
+
+    initializeSync();
+  }, [autoInitialize]);
+
+  // Set up sync result listener
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    const handleSyncResult = (result: SyncResult) => {
+      setLastSyncResult(result);
+      console.log('[useSync] Sync result received:', result);
+    };
+
+    syncService.addSyncListener(handleSyncResult);
+
+    return () => {
+      syncService.removeSyncListener(handleSyncResult);
+    };
+  }, [isInitialized]);
+
+  // Set up conflict listener
+  useEffect(() => {
+    if (!isInitialized || !enableConflictNotifications) return;
+
+    const handleConflicts = (conflicts: SyncConflict[]) => {
+      setPendingConflicts(conflicts);
+      console.log('[useSync] Conflicts detected:', conflicts.length);
+    };
+
+    syncService.addConflictListener(handleConflicts);
+
+    return () => {
+      syncService.removeConflictListener(handleConflicts);
+    };
+  }, [isInitialized, enableConflictNotifications]);
+
+  // Set up status updates
+  useEffect(() => {
+    if (!isInitialized || !enableStatusUpdates) return;
+
+    const updateStatus = async () => {
+      try {
+        const currentStatus = await syncService.getSyncStatus();
+        setStatus(currentStatus);
+      } catch (error) {
+        console.error('[useSync] Failed to update status:', error);
+      }
+    };
+
+    // Update status immediately
+    updateStatus();
+
+    // Set up periodic status updates
+    statusUpdateIntervalRef.current = setInterval(updateStatus, 5000); // Every 5 seconds
+
+    return () => {
+      if (statusUpdateIntervalRef.current) {
+        clearInterval(statusUpdateIntervalRef.current);
+      }
+    };
+  }, [isInitialized, enableStatusUpdates]);
+
+  // Set up periodic conflict checks
+  useEffect(() => {
+    if (!isInitialized || !enableConflictNotifications) return;
+
+    const checkConflicts = async () => {
+      try {
+        const conflicts = await syncService.getPendingConflicts();
+        setPendingConflicts(conflicts);
+      } catch (error) {
+        console.error('[useSync] Failed to check conflicts:', error);
+      }
+    };
+
+    // Check conflicts immediately
+    checkConflicts();
+
+    // Set up periodic conflict checks
+    conflictCheckIntervalRef.current = setInterval(checkConflicts, 30000); // Every 30 seconds
+
+    return () => {
+      if (conflictCheckIntervalRef.current) {
+        clearInterval(conflictCheckIntervalRef.current);
+      }
+    };
+  }, [isInitialized, enableConflictNotifications]);
+
+  // Configure auto-sync
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    syncService.setAutoSyncEnabled(enableAutoSync);
+  }, [isInitialized, enableAutoSync]);
+
+  // Memoized action functions
+  const queueOperation = useCallback(async (
+    type: SyncOperation['type'],
+    entity: SyncOperation['entity'],
+    data: any,
+    operationOptions?: {
+      priority?: SyncOperation['priority'];
+      maxRetries?: number;
+      triggerImmediateSync?: boolean;
+    }
+  ) => {
+    if (!isInitialized) {
+      throw new Error('Sync service not initialized');
+    }
+
+    return await syncService.queueOperation(type, entity, data, operationOptions);
+  }, [isInitialized]);
+
+  const triggerSync = useCallback(async () => {
+    if (!isInitialized) {
+      throw new Error('Sync service not initialized');
+    }
+
+    return await syncService.triggerSync();
+  }, [isInitialized]);
+
+  const resolveConflict = useCallback(async (
+    conflictId: string,
+    strategy: 'local_wins' | 'remote_wins' | 'merge',
+    mergedData?: any
+  ) => {
+    if (!isInitialized) {
+      throw new Error('Sync service not initialized');
+    }
+
+    await syncService.resolveConflict(conflictId, strategy, mergedData);
+    
+    // Refresh conflicts after resolution
+    const updatedConflicts = await syncService.getPendingConflicts();
+    setPendingConflicts(updatedConflicts);
+  }, [isInitialized]);
+
+  const setAutoSyncEnabled = useCallback((enabled: boolean) => {
+    if (!isInitialized) return;
+    
+    syncService.setAutoSyncEnabled(enabled);
+  }, [isInitialized]);
+
+  const cleanup = useCallback(async (olderThanHours: number = 24) => {
+    if (!isInitialized) return;
+    
+    await syncService.cleanup(olderThanHours);
+  }, [isInitialized]);
+
+  return {
+    // Status
+    status,
+    isInitialized,
+    
+    // Actions
+    queueOperation,
+    triggerSync,
+    resolveConflict,
+    
+    // Data
+    pendingConflicts,
+    lastSyncResult,
+    
+    // Controls
+    setAutoSyncEnabled,
+    cleanup,
+  };
+}
+
+/**
+ * Hook for simple sync operations without full status management
+ */
+export function useSyncOperations() {
+  const { queueOperation, triggerSync, isInitialized } = useSync({
+    enableStatusUpdates: false,
+    enableConflictNotifications: false,
   });
 
-  // Update online status
-  useEffect(() => {
-    const handleOnline = () => {
-      setState(prev => ({ ...prev, isOnline: true }));
-      // Auto-sync when coming back online
-      if (state.queueSize > 0) {
-        performSync();
-      }
-    };
+  return {
+    queueOperation,
+    triggerSync,
+    isInitialized,
+  };
+}
 
-    const handleOffline = () => {
-      setState(prev => ({ ...prev, isOnline: false }));
-    };
+/**
+ * Hook for sync status monitoring only
+ */
+export function useSyncStatus() {
+  const { status, isInitialized } = useSync({
+    enableConflictNotifications: false,
+  });
 
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+  return {
+    status,
+    isInitialized,
+  };
+}
 
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, [state.queueSize]);
+/**
+ * Hook for conflict management only
+ */
+export function useSyncConflicts() {
+  const { pendingConflicts, resolveConflict, isInitialized } = useSync({
+    enableStatusUpdates: false,
+  });
 
-  // Listen to sync queue updates
-  useEffect(() => {
-    const handleOperationUpdate = (operation: SyncOperation) => {
-      updateQueueSize();
-    };
-
-    syncQueue.addListener(handleOperationUpdate);
-
-    return () => {
-      syncQueue.removeListener(handleOperationUpdate);
-    };
-  }, []);
-
-  // Listen to sync results
-  useEffect(() => {
-    const handleSyncResult = (result: SyncResult) => {
-      setState(prev => ({
-        ...prev,
-        isSyncing: false,
-        syncResult: result,
-        lastSyncTime: new Date(),
-        conflicts: result.conflicts,
-      }));
-    };
-
-    syncManager.addSyncListener(handleSyncResult);
-
-    return () => {
-      syncManager.removeSyncListener(handleSyncResult);
-    };
-  }, []);
-
-  // Update queue size
-  const updateQueueSize = useCallback(async () => {
-    try {
-      const stats = await syncQueue.getQueueStats();
-      setState(prev => ({ 
-        ...prev, 
-        queueSize: stats.pending + stats.processing 
-      }));
-    } catch (error) {
-      // Silently handle database initialization errors
-      if (error instanceof Error && error.message.includes('object stores was not found')) {
-        return;
-      }
-      console.error('Failed to update queue size:', error);
-    }
-  }, []);
-
-  // Initialize queue size
-  useEffect(() => {
-    updateQueueSize();
-  }, [updateQueueSize]);
-
-  // Add operation to queue
-  const addToQueue = useCallback(async (
-    operation: Omit<SyncOperation, 'id' | 'timestamp' | 'retryCount' | 'status'>
-  ): Promise<string> => {
-    try {
-      const operationId = await syncQueue.addOperation(operation);
-      await updateQueueSize();
-      return operationId;
-    } catch (error) {
-      console.error('Failed to add operation to queue:', error);
-      throw error;
-    }
-  }, [updateQueueSize]);
-
-  // Perform sync
-  const performSync = useCallback(async (): Promise<SyncResult> => {
-    if (!state.isOnline) {
-      throw new Error('Cannot sync while offline');
-    }
-
-    setState(prev => ({ ...prev, isSyncing: true }));
-
-    try {
-      const result = await syncManager.performSync();
-      await updateQueueSize();
-      return result;
-    } catch (error) {
-      setState(prev => ({ ...prev, isSyncing: false }));
-      throw error;
-    }
-  }, [state.isOnline, updateQueueSize]);
-
-  // Resolve conflict
-  const resolveConflict = useCallback(async (
-    conflictId: string, 
-    strategy: 'local' | 'remote' | 'merge', 
-    mergedData?: any
-  ): Promise<void> => {
-    try {
-      const resolution = {
-        strategy: strategy === 'local' ? 'local_wins' as const :
-                 strategy === 'remote' ? 'remote_wins' as const :
-                 'merge' as const,
-        resolvedData: mergedData,
-      };
-
-      await syncManager.resolveConflictManually(conflictId, resolution);
-      
-      // Update conflicts list
-      const updatedConflicts = await syncManager.getPendingConflicts();
-      setState(prev => ({ ...prev, conflicts: updatedConflicts }));
-      
-    } catch (error) {
-      console.error('Failed to resolve conflict:', error);
-      throw error;
-    }
-  }, []);
-
-  // Clear queue
-  const clearQueue = useCallback(async (): Promise<void> => {
-    try {
-      // This would need to be implemented in syncQueue
-      console.warn('Clear queue not implemented yet');
-      await updateQueueSize();
-    } catch (error) {
-      console.error('Failed to clear queue:', error);
-      throw error;
-    }
-  }, [updateQueueSize]);
-
-  // Get queue stats
-  const getQueueStats = useCallback(async () => {
-    try {
-      return await syncQueue.getQueueStats();
-    } catch (error) {
-      console.error('Failed to get queue stats:', error);
-      return { pending: 0, processing: 0, completed: 0, failed: 0, total: 0 };
-    }
-  }, []);
-
-  const actions: SyncActions = {
-    addToQueue,
-    performSync,
+  return {
+    pendingConflicts,
     resolveConflict,
-    clearQueue,
-    getQueueStats,
+    isInitialized,
   };
-
-  return {
-    ...state,
-    actions,
-  };
-};
-
-// Hook for specific entity syncing
-export const useEntitySync = (entity: 'workout' | 'exercise' | 'profile' | 'settings') => {
-  const { actions } = useSync();
-
-  const syncCreate = useCallback(async (data: any) => {
-    return await actions.addToQueue({
-      type: 'CREATE',
-      entity,
-      data,
-      maxRetries: 5,
-      priority: 'medium',
-    });
-  }, [actions, entity]);
-
-  const syncUpdate = useCallback(async (data: any) => {
-    return await actions.addToQueue({
-      type: 'UPDATE',
-      entity,
-      data,
-      maxRetries: 5,
-      priority: 'medium',
-    });
-  }, [actions, entity]);
-
-  const syncDelete = useCallback(async (data: any) => {
-    return await actions.addToQueue({
-      type: 'DELETE',
-      entity,
-      data,
-      maxRetries: 3,
-      priority: 'high',
-    });
-  }, [actions, entity]);
-
-  return {
-    syncCreate,
-    syncUpdate,
-    syncDelete,
-  };
-};
-
-// Hook for workout-specific syncing
-export const useWorkoutSync = () => {
-  return useEntitySync('workout');
-};
-
-// Hook for profile-specific syncing
-export const useProfileSync = () => {
-  return useEntitySync('profile');
-};
+}

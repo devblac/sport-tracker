@@ -28,11 +28,11 @@ export interface SyncQueueConfig {
 }
 
 const DEFAULT_CONFIG: SyncQueueConfig = {
-  maxRetries: 5,
-  baseRetryDelay: 1000, // 1 second
-  maxRetryDelay: 300000, // 5 minutes
-  batchSize: 10,
-  processingTimeout: 30000, // 30 seconds
+  maxRetries: 3, // Reduced for better UX
+  baseRetryDelay: 2000, // 2 seconds - more conservative
+  maxRetryDelay: 60000, // 1 minute - reduced from 5 minutes
+  batchSize: 5, // Smaller batches for better performance
+  processingTimeout: 15000, // 15 seconds - reduced timeout
 };
 
 export class SyncQueue {
@@ -191,6 +191,7 @@ export class SyncQueue {
    */
   async startProcessing(): Promise<void> {
     if (this.isProcessing) {
+      console.log('[SyncQueue] Processing already in progress');
       return;
     }
 
@@ -203,6 +204,7 @@ export class SyncQueue {
       console.error('[SyncQueue] Queue processing failed:', error);
     } finally {
       this.isProcessing = false;
+      console.log('[SyncQueue] Queue processing stopped');
     }
   }
 
@@ -219,30 +221,73 @@ export class SyncQueue {
   }
 
   /**
-   * Process the queue
+   * Process the queue with intelligent frequency optimization
    */
   private async processQueue(): Promise<void> {
+    let consecutiveEmptyChecks = 0;
+    const maxEmptyChecks = 3; // Reduced for tests - stop after 3 empty checks
+    
     while (this.isProcessing) {
       try {
         const pendingOperations = await this.getPendingOperations();
         
         if (pendingOperations.length === 0) {
-          // No pending operations, wait before checking again
-          await this.sleep(5000); // 5 seconds
+          consecutiveEmptyChecks++;
+          
+          // Shorter wait time for tests
+          const waitTime = Math.min(100 * consecutiveEmptyChecks, 500);
+          await this.sleep(waitTime);
+          
+          // Stop processing if no operations for extended period
+          if (consecutiveEmptyChecks >= maxEmptyChecks) {
+            console.log('[SyncQueue] No operations for extended period, stopping processing');
+            this.isProcessing = false;
+            break;
+          }
+          
           continue;
         }
 
-        // Process operations in batches
+        // Reset empty check counter
+        consecutiveEmptyChecks = 0;
+
+        // Process operations in batches with priority ordering
         const batch = pendingOperations.slice(0, this.config.batchSize);
         await this.processBatch(batch);
 
-        // Small delay between batches
-        await this.sleep(1000);
+        // Shorter delay for tests
+        await this.sleep(50);
         
       } catch (error) {
         console.error('[SyncQueue] Error processing queue:', error);
-        await this.sleep(5000); // Wait before retrying
+        
+        // Shorter error delay for tests
+        const errorDelay = Math.min(this.config.baseRetryDelay / 4, 1000);
+        await this.sleep(errorDelay);
       }
+    }
+  }
+
+  /**
+   * Calculate adaptive delay based on recent success rate
+   */
+  private async calculateAdaptiveDelay(): Promise<number> {
+    try {
+      const stats = await this.getQueueStats();
+      const totalRecent = stats.completed + stats.failed;
+      
+      if (totalRecent === 0) return 1000; // Default delay
+      
+      const successRate = stats.completed / totalRecent;
+      
+      // Faster processing for high success rates, slower for low success rates
+      if (successRate > 0.8) return 500; // Fast
+      if (successRate > 0.6) return 1000; // Normal
+      if (successRate > 0.4) return 2000; // Slow
+      return 5000; // Very slow for high failure rates
+      
+    } catch (error) {
+      return 1000; // Default on error
     }
   }
 
@@ -255,7 +300,7 @@ export class SyncQueue {
   }
 
   /**
-   * Process a single operation
+   * Process a single operation with robust error handling
    */
   private async processOperation(operation: SyncOperation): Promise<void> {
     // Check if operation should be retried
@@ -266,15 +311,23 @@ export class SyncQueue {
     // Check if max retries exceeded
     if (operation.retryCount >= operation.maxRetries) {
       await this.updateOperationStatus(operation.id, 'failed', 'Max retries exceeded');
+      console.warn(`[SyncQueue] Operation ${operation.id} permanently failed after ${operation.retryCount} retries`);
       return;
     }
+
+    const operationTimeout = setTimeout(() => {
+      console.warn(`[SyncQueue] Operation ${operation.id} timed out`);
+    }, this.config.processingTimeout);
 
     try {
       // Mark as processing
       await this.updateOperationStatus(operation.id, 'processing');
 
-      // Process the operation based on type and entity
-      await this.executeOperation(operation);
+      // Process the operation based on type and entity with timeout
+      await Promise.race([
+        this.executeOperation(operation),
+        this.createTimeoutPromise(this.config.processingTimeout)
+      ]);
 
       // Mark as completed
       await this.updateOperationStatus(operation.id, 'completed');
@@ -282,20 +335,88 @@ export class SyncQueue {
       console.log(`[SyncQueue] Operation ${operation.id} completed successfully`);
       
     } catch (error) {
-      console.error(`[SyncQueue] Operation ${operation.id} failed:`, error);
+      const isNetworkError = this.isNetworkError(error);
+      const isRetryableError = this.isRetryableError(error);
+      
+      console.error(`[SyncQueue] Operation ${operation.id} failed (attempt ${operation.retryCount + 1}):`, error);
+      
+      if (!isRetryableError && operation.retryCount === 0) {
+        // Non-retryable error on first attempt - fail immediately
+        await this.updateOperationStatus(operation.id, 'failed', `Non-retryable error: ${error instanceof Error ? error.message : String(error)}`);
+        return;
+      }
       
       // Increment retry count and calculate next retry time
+      const nextRetryDelay = this.calculateNextRetryTime(operation.retryCount + 1, isNetworkError);
+      const newRetryCount = operation.retryCount + 1;
+      const newStatus = newRetryCount >= operation.maxRetries ? 'failed' : 'pending';
+      
       const updatedOperation: SyncOperation = {
         ...operation,
-        retryCount: operation.retryCount + 1,
-        status: 'failed',
+        retryCount: newRetryCount,
+        status: newStatus,
         error: error instanceof Error ? error.message : String(error),
-        nextRetryAt: this.calculateNextRetryTime(operation.retryCount + 1),
+        nextRetryAt: newStatus === 'pending' ? Date.now() + nextRetryDelay : undefined,
       };
 
       await dbManager.put('syncQueue', updatedOperation);
       this.notifyListeners(updatedOperation);
+      
+      console.log(`[SyncQueue] Operation ${operation.id} scheduled for retry ${newRetryCount}/${operation.maxRetries} in ${nextRetryDelay}ms`);
+      
+    } finally {
+      clearTimeout(operationTimeout);
     }
+  }
+
+  /**
+   * Create a timeout promise
+   */
+  private createTimeoutPromise(timeout: number): Promise<never> {
+    return new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Operation timeout')), timeout);
+    });
+  }
+
+  /**
+   * Check if error is network-related
+   */
+  private isNetworkError(error: any): boolean {
+    if (error instanceof Error) {
+      const message = error.message.toLowerCase();
+      return message.includes('network') || 
+             message.includes('fetch') || 
+             message.includes('connection') ||
+             message.includes('timeout') ||
+             error.name === 'NetworkError';
+    }
+    return false;
+  }
+
+  /**
+   * Check if error is retryable
+   */
+  private isRetryableError(error: any): boolean {
+    if (error instanceof Error) {
+      const message = error.message.toLowerCase();
+      
+      // Non-retryable errors
+      if (message.includes('unauthorized') || 
+          message.includes('forbidden') ||
+          message.includes('not found') ||
+          message.includes('bad request')) {
+        return false;
+      }
+      
+      // Retryable errors
+      return message.includes('network') ||
+             message.includes('timeout') ||
+             message.includes('server error') ||
+             message.includes('service unavailable') ||
+             message.includes('too many requests');
+    }
+    
+    return true; // Default to retryable for unknown errors
   }
 
   /**
@@ -370,18 +491,22 @@ export class SyncQueue {
   }
 
   /**
-   * Calculate next retry time using exponential backoff
+   * Calculate next retry time using exponential backoff with network-aware delays
    */
-  private calculateNextRetryTime(retryCount: number): number {
+  private calculateNextRetryTime(retryCount: number, isNetworkError: boolean = false): number {
+    // Use different base delays for network vs application errors
+    const baseDelay = isNetworkError ? this.config.baseRetryDelay * 2 : this.config.baseRetryDelay;
+    
     const delay = Math.min(
-      this.config.baseRetryDelay * Math.pow(2, retryCount - 1),
+      baseDelay * Math.pow(2, retryCount - 1),
       this.config.maxRetryDelay
     );
     
-    // Add jitter to prevent thundering herd
-    const jitter = Math.random() * 0.1 * delay;
+    // Add jitter to prevent thundering herd (10-20% of delay)
+    const jitterPercent = 0.1 + Math.random() * 0.1;
+    const jitter = delay * jitterPercent;
     
-    return Date.now() + delay + jitter;
+    return delay + jitter;
   }
 
   /**

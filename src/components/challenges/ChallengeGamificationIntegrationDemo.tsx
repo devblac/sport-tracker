@@ -9,9 +9,10 @@ import React, { useState } from 'react';
 import { challengeIntegrationService } from '@/services/challengeIntegrationService';
 import { challengeRewardsManager } from '@/services/challengeRewardsManager';
 import { XPIntegrationService } from '@/services/XPIntegrationService';
+import type { Challenge, ChallengeParticipant } from '@/types/challenges';
 
 export const ChallengeGamificationIntegrationDemo: React.FC = () => {
-  const [demoResults, setDemoResults] = useState<any>(null);
+  const [demoResults, setDemoResults] = useState<Record<string, unknown> | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const runIntegrationDemo = async () => {
@@ -95,7 +96,7 @@ export const ChallengeGamificationIntegrationDemo: React.FC = () => {
     }
   };
 
-  const testRewardsCalculation = async (challenge: any, participant: any) => {
+  const testRewardsCalculation = async (challenge: Challenge, participant: ChallengeParticipant) => {
     try {
       // Test comprehensive rewards calculation
       const performanceMetrics = challengeRewardsManager.createPerformanceMetrics(
@@ -127,7 +128,7 @@ export const ChallengeGamificationIntegrationDemo: React.FC = () => {
     }
   };
 
-  const testFullIntegration = async (challenge: any, participant: any) => {
+  const testFullIntegration = async (challenge: Challenge, participant: ChallengeParticipant) => {
     try {
       // This would test the full completion flow
       // For demo purposes, we'll simulate the integration

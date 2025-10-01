@@ -104,15 +104,27 @@ export function useRealTime<T = any>(
     batchUpdates
   }), [throttle, priority, onlyWhenVisible, batchUpdates]);
 
-  // Update subscription options ref
-  useEffect(() => {
-    subscriptionOptionsRef.current = {
-      ...stableOptions,
-      ...restOptions
-    };
-  }, [stableOptions]);
+  // Update subscription options ref only when options actually change
+  const optionsChanged = React.useMemo(() => {
+    const newOptions = { ...stableOptions, ...restOptions };
+    const currentOptions = subscriptionOptionsRef.current;
+    
+    if (!currentOptions) return true;
+    
+    // Deep comparison of options to prevent unnecessary updates
+    return JSON.stringify(newOptions) !== JSON.stringify(currentOptions);
+  }, [stableOptions, restOptions]);
 
-  // Setup subscription
+  useEffect(() => {
+    if (optionsChanged) {
+      subscriptionOptionsRef.current = {
+        ...stableOptions,
+        ...restOptions
+      };
+    }
+  }, [optionsChanged, stableOptions, restOptions]);
+
+  // Setup subscription with dependency array that prevents infinite loops
   useEffect(() => {
     if (!enabled) {
       setIsConnected(false);
@@ -145,7 +157,7 @@ export function useRealTime<T = any>(
         logger.debug('Real-time subscription cleaned up', { eventType });
       }
     };
-  }, [enabled, eventType, handleEvent]);
+  }, [enabled, eventType, handleEvent, optionsChanged]);
 
   // Calculate stats
   const stats = {

@@ -8,7 +8,7 @@ import type { DBSchema } from './IndexedDBManager';
 
 export const FITNESS_APP_SCHEMA: DBSchema = {
   name: 'FitnessAppDB',
-  version: 2,
+  version: 3,
   stores: [
     // ============================================================================
     // Core Exercise Data
@@ -399,6 +399,23 @@ export const FITNESS_APP_SCHEMA: DBSchema = {
     },
 
     // ============================================================================
+    // Competition Cycles (Weekly automated competitions)
+    // ============================================================================
+    {
+      name: 'competitionCycles',
+      keyPath: 'id',
+      indexes: [
+        { name: 'weekNumber', keyPath: 'weekNumber' },
+        { name: 'year', keyPath: 'year' },
+        { name: 'status', keyPath: 'status' },
+        { name: 'startDate', keyPath: 'startDate' },
+        { name: 'endDate', keyPath: 'endDate' },
+        { name: 'createdAt', keyPath: 'createdAt' },
+        { name: 'weekNumber_year', keyPath: ['weekNumber', 'year'] }
+      ]
+    },
+
+    // ============================================================================
     // App Settings and Cache
     // ============================================================================
     {
@@ -433,6 +450,13 @@ export const MIGRATION_SCRIPTS = {
     up: async () => {
       // Migration handled automatically by schema upgrade
       // New stores: userLeagueStats, leagueGroups
+    }
+  },
+  3: {
+    description: 'Add competition cycles table for automated weekly competitions',
+    up: async () => {
+      // Migration handled automatically by schema upgrade
+      // New stores: competitionCycles
     }
   }
   // Future migrations will be added here

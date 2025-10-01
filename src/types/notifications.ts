@@ -80,6 +80,7 @@ export type NotificationType =
   | 'workout_reminder'
   | 'streak_reminder'
   | 'streak_at_risk'
+  | 'streak_milestone_approaching'
   | 'achievement_unlocked'
   | 'level_up'
   | 'milestone_reached'
@@ -89,7 +90,8 @@ export type NotificationType =
   | 'challenge_invitation'
   | 'challenge_update'
   | 'system_update'
-  | 'maintenance';
+  | 'maintenance'
+  | 'test_notification';
 
 export type NotificationCategory = 
   | 'workout'

@@ -246,7 +246,7 @@ export const ChallengeCreator: React.FC<ChallengeCreatorProps> = ({
             </label>
             <select
               value={formData.difficulty_level}
-              onChange={(e) => setFormData(prev => ({ ...prev, difficulty_level: parseInt(e.target.value) as any }))}
+              onChange={(e) => setFormData(prev => ({ ...prev, difficulty_level: parseInt(e.target.value) as 1 | 2 | 3 | 4 | 5 }))}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               <option value={1}>Beginner</option>
@@ -281,7 +281,7 @@ export const ChallengeCreator: React.FC<ChallengeCreatorProps> = ({
             </label>
             <select
               value={formData.type}
-              onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as any }))}
+              onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'individual' | 'group' | 'team' }))}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               {CHALLENGE_TYPES.map(type => (
@@ -298,7 +298,7 @@ export const ChallengeCreator: React.FC<ChallengeCreatorProps> = ({
             </label>
             <select
               value={formData.category}
-              onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value as any }))}
+              onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value as 'strength' | 'cardio' | 'flexibility' | 'endurance' | 'weight_loss' | 'muscle_gain' | 'general_fitness' }))}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               {CHALLENGE_CATEGORIES.map(category => (
@@ -350,7 +350,7 @@ export const ChallengeCreator: React.FC<ChallengeCreatorProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
               <select
                 value={currentRequirement.type}
-                onChange={(e) => setCurrentRequirement(prev => ({ ...prev, type: e.target.value as any }))}
+                onChange={(e) => setCurrentRequirement(prev => ({ ...prev, type: e.target.value as 'workout_count' | 'total_volume' | 'specific_exercise' | 'streak_days' | 'frequency' }))}
                 className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
                 {REQUIREMENT_TYPES.map(type => (
@@ -371,7 +371,7 @@ export const ChallengeCreator: React.FC<ChallengeCreatorProps> = ({
 
               <select
                 value={currentRequirement.timeframe}
-                onChange={(e) => setCurrentRequirement(prev => ({ ...prev, timeframe: e.target.value as any }))}
+                onChange={(e) => setCurrentRequirement(prev => ({ ...prev, timeframe: e.target.value as 'daily' | 'weekly' | 'total' }))}
                 className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
                 <option value="total">Total</option>
@@ -435,7 +435,7 @@ export const ChallengeCreator: React.FC<ChallengeCreatorProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
               <select
                 value={currentReward.type}
-                onChange={(e) => setCurrentReward(prev => ({ ...prev, type: e.target.value as any }))}
+                onChange={(e) => setCurrentReward(prev => ({ ...prev, type: e.target.value as 'xp' | 'badge' | 'title' | 'premium_content' | 'discount' }))}
                 className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
                 {REWARD_TYPES.map(type => (
@@ -458,7 +458,7 @@ export const ChallengeCreator: React.FC<ChallengeCreatorProps> = ({
 
               <select
                 value={currentReward.rarity}
-                onChange={(e) => setCurrentReward(prev => ({ ...prev, rarity: e.target.value as any }))}
+                onChange={(e) => setCurrentReward(prev => ({ ...prev, rarity: e.target.value as 'common' | 'rare' | 'epic' | 'legendary' }))}
                 className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
                 <option value="common">Common</option>

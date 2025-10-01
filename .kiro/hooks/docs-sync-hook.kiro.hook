@@ -4,7 +4,7 @@
   "description": "Monitors TypeScript source files and configuration files for changes and automatically updates project documentation in README.md and docs folder with current feature status and completion percentages",
   "version": "1",
   "when": {
-    "type": "userTriggered",
+    "type": "fileEdited",
     "patterns": [
       "src/**/*.ts",
       "src/**/*.tsx",

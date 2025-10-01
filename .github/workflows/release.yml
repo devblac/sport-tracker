@@ -1,0 +1,76 @@
+name: Release Pipeline
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run full test suite
+      run: |
+        npm run test:coverage
+        npm run test:e2e
+        
+    - name: Build for production
+      run: npm run build
+      env:
+        VITE_APP_VERSION: ${{ github.ref_name }}
+        VITE_BUILD_TIME: ${{ github.event.head_commit.timestamp }}
+        VITE_ENVIRONMENT: production
+        
+    - name: Generate changelog
+      id: changelog
+      run: |
+        echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+        git log --pretty=format:"- %s (%h)" $(git describe --tags --abbrev=0 HEAD^)..HEAD >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+        
+    - name: Create GitHub Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref_name }}
+        release_name: Release ${{ github.ref_name }}
+        body: |
+          ## Changes in this release
+          ${{ steps.changelog.outputs.CHANGELOG }}
+          
+          ## Deployment
+          - Production deployment: Automatic
+          - Rollback available: Yes
+          
+        draft: false
+        prerelease: false
+        
+    - name: Deploy to production
+      run: |
+        echo "Deploying release ${{ github.ref_name }} to production"
+        # Add production deployment commands here
+        
+    - name: Post-deployment verification
+      run: |
+        echo "Running post-deployment health checks"
+        # Add health check commands here

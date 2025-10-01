@@ -18,28 +18,23 @@ export type PostVisibility = 'public' | 'friends' | 'private';
 
 export interface SocialPost {
   id: string;
-  userId: string;
+  user_id: string;
+  user?: {
+    id: string;
+    username: string;
+    display_name: string;
+    avatar_url?: string;
+  };
   type: PostType;
+  content: string;
+  data?: Record<string, any>;
+  image_urls: string[];
+  likes_count: number;
+  comments_count: number;
+  shares_count: number;
   visibility: PostVisibility;
-  
-  // Content
-  title: string;
-  description?: string;
-  imageUrl?: string;
-  
-  // Post-specific data
-  data: PostData;
-  
-  // Engagement
-  likesCount: number;
-  commentsCount: number;
-  sharesCount: number;
-  
-  // Metadata
-  createdAt: Date;
-  updatedAt: Date;
-  isEdited: boolean;
-  isPinned: boolean;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export type PostData = 
@@ -123,22 +118,38 @@ export interface ChallengeCompletedData {
 // Engagement Types
 export interface PostLike {
   id: string;
-  postId: string;
-  userId: string;
-  createdAt: Date;
+  post_id: string;
+  user_id: string;
+  user?: {
+    id: string;
+    username: string;
+    display_name: string;
+    avatar_url?: string;
+  };
+  created_at: Date;
 }
 
 export interface PostComment {
   id: string;
-  postId: string;
-  userId: string;
+  post_id: string;
+  user_id: string;
+  user?: {
+    id: string;
+    username: string;
+    display_name: string;
+    avatar_url?: string;
+  };
+  parent_comment_id?: string;
   content: string;
-  parentCommentId?: string; // for replies
-  likesCount: number;
-  repliesCount: number;
-  createdAt: Date;
-  updatedAt: Date;
-  isEdited: boolean;
+  mentions: string[];
+  likes_count: number;
+  replies_count: number;
+  replies?: PostComment[];
+  is_edited: boolean;
+  is_pinned: boolean;
+  is_deleted: boolean;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export interface PostShare {
@@ -147,6 +158,43 @@ export interface PostShare {
   userId: string;
   platform?: 'internal' | 'facebook' | 'twitter' | 'instagram' | 'whatsapp';
   createdAt: Date;
+}
+
+// Friendship Types
+export interface Friendship {
+  id: string;
+  user_id: string;
+  friend_id: string;
+  friend: {
+    id: string;
+    username: string;
+    display_name: string;
+    avatar_url?: string;
+  };
+  status: 'accepted' | 'pending' | 'blocked';
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface FriendRequest {
+  id: string;
+  requester_id: string;
+  addressee_id: string;
+  requester: {
+    id: string;
+    username: string;
+    display_name: string;
+    avatar_url?: string;
+  };
+  addressee: {
+    id: string;
+    username: string;
+    display_name: string;
+    avatar_url?: string;
+  };
+  status: 'pending' | 'accepted' | 'declined' | 'cancelled';
+  created_at: Date;
+  updated_at: Date;
 }
 
 // Feed Types

@@ -4,6 +4,8 @@ import { Card, CardHeader, CardTitle, CardContent, Button, Input } from '@/compo
 import { validateUserLogin, isValidEmail } from '@/utils';
 import { useAuthStore } from '@/stores';
 import { logger } from '@/utils';
+import { validateFormData, secureApiCall } from '@/utils/securityMiddleware';
+import { useSecurity } from '@/hooks/useSecurity';
 
 interface LoginFormProps {
   onSwitchToRegister: () => void;

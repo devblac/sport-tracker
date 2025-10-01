@@ -1,0 +1,162 @@
+{
+  "categories": {
+    "strength": "Força",
+    "cardio": "Cardio",
+    "flexibility": "Flexibilidade",
+    "balance": "Equilíbrio",
+    "endurance": "Resistência",
+    "power": "Potência",
+    "mobility": "Mobilidade"
+  },
+  "bodyParts": {
+    "chest": "Peito",
+    "back": "Costas",
+    "shoulders": "Ombros",
+    "arms": "Braços",
+    "legs": "Pernas",
+    "core": "Core",
+    "glutes": "Glúteos",
+    "calves": "Panturrilhas",
+    "forearms": "Antebraços",
+    "neck": "Pescoço",
+    "full_body": "Corpo Inteiro"
+  },
+  "muscleGroups": {
+    "pectorals": "Peitorais",
+    "latissimus_dorsi": "Grande Dorsal",
+    "rhomboids": "Romboides",
+    "trapezius": "Trapézio",
+    "deltoids": "Deltoides",
+    "biceps_brachii": "Bíceps",
+    "triceps_brachii": "Tríceps",
+    "quadriceps": "Quadríceps",
+    "hamstrings": "Isquiotibiais",
+    "glutes": "Glúteos",
+    "calves": "Panturrilhas",
+    "abdominals": "Abdominais",
+    "obliques": "Oblíquos",
+    "lower_back": "Lombar",
+    "serratus_anterior": "Serrátil Anterior",
+    "teres_major": "Redondo Maior",
+    "infraspinatus": "Infraespinal",
+    "supraspinatus": "Supraespinal",
+    "subscapularis": "Subescapular"
+  },
+  "equipment": {
+    "none": "Sem Equipamento",
+    "barbell": "Barra",
+    "dumbbell": "Halteres",
+    "machine": "Máquina",
+    "cable": "Cabo",
+    "kettlebell": "Kettlebell",
+    "resistance_band": "Faixa Elástica",
+    "medicine_ball": "Bola Medicinal",
+    "bodyweight": "Peso Corporal",
+    "bench": "Banco",
+    "pull_up_bar": "Barra de Dominadas",
+    "smith_machine": "Máquina Smith",
+    "suspension_trainer": "Treinador em Suspensão",
+    "foam_roller": "Rolo de Espuma",
+    "stability_ball": "Bola de Estabilidade"
+  },
+  "exerciseTypes": {
+    "barbell": "Barra",
+    "dumbbell": "Halteres",
+    "machine": "Máquina",
+    "bodyweight": "Peso Corporal",
+    "cable": "Cabo",
+    "kettlebell": "Kettlebell",
+    "resistance_band": "Faixa Elástica"
+  },
+  "difficulty": {
+    "1": "Iniciante",
+    "2": "Fácil",
+    "3": "Intermediário",
+    "4": "Avançado",
+    "5": "Especialista"
+  },
+  "setTypes": {
+    "normal": "Normal",
+    "warmup": "Aquecimento",
+    "failure": "Até a Falha",
+    "dropset": "Drop Set",
+    "superset": "Superset",
+    "rest_pause": "Descanso-Pausa"
+  },
+  "exerciseNames": {
+    "push_ups": "Flexões",
+    "bench_press": "Supino",
+    "squat": "Agachamento",
+    "deadlift": "Levantamento Terra",
+    "pull_ups": "Barra Fixa",
+    "overhead_press": "Desenvolvimento",
+    "barbell_row": "Remada com Barra",
+    "dumbbell_curl": "Rosca com Halteres",
+    "tricep_dips": "Mergulho de Tríceps",
+    "lunges": "Afundos",
+    "plank": "Prancha",
+    "burpees": "Burpees",
+    "mountain_climbers": "Escaladores",
+    "jumping_jacks": "Polichinelos",
+    "russian_twists": "Giros Russos",
+    "leg_press": "Leg Press",
+    "lat_pulldown": "Puxada no Pulley",
+    "chest_fly": "Crucifixo",
+    "shoulder_shrugs": "Encolhimento de Ombros",
+    "calf_raises": "Elevação de Panturrilha"
+  },
+  "instructions": {
+    "common": {
+      "start_position": "Posição inicial",
+      "movement": "Movimento",
+      "return": "Retorno",
+      "breathing": "Respiração",
+      "keep_core_tight": "Mantenha o core contraído",
+      "control_movement": "Controle o movimento",
+      "full_range_motion": "Amplitude completa de movimento",
+      "squeeze_at_top": "Contraia no topo",
+      "slow_negative": "Negativo lento",
+      "feet_flat_floor": "Pés apoiados no chão",
+      "straight_back": "Costas retas",
+      "shoulders_back": "Ombros para trás"
+    }
+  },
+  "tips": {
+    "categories": {
+      "form": "Forma",
+      "breathing": "Respiração",
+      "progression": "Progressão",
+      "safety": "Segurança",
+      "variation": "Variação",
+      "common_mistakes": "Erros Comuns"
+    }
+  },
+  "variations": {
+    "easier": "Mais Fácil",
+    "harder": "Mais Difícil",
+    "different_angle": "Ângulo Diferente",
+    "different_grip": "Pegada Diferente",
+    "unilateral": "Unilateral",
+    "isometric": "Isométrico",
+    "explosive": "Explosivo",
+    "slow_tempo": "Tempo Lento"
+  },
+  "tags": {
+    "bodyweight": "Peso Corporal",
+    "upper_body": "Membros Superiores",
+    "lower_body": "Membros Inferiores",
+    "full_body": "Corpo Inteiro",
+    "beginner_friendly": "Amigável para Iniciantes",
+    "advanced": "Avançado",
+    "compound": "Composto",
+    "isolation": "Isolamento",
+    "functional": "Funcional",
+    "core_stability": "Estabilidade do Core",
+    "balance": "Equilíbrio",
+    "flexibility": "Flexibilidade",
+    "cardio": "Cardio",
+    "strength": "Força",
+    "power": "Potência",
+    "endurance": "Resistência"
+  }
+}

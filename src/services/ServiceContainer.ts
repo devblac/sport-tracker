@@ -1,66 +1,40 @@
-// ============================================================================
-// SERVICE CONTAINER
-// ============================================================================
-// Dependency injection container for services
-// ============================================================================
+/**
+ * Service Container for Dependency Injection
+ * Replaces singleton pattern with proper DI container
+ */
 
-import { WorkoutService } from './WorkoutService';
-import { NotificationService } from './NotificationService';
-import { SyncService } from './SyncService';
-import { WorkoutAutoSaveService } from './WorkoutAutoSaveService';
-import { WorkoutRecoveryService } from './WorkoutRecoveryService';
-
-export interface ServiceDependencies {
-  workoutService: WorkoutService;
-  notificationService: NotificationService;
-  syncService: SyncService;
-  autoSaveService: WorkoutAutoSaveService;
+interface ServiceFactory<T> {
+  create(): T;
+  singleton?: boolean;
 }
 
-class ServiceContainer {
-  private static instance: ServiceContainer;
-  private services: Map<string, any> = new Map();
+export class ServiceContainer {
+  private services = new Map<string, any>();
+  private factories = new Map<string, ServiceFactory<any>>();
 
-  private constructor() {}
+  register<T>(name: string, factory: ServiceFactory<T>): void {
+    this.factories.set(name, factory);
+  }
 
-  public static getInstance(): ServiceContainer {
-    if (!ServiceContainer.instance) {
-      ServiceContainer.instance = new ServiceContainer();
+  get<T>(name: string): T {
+    const factory = this.factories.get(name);
+    if (!factory) {
+      throw new Error(`Service ${name} not registered`);
     }
-    return ServiceContainer.instance;
-  }
 
-  public register<T>(key: string, service: T): void {
-    this.services.set(key, service);
-  }
-
-  public get<T>(key: string): T {
-    const service = this.services.get(key);
-    if (!service) {
-      throw new Error(`Service ${key} not registered`);
+    if (factory.singleton) {
+      if (!this.services.has(name)) {
+        this.services.set(name, factory.create());
+      }
+      return this.services.get(name);
     }
-    return service;
+
+    return factory.create();
   }
 
-  public initialize(): ServiceDependencies {
-    // Initialize services in correct order
-    const workoutService = WorkoutService.getInstance();
-    const notificationService = NotificationService.getInstance();
-    const syncService = new SyncService();
-    const autoSaveService = WorkoutAutoSaveService.getInstance();
-
-    this.register('workoutService', workoutService);
-    this.register('notificationService', notificationService);
-    this.register('syncService', syncService);
-    this.register('autoSaveService', autoSaveService);
-
-    return {
-      workoutService,
-      notificationService,
-      syncService,
-      autoSaveService
-    };
+  clear(): void {
+    this.services.clear();
   }
 }
 
-export const serviceContainer = ServiceContainer.getInstance();
+export const serviceContainer = new ServiceContainer();

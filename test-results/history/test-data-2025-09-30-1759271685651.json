@@ -1,0 +1,21 @@
+{
+  "testRuns": [],
+  "testSuites": [
+    {
+      "suiteName": "Full Test Suite",
+      "buildNumber": 1759271668908,
+      "timestamp": "2025-09-30T22:34:45.628Z",
+      "totalTests": 0,
+      "passedTests": 0,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "duration": 16639
+    }
+  ],
+  "metadata": {
+    "version": "1.0.0",
+    "lastUpdated": "2025-09-30T22:34:45.651Z",
+    "totalBuilds": 1,
+    "environment": "test"
+  }
+}

@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { storage, logger } from '@/utils';
 import { supabaseAuthService } from './supabaseAuthService';
-import { syncService } from './syncService';
+import { syncService } from './SyncService';
 import type { User } from '@/schemas/user';
 import type { Workout } from '@/types/workoutModels';
 
@@ -313,7 +313,9 @@ class CloudBackupService {
     try {
       // Sync workouts to cloud
       for (const workout of workouts) {
-        syncService.queueForSync('workout', 'create', workout, userId);
+        syncService.getInstance().queueOperation('CREATE', 'workout', workout).catch(error => {
+          logger.warn('Workout sync queue failed', error);
+        });
       }
       return true;
     } catch (error) {
@@ -326,7 +328,9 @@ class CloudBackupService {
     try {
       // Sync achievements to cloud
       for (const achievement of achievements) {
-        syncService.queueForSync('achievement', 'create', achievement, userId);
+        syncService.getInstance().queueOperation('CREATE', 'achievement', achievement).catch(error => {
+          logger.warn('Achievement sync queue failed', error);
+        });
       }
       return true;
     } catch (error) {
@@ -337,7 +341,9 @@ class CloudBackupService {
 
   private async syncProfile(userId: string, profile: any): Promise<boolean> {
     try {
-      syncService.queueForSync('profile', 'update', profile, userId);
+      syncService.getInstance().queueOperation('UPDATE', 'profile', profile).catch(error => {
+        logger.warn('Profile sync queue failed', error);
+      });
       return true;
     } catch (error) {
       logger.error('Failed to sync profile', error);

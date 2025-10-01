@@ -45,6 +45,7 @@ export const calculateVolume = (weight: number, reps: number): number => {
 
 export const calculateOneRepMax = (weight: number, reps: number): number => {
   if (reps === 1) return weight;
+  if (reps === 0) return 0;
   // Epley formula
   return Math.round(weight * (1 + reps / 30));
 };

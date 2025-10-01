@@ -5,21 +5,30 @@ export interface Challenge {
   id: string;
   name: string;
   description: string;
+  short_description?: string;
   type: 'individual' | 'group' | 'global';
   category: 'strength' | 'consistency' | 'volume' | 'endurance';
+  difficulty: 'beginner' | 'easy' | 'intermediate' | 'advanced' | 'expert';
+  duration_days: number;
   start_date: Date;
   end_date: Date;
+  status: 'draft' | 'upcoming' | 'active' | 'ended' | 'cancelled';
+  current_participants: number;
+  max_participants?: number;
+  is_featured?: boolean;
+  rules: string[];
+  scoring_method: 'completion' | 'points' | 'time' | 'volume';
   requirements: ChallengeRequirement[];
   rewards: ChallengeReward[];
-  participants_count: number;
-  max_participants?: number;
   created_by: string;
-  is_active: boolean;
-  difficulty_level: 1 | 2 | 3 | 4 | 5;
+  difficulty_level: 1 | 2 | 3 | 4 | 5; // Keep for backward compatibility
   image_url?: string;
   tags: string[];
   created_at: Date;
   updated_at: Date;
+  // Legacy fields for backward compatibility
+  participants_count?: number; // Use current_participants instead
+  is_active?: boolean; // Use status instead
 }
 
 export interface ChallengeRequirement {

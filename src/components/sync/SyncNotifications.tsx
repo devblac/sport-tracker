@@ -26,41 +26,41 @@ interface SyncNotification {
 }
 
 export const SyncNotifications: React.FC = () => {
-  const { syncResult, conflicts, isOnline, lastSyncTime } = useSync();
+  const { status, pendingConflicts, lastSyncResult } = useSync();
   const [notifications, setNotifications] = useState<SyncNotification[]>([]);
 
   // Handle sync results
   useEffect(() => {
-    if (!syncResult || !lastSyncTime) return;
+    if (!lastSyncResult || !status.lastSyncTime) return;
 
     const notification: SyncNotification = {
       id: `sync-${Date.now()}`,
-      type: syncResult.success ? 'success' : 'error',
-      title: syncResult.success ? 'Sync Complete' : 'Sync Failed',
-      message: syncResult.success 
-        ? `Successfully synced ${syncResult.synced} items`
-        : `Failed to sync ${syncResult.failed} items`,
+      type: lastSyncResult.success ? 'success' : 'error',
+      title: lastSyncResult.success ? 'Sync Complete' : 'Sync Failed',
+      message: lastSyncResult.success 
+        ? `Successfully synced ${lastSyncResult.operationsProcessed || 0} items`
+        : `Failed to sync items`,
       timestamp: Date.now(),
-      autoHide: syncResult.success,
+      autoHide: lastSyncResult.success,
       duration: 5000,
     };
 
-    if (!syncResult.success && syncResult.errors.length > 0) {
-      notification.message += `: ${syncResult.errors[0]}`;
+    if (!lastSyncResult.success && lastSyncResult.error) {
+      notification.message += `: ${lastSyncResult.error}`;
     }
 
     addNotification(notification);
-  }, [syncResult, lastSyncTime]);
+  }, [lastSyncResult, status.lastSyncTime]);
 
   // Handle conflicts
   useEffect(() => {
-    if (conflicts.length === 0) return;
+    if (!pendingConflicts || pendingConflicts.length === 0) return;
 
     const notification: SyncNotification = {
       id: `conflicts-${Date.now()}`,
       type: 'conflict',
       title: 'Sync Conflicts',
-      message: `${conflicts.length} conflict${conflicts.length > 1 ? 's' : ''} need${conflicts.length === 1 ? 's' : ''} resolution`,
+      message: `${pendingConflicts.length} conflict${pendingConflicts.length > 1 ? 's' : ''} need${pendingConflicts.length === 1 ? 's' : ''} resolution`,
       timestamp: Date.now(),
       autoHide: false,
       action: {
@@ -73,21 +73,21 @@ export const SyncNotifications: React.FC = () => {
     };
 
     addNotification(notification);
-  }, [conflicts.length]);
+  }, [pendingConflicts?.length]);
 
   // Handle online/offline status
   useEffect(() => {
     const handleOnlineChange = () => {
       const notification: SyncNotification = {
         id: `connection-${Date.now()}`,
-        type: isOnline ? 'online' : 'offline',
-        title: isOnline ? 'Connected' : 'You\'re Offline',
-        message: isOnline 
+        type: status.isOnline ? 'online' : 'offline',
+        title: status.isOnline ? 'Connected' : 'You\'re Offline',
+        message: status.isOnline 
           ? 'Connection restored. Syncing pending changes...'
           : 'Working offline. Changes will sync when connection is restored.',
         timestamp: Date.now(),
         autoHide: true,
-        duration: isOnline ? 3000 : 5000,
+        duration: status.isOnline ? 3000 : 5000,
       };
 
       addNotification(notification);
@@ -96,7 +96,7 @@ export const SyncNotifications: React.FC = () => {
     // Only show notification if this is a change, not initial state
     const timer = setTimeout(handleOnlineChange, 100);
     return () => clearTimeout(timer);
-  }, [isOnline]);
+  }, [status.isOnline]);
 
   const addNotification = (notification: SyncNotification) => {
     setNotifications(prev => {

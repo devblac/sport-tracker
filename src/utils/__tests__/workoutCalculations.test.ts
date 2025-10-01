@@ -289,7 +289,7 @@ describe('workoutCalculations', () => {
       
       const max1RMRecord = records.find(r => r.type === 'max_1rm');
       expect(max1RMRecord).toBeDefined();
-      expect(max1RMRecord?.value).toBe(137); // calculateOneRepMax(110, 6)
+      expect(max1RMRecord?.value).toBe(133); // Max 1RM from all sets (100kg×10 or 105kg×8)
     });
 
     it('should not find records if no improvement', () => {

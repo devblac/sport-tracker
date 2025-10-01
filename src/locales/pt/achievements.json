@@ -1,0 +1,227 @@
+{
+  "categories": {
+    "consistency": "Consistência",
+    "strength": "Força",
+    "volume": "Volume",
+    "milestone": "Marco",
+    "social": "Social",
+    "special": "Especial",
+    "endurance": "Resistência",
+    "technique": "Técnica"
+  },
+  "rarity": {
+    "common": "Comum",
+    "uncommon": "Incomum",
+    "rare": "Raro",
+    "epic": "Épico",
+    "legendary": "Lendário"
+  },
+  "achievements": {
+    "streak_3_days": {
+      "name": "Começando",
+      "description": "Complete treinos por 3 dias consecutivos"
+    },
+    "streak_7_days": {
+      "name": "Guerreiro da Semana",
+      "description": "Mantenha uma sequência de 7 dias de treino"
+    },
+    "streak_14_days": {
+      "name": "Fortaleza de Duas Semanas",
+      "description": "Mantenha uma sequência de 14 dias de treino"
+    },
+    "streak_30_days": {
+      "name": "Mestre do Mês",
+      "description": "Mantenha uma sequência de 30 dias de treino"
+    },
+    "streak_60_days": {
+      "name": "Lenda de Dois Meses",
+      "description": "Mantenha uma sequência de 60 dias de treino"
+    },
+    "streak_100_days": {
+      "name": "Centurião do Fitness",
+      "description": "Mantenha uma sequência de 100 dias de treino"
+    },
+    "first_workout": {
+      "name": "Primeiro Passo",
+      "description": "Complete seu primeiro treino"
+    },
+    "workout_10": {
+      "name": "Dezena Perfeita",
+      "description": "Complete 10 treinos"
+    },
+    "workout_50": {
+      "name": "Meio Século",
+      "description": "Complete 50 treinos"
+    },
+    "workout_100": {
+      "name": "Século Completo",
+      "description": "Complete 100 treinos"
+    },
+    "workout_250": {
+      "name": "Quarto de Mil",
+      "description": "Complete 250 treinos"
+    },
+    "workout_500": {
+      "name": "Meio Milhar",
+      "description": "Complete 500 treinos"
+    },
+    "workout_1000": {
+      "name": "Mestre do Milhar",
+      "description": "Complete 1000 treinos"
+    },
+    "volume_1000kg": {
+      "name": "Primeira Tonelada",
+      "description": "Levante um total de 1.000 kg"
+    },
+    "volume_10000kg": {
+      "name": "Dez Toneladas",
+      "description": "Levante um total de 10.000 kg"
+    },
+    "volume_50000kg": {
+      "name": "Cinquenta Toneladas",
+      "description": "Levante um total de 50.000 kg"
+    },
+    "volume_100000kg": {
+      "name": "Cem Toneladas",
+      "description": "Levante um total de 100.000 kg"
+    },
+    "bench_bodyweight": {
+      "name": "Supino Peso Corporal",
+      "description": "Faça supino com seu peso corporal"
+    },
+    "squat_bodyweight": {
+      "name": "Agachamento Peso Corporal",
+      "description": "Faça agachamento com seu peso corporal"
+    },
+    "deadlift_bodyweight": {
+      "name": "Terra Peso Corporal",
+      "description": "Faça levantamento terra com seu peso corporal"
+    },
+    "bench_1_5x_bodyweight": {
+      "name": "Supino 1.5x",
+      "description": "Faça supino com 1.5 vezes seu peso corporal"
+    },
+    "squat_1_5x_bodyweight": {
+      "name": "Agachamento 1.5x",
+      "description": "Faça agachamento com 1.5 vezes seu peso corporal"
+    },
+    "deadlift_2x_bodyweight": {
+      "name": "Terra 2x",
+      "description": "Faça levantamento terra com 2 vezes seu peso corporal"
+    },
+    "first_friend": {
+      "name": "Primeiro Parceiro",
+      "description": "Adicione seu primeiro amigo da academia"
+    },
+    "social_butterfly": {
+      "name": "Borboleta Social",
+      "description": "Adicione 10 amigos da academia"
+    },
+    "gym_family": {
+      "name": "Família da Academia",
+      "description": "Adicione 25 amigos da academia"
+    },
+    "first_like": {
+      "name": "Primeira Aprovação",
+      "description": "Receba sua primeira curtida em uma publicação"
+    },
+    "popular_post": {
+      "name": "Publicação Popular",
+      "description": "Receba 50 curtidas em uma única publicação"
+    },
+    "viral_content": {
+      "name": "Conteúdo Viral",
+      "description": "Receba 100 curtidas em uma única publicação"
+    },
+    "early_bird": {
+      "name": "Madrugador",
+      "description": "Complete 10 treinos antes das 7h"
+    },
+    "night_owl": {
+      "name": "Coruja Noturna",
+      "description": "Complete 10 treinos depois das 21h"
+    },
+    "weekend_warrior": {
+      "name": "Guerreiro de Fim de Semana",
+      "description": "Complete 20 treinos de fim de semana"
+    },
+    "perfect_week": {
+      "name": "Semana Perfeita",
+      "description": "Treine todos os dias de uma semana"
+    },
+    "challenge_winner": {
+      "name": "Vencedor de Desafio",
+      "description": "Vença seu primeiro desafio em grupo"
+    },
+    "challenge_champion": {
+      "name": "Campeão de Desafios",
+      "description": "Vença 5 desafios em grupo"
+    },
+    "mentor": {
+      "name": "Mentor",
+      "description": "Ajude 5 usuários iniciantes"
+    },
+    "fitness_guru": {
+      "name": "Guru do Fitness",
+      "description": "Alcance o nível 50"
+    },
+    "xp_master": {
+      "name": "Mestre de XP",
+      "description": "Acumule 100.000 pontos de experiência"
+    }
+  },
+  "titles": {
+    "consistent": "Consistente",
+    "warrior": "Guerreiro",
+    "champion": "Campeão",
+    "master": "Mestre",
+    "legend": "Lenda",
+    "guru": "Guru",
+    "mentor": "Mentor",
+    "beast": "Fera",
+    "iron": "Ferro",
+    "steel": "Aço",
+    "diamond": "Diamante",
+    "elite": "Elite",
+    "pro": "Pro",
+    "veteran": "Veterano",
+    "rookie": "Novato"
+  },
+  "requirements": {
+    "types": {
+      "streak_days": "Dias de sequência",
+      "workout_count": "Número de treinos",
+      "total_volume": "Volume total",
+      "exercise_pr": "Recorde pessoal no exercício",
+      "social_friends": "Amigos adicionados",
+      "social_likes": "Curtidas recebidas",
+      "time_based": "Baseado em tempo",
+      "level_reached": "Nível alcançado",
+      "xp_earned": "XP ganho",
+      "challenge_wins": "Vitórias em desafios"
+    }
+  },
+  "rewards": {
+    "xp": "XP",
+    "title": "Título",
+    "badge": "Distintivo",
+    "unlock": "Desbloqueio"
+  },
+  "status": {
+    "locked": "Bloqueado",
+    "unlocked": "Desbloqueado",
+    "in_progress": "Em Progresso",
+    "completed": "Completado",
+    "secret": "Secreto"
+  },
+  "progress": {
+    "current": "Atual",
+    "target": "Objetivo",
+    "remaining": "Restante",
+    "percentage": "Porcentagem",
+    "days_left": "Dias restantes",
+    "almost_there": "Quase lá!",
+    "keep_going": "Continue assim!",
+    "well_done": "Muito bem!"
+  }
+}

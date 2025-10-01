@@ -54,9 +54,14 @@ export const RealTimeNotifications: React.FC<RealTimeNotificationsProps> = ({
     onlyWhenVisible: false // Show notifications even when tab is hidden
   });
 
-  // Handle new notifications
+  // Handle new notifications with duplicate prevention
+  const processedNotificationIds = useRef(new Set<string>());
+  
   useEffect(() => {
-    if (data) {
+    if (data && data.id && !processedNotificationIds.current.has(data.id)) {
+      // Mark as processed to prevent duplicates
+      processedNotificationIds.current.add(data.id);
+      
       const newNotification: ActiveNotification = {
         ...data,
         timestamp: Date.now(),
@@ -67,12 +72,16 @@ export const RealTimeNotifications: React.FC<RealTimeNotificationsProps> = ({
 
       // Add notification with entrance animation
       setNotifications(prev => {
+        // Check if notification already exists
+        const exists = prev.some(notif => notif.id === newNotification.id);
+        if (exists) return prev;
+        
         const updated = [newNotification, ...prev].slice(0, maxNotifications);
         return updated;
       });
 
       // Trigger entrance animation
-      setTimeout(() => {
+      const animationTimer = setTimeout(() => {
         setNotifications(prev => 
           prev.map(notif => 
             notif.id === newNotification.id 
@@ -89,12 +98,31 @@ export const RealTimeNotifications: React.FC<RealTimeNotificationsProps> = ({
 
       // Auto-close if specified
       if (newNotification.autoClose && newNotification.autoClose > 0 && !newNotification.persistent) {
-        setTimeout(() => {
+        const autoCloseTimer = setTimeout(() => {
           removeNotification(newNotification.id);
         }, newNotification.autoClose);
+        
+        // Store timer reference for cleanup
+        return () => {
+          clearTimeout(animationTimer);
+          clearTimeout(autoCloseTimer);
+        };
       }
+      
+      return () => {
+        clearTimeout(animationTimer);
+      };
     }
-  }, [data, defaultAutoClose, maxNotifications, soundEnabled]);
+  }, [data, defaultAutoClose, maxNotifications, soundEnabled, removeNotification, playNotificationSound]);
+
+  // Cleanup processed IDs periodically to prevent memory leaks
+  useEffect(() => {
+    const cleanup = setInterval(() => {
+      processedNotificationIds.current.clear();
+    }, 300000); // Clear every 5 minutes
+    
+    return () => clearInterval(cleanup);
+  }, []);
 
   // Remove notification with animation
   const removeNotification = useCallback((id: string) => {

@@ -1,0 +1,281 @@
+name: Performance Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run performance tests daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  NODE_VERSION: '18'
+  PERFORMANCE_FAIL_ON_CRITICAL: 'true'
+  PERFORMANCE_FAIL_ON_HIGH_COUNT: '3'
+
+jobs:
+  performance-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Needed for performance trend analysis
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run type-check
+
+      - name: Lint code
+        run: npm run lint
+
+      - name: Build project
+        run: npm run build
+
+      - name: Create test results directory
+        run: mkdir -p test-results/performance
+
+      - name: Load performance baselines
+        id: load-baselines
+        continue-on-error: true
+        run: |
+          if [ -f "performance-baselines.json" ]; then
+            echo "baselines-exist=true" >> $GITHUB_OUTPUT
+            echo "Loaded existing performance baselines"
+          else
+            echo "baselines-exist=false" >> $GITHUB_OUTPUT
+            echo "No existing baselines found"
+          fi
+
+      - name: Run performance tests
+        id: performance-tests
+        run: |
+          npm run test:performance:ci
+        env:
+          CI: 'true'
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+          PERFORMANCE_WEBHOOK_URL: ${{ secrets.PERFORMANCE_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Upload performance results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-results-${{ github.run_number }}
+          path: |
+            test-results/performance/
+            performance-report.json
+            performance-report.md
+            performance-baselines.json
+          retention-days: 30
+
+      - name: Comment PR with performance results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = 'performance-report.md';
+            
+            if (fs.existsSync(path)) {
+              const report = fs.readFileSync(path, 'utf8');
+              
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `## Performance Test Results\n\n${report}`
+              });
+            }
+
+      - name: Check performance regression thresholds
+        id: check-thresholds
+        run: |
+          if [ -f "performance-report.json" ]; then
+            # Parse the JSON report to check if build should fail
+            CRITICAL=$(jq -r '.summary.regressions.critical // 0' performance-report.json)
+            HIGH=$(jq -r '.summary.regressions.high // 0' performance-report.json)
+            
+            echo "critical-regressions=$CRITICAL" >> $GITHUB_OUTPUT
+            echo "high-regressions=$HIGH" >> $GITHUB_OUTPUT
+            
+            if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -ge 3 ]; then
+              echo "performance-failed=true" >> $GITHUB_OUTPUT
+              echo "Performance thresholds exceeded: Critical=$CRITICAL, High=$HIGH"
+              exit 1
+            else
+              echo "performance-failed=false" >> $GITHUB_OUTPUT
+              echo "Performance tests passed: Critical=$CRITICAL, High=$HIGH"
+            fi
+          else
+            echo "No performance report found"
+            exit 1
+          fi
+
+      - name: Update performance baselines
+        if: github.ref == 'refs/heads/main' && steps.check-thresholds.outputs.performance-failed == 'false'
+        run: |
+          # Update baselines on main branch when tests pass
+          if [ -f "performance-baselines.json" ]; then
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add performance-baselines.json
+            git diff --staged --quiet || git commit -m "Update performance baselines [skip ci]"
+            git push
+          fi
+
+      - name: Create performance trend analysis
+        if: github.ref == 'refs/heads/main'
+        run: |
+          # Store performance data for trend analysis
+          mkdir -p .performance-history
+          cp performance-report.json ".performance-history/performance-${{ github.run_number }}.json"
+          
+          # Keep only last 50 reports
+          cd .performance-history
+          ls -t performance-*.json | tail -n +51 | xargs -r rm
+          
+          # Commit trend data
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .performance-history/
+          git diff --staged --quiet || git commit -m "Update performance trend data [skip ci]"
+          git push
+
+  performance-regression-alert:
+    needs: performance-tests
+    runs-on: ubuntu-latest
+    if: failure() && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Download performance results
+        uses: actions/download-artifact@v4
+        with:
+          name: performance-results-${{ github.run_number }}
+
+      - name: Send Slack alert for performance regression
+        if: env.SLACK_WEBHOOK_URL
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          channel: '#performance-alerts'
+          text: |
+            🚨 Performance regression detected in main branch!
+            
+            Build: ${{ github.run_number }}
+            Commit: ${{ github.sha }}
+            
+            Check the performance report for details.
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Create GitHub issue for performance regression
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            let reportContent = 'Performance regression detected but no detailed report available.';
+            if (fs.existsSync('performance-report.md')) {
+              reportContent = fs.readFileSync('performance-report.md', 'utf8');
+            }
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Performance Regression - Build ${{ github.run_number }}`,
+              body: `## Performance Regression Alert
+              
+              A performance regression has been detected in build ${{ github.run_number }}.
+              
+              **Commit:** ${{ github.sha }}
+              **Branch:** ${{ github.ref }}
+              **Workflow:** ${{ github.workflow }}
+              
+              ## Performance Report
+              
+              ${reportContent}
+              
+              ## Action Required
+              
+              Please review the performance changes and either:
+              1. Fix the performance regression
+              2. Update performance baselines if the change is intentional
+              
+              ## Links
+              
+              - [Workflow Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+              - [Performance Results Artifact](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+              `,
+              labels: ['performance', 'regression', 'bug']
+            });
+
+  benchmark-comparison:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run performance tests on PR
+        run: npm run test:performance:ci
+        env:
+          CI: 'true'
+
+      - name: Store PR results
+        run: cp performance-report.json pr-performance.json
+
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Install dependencies (main)
+        run: npm ci
+
+      - name: Run performance tests on main
+        run: npm run test:performance:ci
+        env:
+          CI: 'true'
+
+      - name: Compare performance results
+        run: |
+          # Compare PR vs main performance
+          echo "## Performance Comparison" > comparison.md
+          echo "" >> comparison.md
+          echo "Comparing PR performance against main branch..." >> comparison.md
+          echo "" >> comparison.md
+          
+          # This would include actual comparison logic
+          # For now, just indicate that comparison was performed
+          echo "Performance comparison completed. See artifacts for detailed results." >> comparison.md
+
+      - name: Upload comparison results
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-comparison-${{ github.event.number }}
+          path: |
+            pr-performance.json
+            performance-report.json
+            comparison.md

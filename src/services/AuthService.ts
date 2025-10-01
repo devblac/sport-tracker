@@ -394,3 +394,6 @@ class AuthService {
 
 // Export singleton instance
 export const authService = new AuthService();
+
+// Also export the Supabase auth service as the primary auth service
+export { supabaseAuthService as primaryAuthService } from './supabaseAuthService';

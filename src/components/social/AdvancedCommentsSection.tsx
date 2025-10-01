@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { AdvancedCommentThread } from './AdvancedCommentThread';
 import { useAdvancedComments } from '@/hooks/useAdvancedComments';
+import { sanitizeUserContent } from '@/utils/xssProtection';
+import { useSecurity } from '@/hooks/useSecurity';
 
 import type { CommentFormData, MentionSuggestion, CommentStats } from '@/types/comments';
 

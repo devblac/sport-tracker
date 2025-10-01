@@ -265,9 +265,16 @@ export const ChallengeRewardsSystem: React.FC<ChallengeRewardsSystemProps> = ({
 };
 
 // Individual reward card component
+interface RewardStyling {
+  bg: string;
+  border: string;
+  glow: string;
+  text: string;
+}
+
 interface RewardCardProps {
   reward: ChallengeReward;
-  styling: any;
+  styling: RewardStyling;
   unlocked: boolean;
   claimed: boolean;
   claiming: boolean;

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import { BottomNavigation } from '@/components/shared/BottomNavigation';
+import { DynamicNavigation } from '@/components/navigation/DynamicNavigation';
+import { FeatureDiscoverySystem } from '@/components/navigation/FeatureDiscoverySystem';
 import { ToastContainer } from '@/components/ui/Toast';
 import { UpdateNotification } from '@/components/offline/UpdateNotification';
 import { OfflineIndicator, SyncFAB } from '@/components/offline/OfflineIndicator';
@@ -33,8 +34,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         </div>
       </main>
       
-      {/* Bottom Navigation */}
-      <BottomNavigation />
+      {/* Dynamic Navigation */}
+      <DynamicNavigation />
+      
+      {/* Feature Discovery System */}
+      <FeatureDiscoverySystem />
       
       {/* Toast Notifications */}
       <ToastContainer />

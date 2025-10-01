@@ -4,7 +4,7 @@
  * Allows users to configure their notification preferences.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Bell, 
@@ -17,9 +17,17 @@ import {
   Moon,
   Settings,
   Check,
-  X
+  X,
+  Shield,
+  ShieldOff,
+  TestTube,
+  Volume2,
+  VolumeX,
+  Calendar,
+  AlertTriangle
 } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
+import { notificationService } from '@/services/notificationService';
 
 interface NotificationSettingsProps {
   userId: string;
@@ -39,6 +47,17 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
   } = useNotifications(userId);
 
   const [showTimePickerFor, setShowTimePickerFor] = useState<'start' | 'end' | null>(null);
+  const [doNotDisturbMode, setDoNotDisturbMode] = useState(false);
+  const [testNotificationSent, setTestNotificationSent] = useState(false);
+  const [notificationStats, setNotificationStats] = useState<any>(null);
+
+  useEffect(() => {
+    // Load do not disturb mode status
+    setDoNotDisturbMode(notificationService.getDoNotDisturbMode());
+    
+    // Load notification stats
+    setNotificationStats(notificationService.getNotificationStats());
+  }, []);
 
   const handleToggleSetting = async (key: keyof typeof settings, value: boolean) => {
     if (!settings) return;
@@ -82,6 +101,31 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
       frequency: {
         ...settings.frequency,
         [type]: value
+      }
+    });
+  };
+
+  const handleDoNotDisturbToggle = (enabled: boolean, duration?: number) => {
+    notificationService.setDoNotDisturbMode(enabled, duration);
+    setDoNotDisturbMode(enabled);
+  };
+
+  const handleTestNotification = async () => {
+    const success = await notificationService.testNotification();
+    setTestNotificationSent(success);
+    
+    if (success) {
+      setTimeout(() => setTestNotificationSent(false), 3000);
+    }
+  };
+
+  const handleCustomScheduleChange = async (days: number[], times: string[]) => {
+    if (!settings) return;
+    
+    await updateSettings({
+      customSchedule: {
+        days,
+        times
       }
     });
   };
@@ -455,6 +499,198 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                 <option value="daily">Diario</option>
                 <option value="weekly">Semanal</option>
               </select>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Do Not Disturb Mode */}
+      {settings.enabled && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+            {doNotDisturbMode ? (
+              <ShieldOff className="w-5 h-5 mr-2 text-red-500" />
+            ) : (
+              <Shield className="w-5 h-5 mr-2 text-green-500" />
+            )}
+            Modo No Molestar
+          </h3>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+              <div className="flex items-center space-x-3">
+                {doNotDisturbMode ? (
+                  <VolumeX className="w-5 h-5 text-red-500" />
+                ) : (
+                  <Volume2 className="w-5 h-5 text-green-500" />
+                )}
+                <div>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    {doNotDisturbMode ? 'Activado' : 'Desactivado'}
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {doNotDisturbMode 
+                      ? 'Solo notificaciones urgentes (racha en riesgo)'
+                      : 'Todas las notificaciones habilitadas'
+                    }
+                  </p>
+                </div>
+              </div>
+              
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={doNotDisturbMode}
+                  onChange={(e) => handleDoNotDisturbToggle(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-red-600"></div>
+              </label>
+            </div>
+
+            {!doNotDisturbMode && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="grid grid-cols-2 gap-3"
+              >
+                <button
+                  onClick={() => handleDoNotDisturbToggle(true, 30)}
+                  className="px-4 py-2 bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 rounded-lg hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors"
+                >
+                  30 minutos
+                </button>
+                <button
+                  onClick={() => handleDoNotDisturbToggle(true, 60)}
+                  className="px-4 py-2 bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 rounded-lg hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors"
+                >
+                  1 hora
+                </button>
+                <button
+                  onClick={() => handleDoNotDisturbToggle(true, 120)}
+                  className="px-4 py-2 bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 rounded-lg hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors"
+                >
+                  2 horas
+                </button>
+                <button
+                  onClick={() => handleDoNotDisturbToggle(true)}
+                  className="px-4 py-2 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
+                >
+                  Hasta desactivar
+                </button>
+              </motion.div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Streak Risk Notifications */}
+      {settings.enabled && settings.streakReminders && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+            <AlertTriangle className="w-5 h-5 mr-2 text-orange-500" />
+            Notificaciones de Racha en Riesgo
+          </h3>
+
+          <div className="space-y-4">
+            <div className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+              <div className="flex items-start space-x-3">
+                <AlertTriangle className="w-5 h-5 text-orange-500 mt-0.5" />
+                <div>
+                  <p className="font-medium text-orange-800 dark:text-orange-200">
+                    Notificaciones Urgentes
+                  </p>
+                  <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">
+                    Las notificaciones de racha en riesgo tienen prioridad urgente y se muestran 
+                    incluso durante horas de silencio y modo no molestar.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-3 border border-gray-200 dark:border-gray-600 rounded-lg">
+                <p className="font-medium text-gray-900 dark:text-white">Alertas Tempranas</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">6 horas antes del límite</p>
+              </div>
+              <div className="p-3 border border-gray-200 dark:border-gray-600 rounded-lg">
+                <p className="font-medium text-gray-900 dark:text-white">Alertas Urgentes</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">2 horas antes del límite</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Test Notifications */}
+      {settings.enabled && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+            <TestTube className="w-5 h-5 mr-2" />
+            Probar Notificaciones
+          </h3>
+
+          <div className="space-y-4">
+            <p className="text-gray-600 dark:text-gray-400">
+              Envía una notificación de prueba para verificar que todo funciona correctamente.
+            </p>
+            
+            <button
+              onClick={handleTestNotification}
+              disabled={!permission.granted}
+              className={`w-full px-4 py-3 rounded-lg font-medium transition-colors ${
+                testNotificationSent
+                  ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+                  : permission.granted
+                  ? 'bg-blue-500 hover:bg-blue-600 text-white'
+                  : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              {testNotificationSent ? (
+                <span className="flex items-center justify-center">
+                  <Check className="w-4 h-4 mr-2" />
+                  ¡Notificación enviada!
+                </span>
+              ) : (
+                'Enviar Notificación de Prueba'
+              )}
+            </button>
+
+            {!permission.granted && (
+              <p className="text-sm text-red-600 dark:text-red-400">
+                Necesitas permitir notificaciones primero
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Notification Statistics */}
+      {notificationStats && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+            <BarChart3 className="w-5 h-5 mr-2" />
+            Estadísticas de Notificaciones
+          </h3>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {Object.values(notificationStats.sent).reduce((a: number, b: number) => a + b, 0)}
+              </p>
+              <p className="text-sm text-blue-600 dark:text-blue-400">Enviadas</p>
+            </div>
+            <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+              <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                {Object.values(notificationStats.clicked).reduce((a: number, b: number) => a + b, 0)}
+              </p>
+              <p className="text-sm text-green-600 dark:text-green-400">Clickeadas</p>
+            </div>
+            <div className="text-center p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+              <p className="text-2xl font-bold text-red-600 dark:text-red-400">
+                {Object.values(notificationStats.dismissed).reduce((a: number, b: number) => a + b, 0)}
+              </p>
+              <p className="text-sm text-red-600 dark:text-red-400">Descartadas</p>
             </div>
           </div>
         </div>

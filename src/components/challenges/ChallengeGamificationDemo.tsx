@@ -23,8 +23,8 @@ interface DemoState {
   currentCelebration: CelebrationData | null;
   showWinnerCelebration: boolean;
   rewardResult: RewardCalculationResult | null;
-  milestones: any[];
-  specialEvents: any[];
+  milestones: Array<{ id: string; name: string; progress: number; total: number; }>;
+  specialEvents: Array<{ id: string; name: string; type: string; active: boolean; }>;
 }
 
 export const ChallengeGamificationDemo: React.FC = () => {
@@ -441,7 +441,7 @@ export const ChallengeGamificationDemo: React.FC = () => {
             ].map(demo => (
               <button
                 key={demo.key}
-                onClick={() => setActiveDemo(demo.key as any)}
+                onClick={() => setActiveDemo(demo.key as 'basic' | 'advanced' | 'realtime' | 'social')}
                 className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 ${
                   activeDemo === demo.key
                     ? `bg-gradient-to-r ${demo.color} text-white shadow-lg`

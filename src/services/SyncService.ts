@@ -1,491 +1,404 @@
-import { supabase } from '@/lib/supabase';
-import { storage, logger } from '@/utils';
-import { supabaseAuthService } from './supabaseAuthService';
-import type { User } from '@/schemas/user';
+/**
+ * Comprehensive Sync Service
+ * Integrates all synchronization components with robust error handling and optimization
+ */
 
-interface SyncQueueItem {
-  id: string;
-  type: 'workout' | 'achievement' | 'profile' | 'social_post' | 'friendship';
-  action: 'create' | 'update' | 'delete';
-  data: any;
-  timestamp: number;
-  retryCount: number;
-  userId: string;
+import { syncQueue } from '@/utils/syncQueue';
+import { syncManager } from '@/utils/syncManager';
+import { syncFrequencyManager } from '@/utils/syncFrequencyManager';
+import type { SyncOperation } from '@/utils/syncQueue';
+import type { SyncResult, SyncConflict } from '@/utils/syncManager';
+
+export interface SyncServiceConfig {
+  enableAutoSync: boolean;
+  enableConflictResolution: boolean;
+  enableFrequencyOptimization: boolean;
+  maxConcurrentOperations: number;
+  syncTimeout: number;
 }
 
-interface SyncStatus {
-  isOnline: boolean;
-  isSyncing: boolean;
-  lastSyncTime: Date | null;
-  pendingItems: number;
-  failedItems: number;
-}
+const DEFAULT_CONFIG: SyncServiceConfig = {
+  enableAutoSync: true,
+  enableConflictResolution: true,
+  enableFrequencyOptimization: true,
+  maxConcurrentOperations: 3,
+  syncTimeout: 30000, // 30 seconds
+};
 
-class SyncService {
-  private readonly SYNC_QUEUE_KEY = 'sport-tracker-sync-queue';
-  private readonly LAST_SYNC_KEY = 'sport-tracker-last-sync';
-  private readonly MAX_RETRIES = 3;
-  private readonly SYNC_INTERVAL = 30000; // 30 seconds
-  private readonly BATCH_SIZE = 10;
-  
-  private syncInterval: NodeJS.Timeout | null = null;
-  private isSyncing = false;
-  private isOnline = navigator.onLine;
-  
-  constructor() {
-    // Listen for online/offline events
-    window.addEventListener('online', this.handleOnline.bind(this));
-    window.addEventListener('offline', this.handleOffline.bind(this));
-    
-    // Start periodic sync if online
-    if (this.isOnline) {
-      this.startPeriodicSync();
+export class SyncService {
+  private static instance: SyncService;
+  private config: SyncServiceConfig;
+  private syncListeners: Set<(result: SyncResult) => void> = new Set();
+  private conflictListeners: Set<(conflicts: SyncConflict[]) => void> = new Set();
+  private statusListeners: Set<(status: SyncStatus) => void> = new Set();
+  private isInitialized = false;
+
+  private constructor(config: Partial<SyncServiceConfig> = {}) {
+    this.config = { ...DEFAULT_CONFIG, ...config };
+  }
+
+  public static getInstance(config?: Partial<SyncServiceConfig>): SyncService {
+    if (!SyncService.instance) {
+      SyncService.instance = new SyncService(config);
     }
+    return SyncService.instance;
   }
 
   /**
-   * Add item to sync queue
+   * Initialize the sync service
    */
-  queueForSync(
-    type: SyncQueueItem['type'],
-    action: SyncQueueItem['action'],
-    data: any,
-    userId?: string
-  ): void {
-    const user = supabaseAuthService.getCurrentUser();
-    
-    // Only queue for registered users (not guests)
-    if (!user || user.role === 'guest') {
+  async initialize(): Promise<void> {
+    if (this.isInitialized) {
       return;
     }
-    
-    const item: SyncQueueItem = {
-      id: `${type}_${action}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-      type,
-      action,
-      data,
-      timestamp: Date.now(),
-      retryCount: 0,
-      userId: userId || user.id,
-    };
-    
-    const queue = this.getSyncQueue();
-    queue.push(item);
-    this.saveSyncQueue(queue);
-    
-    logger.info('Item queued for sync', { type, action, itemId: item.id });
-    
-    // Try immediate sync if online
-    if (this.isOnline && !this.isSyncing) {
-      this.syncNow();
-    }
-  }
 
-  /**
-   * Perform immediate sync
-   */
-  async syncNow(): Promise<boolean> {
-    if (this.isSyncing || !this.isOnline) {
-      return false;
-    }
-    
-    const user = supabaseAuthService.getCurrentUser();
-    if (!user || user.role === 'guest') {
-      return false;
-    }
-    
-    this.isSyncing = true;
-    
     try {
-      const queue = this.getSyncQueue();
-      const userQueue = queue.filter(item => item.userId === user.id);
-      
-      if (userQueue.length === 0) {
-        this.isSyncing = false;
-        return true;
-      }
-      
-      logger.info('Starting sync', { itemCount: userQueue.length });
-      
-      // Process items in batches
-      const batches = this.chunkArray(userQueue, this.BATCH_SIZE);
-      let successCount = 0;
-      let failureCount = 0;
-      
-      for (const batch of batches) {
-        const results = await Promise.allSettled(
-          batch.map(item => this.syncItem(item))
-        );
-        
-        results.forEach((result, index) => {
-          const item = batch[index];
-          if (result.status === 'fulfilled' && result.value) {
-            successCount++;
-            this.removeFromQueue(item.id);
-          } else {
-            failureCount++;
-            this.handleSyncFailure(item);
+      console.log('[SyncService] Initializing sync service...');
+
+      // Set up sync manager listeners
+      if (this.config.enableConflictResolution) {
+        syncManager.addSyncListener((result) => {
+          this.notifySyncListeners(result);
+          
+          if (result.conflicts.length > 0) {
+            this.notifyConflictListeners(result.conflicts);
           }
         });
       }
-      
-      // Update last sync time
-      storage.set(this.LAST_SYNC_KEY, new Date().toISOString());
-      
-      logger.info('Sync completed', { successCount, failureCount });
-      
-      this.isSyncing = false;
-      return failureCount === 0;
+
+      // Set up sync queue listeners
+      syncQueue.addListener((operation) => {
+        this.notifyStatusListeners({
+          isOnline: navigator.onLine,
+          isSyncing: operation.status === 'processing',
+          pendingOperations: 0, // Will be updated by frequency manager
+          lastSyncTime: Date.now(),
+          hasConflicts: false,
+        });
+      });
+
+      // Start frequency optimization if enabled
+      if (this.config.enableFrequencyOptimization) {
+        // Frequency manager is already initialized as singleton
+        console.log('[SyncService] Frequency optimization enabled');
+      }
+
+      this.isInitialized = true;
+      console.log('[SyncService] Sync service initialized successfully');
+
     } catch (error) {
-      logger.error('Sync failed', error);
-      this.isSyncing = false;
-      return false;
-    }
-  }
-
-  /**
-   * Get current sync status
-   */
-  getSyncStatus(): SyncStatus {
-    const queue = this.getSyncQueue();
-    const user = supabaseAuthService.getCurrentUser();
-    const userQueue = user ? queue.filter(item => item.userId === user.id) : [];
-    
-    return {
-      isOnline: this.isOnline,
-      isSyncing: this.isSyncing,
-      lastSyncTime: this.getLastSyncTime(),
-      pendingItems: userQueue.length,
-      failedItems: userQueue.filter(item => item.retryCount >= this.MAX_RETRIES).length,
-    };
-  }
-
-  /**
-   * Clear failed items from queue
-   */
-  clearFailedItems(): void {
-    const queue = this.getSyncQueue();
-    const user = supabaseAuthService.getCurrentUser();
-    
-    if (!user) return;
-    
-    const filteredQueue = queue.filter(
-      item => item.userId !== user.id || item.retryCount < this.MAX_RETRIES
-    );
-    
-    this.saveSyncQueue(filteredQueue);
-    logger.info('Failed items cleared from sync queue');
-  }
-
-  /**
-   * Force sync for premium users (cloud backup)
-   */
-  async forcePremiumSync(): Promise<boolean> {
-    const user = supabaseAuthService.getCurrentUser();
-    
-    if (!user || (user.role !== 'premium' && user.role !== 'trainer' && user.role !== 'admin')) {
-      throw new Error('Premium sync is only available for premium users');
-    }
-    
-    if (!this.isOnline) {
-      throw new Error('Premium sync requires internet connection');
-    }
-    
-    try {
-      // Sync all local data to cloud
-      await this.syncAllUserData(user);
-      
-      // Pull latest data from cloud
-      await this.pullCloudData(user);
-      
-      logger.info('Premium sync completed', { userId: user.id });
-      return true;
-    } catch (error) {
-      logger.error('Premium sync failed', error);
+      console.error('[SyncService] Failed to initialize sync service:', error);
       throw error;
     }
   }
 
   /**
-   * Private methods
+   * Queue an operation for synchronization
    */
-  private async syncItem(item: SyncQueueItem): Promise<boolean> {
+  async queueOperation(
+    type: SyncOperation['type'],
+    entity: SyncOperation['entity'],
+    data: any,
+    options: {
+      priority?: SyncOperation['priority'];
+      maxRetries?: number;
+      triggerImmediateSync?: boolean;
+    } = {}
+  ): Promise<string> {
     try {
-      switch (item.type) {
-        case 'workout':
-          return await this.syncWorkout(item);
-        case 'achievement':
-          return await this.syncAchievement(item);
-        case 'profile':
-          return await this.syncProfile(item);
-        case 'social_post':
-          return await this.syncSocialPost(item);
-        case 'friendship':
-          return await this.syncFriendship(item);
-        default:
-          logger.warn('Unknown sync item type', { type: item.type });
-          return false;
+      const operationId = await syncQueue.addOperation({
+        type,
+        entity,
+        data,
+        priority: options.priority || 'medium',
+        maxRetries: options.maxRetries || 3,
+      });
+
+      // Notify frequency manager about new operation
+      if (this.config.enableFrequencyOptimization) {
+        syncFrequencyManager.notifyPendingOperation();
       }
+
+      // Trigger immediate sync if requested
+      if (options.triggerImmediateSync) {
+        await this.triggerSync();
+      }
+
+      console.log(`[SyncService] Operation queued: ${operationId}`);
+      return operationId;
+
     } catch (error) {
-      logger.error('Failed to sync item', { itemId: item.id, error });
-      return false;
+      console.error('[SyncService] Failed to queue operation:', error);
+      throw error;
     }
   }
 
-  private async syncWorkout(item: SyncQueueItem): Promise<boolean> {
-    const { action, data } = item;
-    
+  /**
+   * Trigger immediate synchronization
+   */
+  async triggerSync(): Promise<SyncResult> {
     try {
-      switch (action) {
-        case 'create':
-          const { error: createError } = await supabase
-            .from('workout_sessions')
-            .insert({
-              id: data.id,
-              user_id: data.userId,
-              name: data.name,
-              exercises: data.exercises,
-              started_at: data.startedAt,
-              completed_at: data.completedAt,
-              duration_seconds: data.duration,
-              total_volume_kg: data.totalVolume,
-              total_reps: data.totalReps,
-              total_sets: data.totalSets,
-              xp_earned: data.xpEarned || 0,
-              status: data.isCompleted ? 'completed' : 'in_progress',
-            });
-          return !createError;
-          
-        case 'update':
-          const { error: updateError } = await supabase
-            .from('workout_sessions')
-            .update({
-              name: data.name,
-              exercises: data.exercises,
-              completed_at: data.completedAt,
-              duration_seconds: data.duration,
-              total_volume_kg: data.totalVolume,
-              total_reps: data.totalReps,
-              total_sets: data.totalSets,
-              xp_earned: data.xpEarned || 0,
-              status: data.isCompleted ? 'completed' : 'in_progress',
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', data.id)
-            .eq('user_id', item.userId);
-          return !updateError;
-          
-        case 'delete':
-          const { error: deleteError } = await supabase
-            .from('workout_sessions')
-            .delete()
-            .eq('id', data.id)
-            .eq('user_id', item.userId);
-          return !deleteError;
-          
-        default:
-          return false;
+      console.log('[SyncService] Triggering immediate sync...');
+
+      if (this.config.enableFrequencyOptimization) {
+        await syncFrequencyManager.triggerImmediateSync();
       }
+
+      const result = await syncManager.performSync();
+      
+      console.log('[SyncService] Immediate sync completed:', {
+        synced: result.synced,
+        failed: result.failed,
+        conflicts: result.conflicts.length,
+        success: result.success
+      });
+
+      // Notify listeners with the actual result
+      this.notifySyncListeners(result);
+      return result;
+
     } catch (error) {
-      logger.error('Workout sync failed', error);
-      return false;
+      console.error('[SyncService] Immediate sync failed:', error);
+      
+      const errorResult: SyncResult = {
+        success: false,
+        conflicts: [],
+        synced: 0,
+        failed: 1,
+        errors: [error instanceof Error ? error.message : String(error)],
+      };
+
+      this.notifySyncListeners(errorResult);
+      return errorResult;
     }
   }
 
-  private async syncAchievement(item: SyncQueueItem): Promise<boolean> {
-    const { action, data } = item;
-    
+  /**
+   * Get pending conflicts that require manual resolution
+   */
+  async getPendingConflicts(): Promise<SyncConflict[]> {
+    if (!this.config.enableConflictResolution) {
+      return [];
+    }
+
     try {
-      if (action === 'create') {
-        const { error } = await supabase
-          .from('user_achievements')
-          .insert({
-            user_id: item.userId,
-            achievement_id: data.achievementId,
-            progress: data.progress,
-            is_completed: data.isCompleted,
-            completed_at: data.completedAt,
-            xp_earned: data.xpEarned || 0,
-          });
-        return !error;
-      }
-      return false;
+      return await syncManager.getPendingConflicts();
     } catch (error) {
-      logger.error('Achievement sync failed', error);
-      return false;
+      console.error('[SyncService] Failed to get pending conflicts:', error);
+      return [];
     }
   }
 
-  private async syncProfile(item: SyncQueueItem): Promise<boolean> {
-    const { action, data } = item;
-    
+  /**
+   * Resolve a conflict manually
+   */
+  async resolveConflict(
+    conflictId: string,
+    strategy: 'local_wins' | 'remote_wins' | 'merge',
+    mergedData?: any
+  ): Promise<void> {
+    if (!this.config.enableConflictResolution) {
+      throw new Error('Conflict resolution is disabled');
+    }
+
     try {
-      if (action === 'update') {
-        const { error } = await supabase
-          .from('user_profiles')
-          .update({
-            display_name: data.display_name,
-            bio: data.bio,
-            fitness_level: data.fitness_level,
-            height_cm: data.height_cm,
-            weight_kg: data.weight_kg,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', item.userId);
-        return !error;
-      }
-      return false;
+      await syncManager.resolveConflictManually(conflictId, {
+        strategy,
+        resolvedData: mergedData,
+      });
+
+      console.log(`[SyncService] Conflict resolved: ${conflictId} (${strategy})`);
+
     } catch (error) {
-      logger.error('Profile sync failed', error);
-      return false;
+      console.error('[SyncService] Failed to resolve conflict:', error);
+      throw error;
     }
   }
 
-  private async syncSocialPost(item: SyncQueueItem): Promise<boolean> {
-    const { action, data } = item;
-    
+  /**
+   * Get comprehensive sync status
+   */
+  async getSyncStatus(): Promise<SyncStatus> {
     try {
-      if (action === 'create') {
-        const { error } = await supabase
-          .from('social_posts')
-          .insert({
-            id: data.id,
-            user_id: item.userId,
-            type: data.type,
-            content: data.content,
-            data: data.postData,
-            visibility: data.visibility || 'friends',
-          });
-        return !error;
-      }
-      return false;
+      const queueStats = await syncQueue.getQueueStats();
+      const pendingConflicts = this.config.enableConflictResolution 
+        ? await this.getPendingConflicts()
+        : [];
+
+      const frequencyStatus = this.config.enableFrequencyOptimization
+        ? syncFrequencyManager.getSyncStatus()
+        : null;
+
+      return {
+        isOnline: navigator.onLine,
+        isSyncing: queueStats.processing > 0,
+        pendingOperations: queueStats.pending,
+        failedOperations: queueStats.failed,
+        lastSyncTime: frequencyStatus?.nextSyncIn ? Date.now() - frequencyStatus.nextSyncIn : 0,
+        hasConflicts: pendingConflicts.length > 0,
+        conflictCount: pendingConflicts.length,
+        networkQuality: frequencyStatus?.networkQuality || 'unknown',
+        userActive: frequencyStatus?.userActive || true,
+        nextSyncIn: frequencyStatus?.nextSyncIn || -1,
+      };
+
     } catch (error) {
-      logger.error('Social post sync failed', error);
-      return false;
+      console.error('[SyncService] Failed to get sync status:', error);
+      
+      return {
+        isOnline: navigator.onLine,
+        isSyncing: false,
+        pendingOperations: 0,
+        failedOperations: 0,
+        lastSyncTime: 0,
+        hasConflicts: false,
+        conflictCount: 0,
+        networkQuality: 'unknown',
+        userActive: true,
+        nextSyncIn: -1,
+      };
     }
   }
 
-  private async syncFriendship(item: SyncQueueItem): Promise<boolean> {
-    const { action, data } = item;
+  /**
+   * Enable or disable auto-sync
+   */
+  setAutoSyncEnabled(enabled: boolean): void {
+    this.config.enableAutoSync = enabled;
     
+    if (enabled && this.config.enableFrequencyOptimization) {
+      // Restart frequency manager if needed
+      console.log('[SyncService] Auto-sync enabled');
+    } else {
+      console.log('[SyncService] Auto-sync disabled');
+    }
+  }
+
+  /**
+   * Update sync configuration
+   */
+  updateConfig(newConfig: Partial<SyncServiceConfig>): void {
+    this.config = { ...this.config, ...newConfig };
+    console.log('[SyncService] Configuration updated:', newConfig);
+  }
+
+  /**
+   * Add sync result listener
+   */
+  addSyncListener(listener: (result: SyncResult) => void): void {
+    this.syncListeners.add(listener);
+  }
+
+  /**
+   * Remove sync result listener
+   */
+  removeSyncListener(listener: (result: SyncResult) => void): void {
+    this.syncListeners.delete(listener);
+  }
+
+  /**
+   * Add conflict listener
+   */
+  addConflictListener(listener: (conflicts: SyncConflict[]) => void): void {
+    this.conflictListeners.add(listener);
+  }
+
+  /**
+   * Remove conflict listener
+   */
+  removeConflictListener(listener: (conflicts: SyncConflict[]) => void): void {
+    this.conflictListeners.delete(listener);
+  }
+
+  /**
+   * Add status listener
+   */
+  addStatusListener(listener: (status: SyncStatus) => void): void {
+    this.statusListeners.add(listener);
+  }
+
+  /**
+   * Remove status listener
+   */
+  removeStatusListener(listener: (status: SyncStatus) => void): void {
+    this.statusListeners.delete(listener);
+  }
+
+  /**
+   * Clean up old completed operations and resolved conflicts
+   */
+  async cleanup(olderThanHours: number = 24): Promise<void> {
     try {
-      switch (action) {
-        case 'create':
-          const { error: createError } = await supabase
-            .from('friendships')
-            .insert({
-              requester_id: data.requesterId,
-              addressee_id: data.addresseeId,
-              status: data.status || 'pending',
-            });
-          return !createError;
-          
-        case 'update':
-          const { error: updateError } = await supabase
-            .from('friendships')
-            .update({
-              status: data.status,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', data.id);
-          return !updateError;
-          
-        default:
-          return false;
-      }
+      const cleanedOperations = await syncQueue.cleanupCompletedOperations(olderThanHours);
+      console.log(`[SyncService] Cleaned up ${cleanedOperations} old operations`);
     } catch (error) {
-      logger.error('Friendship sync failed', error);
-      return false;
+      console.error('[SyncService] Cleanup failed:', error);
     }
   }
 
-  private async syncAllUserData(user: User): Promise<void> {
-    // This would sync all local data to cloud for premium users
-    // Implementation depends on local data structure
-    logger.info('Syncing all user data to cloud', { userId: user.id });
-  }
-
-  private async pullCloudData(user: User): Promise<void> {
-    // This would pull latest data from cloud for premium users
-    // Implementation depends on local data structure
-    logger.info('Pulling cloud data for user', { userId: user.id });
-  }
-
-  private handleOnline(): void {
-    this.isOnline = true;
-    logger.info('Connection restored - starting sync');
-    this.startPeriodicSync();
-    this.syncNow();
-  }
-
-  private handleOffline(): void {
-    this.isOnline = false;
-    logger.info('Connection lost - stopping sync');
-    this.stopPeriodicSync();
-  }
-
-  private startPeriodicSync(): void {
-    if (this.syncInterval) {
-      clearInterval(this.syncInterval);
+  /**
+   * Destroy the sync service and clean up resources
+   */
+  destroy(): void {
+    this.syncListeners.clear();
+    this.conflictListeners.clear();
+    this.statusListeners.clear();
+    
+    if (this.config.enableFrequencyOptimization) {
+      syncFrequencyManager.destroy();
     }
     
-    this.syncInterval = setInterval(() => {
-      if (this.isOnline && !this.isSyncing) {
-        this.syncNow();
+    syncQueue.stopProcessing();
+    
+    this.isInitialized = false;
+    console.log('[SyncService] Sync service destroyed');
+  }
+
+  // Private helper methods
+
+  private notifySyncListeners(result: SyncResult): void {
+    this.syncListeners.forEach(listener => {
+      try {
+        listener(result);
+      } catch (error) {
+        console.error('[SyncService] Sync listener error:', error);
       }
-    }, this.SYNC_INTERVAL);
+    });
   }
 
-  private stopPeriodicSync(): void {
-    if (this.syncInterval) {
-      clearInterval(this.syncInterval);
-      this.syncInterval = null;
-    }
+  private notifyConflictListeners(conflicts: SyncConflict[]): void {
+    this.conflictListeners.forEach(listener => {
+      try {
+        listener(conflicts);
+      } catch (error) {
+        console.error('[SyncService] Conflict listener error:', error);
+      }
+    });
   }
 
-  private handleSyncFailure(item: SyncQueueItem): void {
-    item.retryCount++;
-    
-    if (item.retryCount >= this.MAX_RETRIES) {
-      logger.warn('Item exceeded max retries', { itemId: item.id, type: item.type });
-    }
-    
-    // Update item in queue
-    const queue = this.getSyncQueue();
-    const index = queue.findIndex(q => q.id === item.id);
-    if (index >= 0) {
-      queue[index] = item;
-      this.saveSyncQueue(queue);
-    }
-  }
-
-  private getSyncQueue(): SyncQueueItem[] {
-    return storage.get<SyncQueueItem[]>(this.SYNC_QUEUE_KEY) || [];
-  }
-
-  private saveSyncQueue(queue: SyncQueueItem[]): void {
-    storage.set(this.SYNC_QUEUE_KEY, queue);
-  }
-
-  private removeFromQueue(itemId: string): void {
-    const queue = this.getSyncQueue();
-    const filteredQueue = queue.filter(item => item.id !== itemId);
-    this.saveSyncQueue(filteredQueue);
-  }
-
-  private getLastSyncTime(): Date | null {
-    const lastSync = storage.get<string>(this.LAST_SYNC_KEY);
-    return lastSync ? new Date(lastSync) : null;
-  }
-
-  private chunkArray<T>(array: T[], size: number): T[][] {
-    const chunks: T[][] = [];
-    for (let i = 0; i < array.length; i += size) {
-      chunks.push(array.slice(i, i + size));
-    }
-    return chunks;
+  private notifyStatusListeners(status: SyncStatus): void {
+    this.statusListeners.forEach(listener => {
+      try {
+        listener(status);
+      } catch (error) {
+        console.error('[SyncService] Status listener error:', error);
+      }
+    });
   }
 }
 
+export interface SyncStatus {
+  isOnline: boolean;
+  isSyncing: boolean;
+  pendingOperations: number;
+  failedOperations?: number;
+  lastSyncTime: number;
+  hasConflicts: boolean;
+  conflictCount?: number;
+  networkQuality?: string;
+  userActive?: boolean;
+  nextSyncIn?: number;
+}
+
 // Export singleton instance
-export const syncService = new SyncService();
+export const syncService = SyncService.getInstance();

@@ -69,11 +69,19 @@ export function calculateWorkoutDuration(workout: Workout): number {
  * Calculate estimated 1RM using Epley formula
  */
 export function calculateOneRepMax(weight: number, reps: number): number {
-  if (reps === 1) return weight;
-  if (reps === 0) return 0;
+  // Validate inputs
+  if (weight < 0 || reps < 0 || !Number.isFinite(weight) || !Number.isFinite(reps)) {
+    return 0;
+  }
   
-  // Epley formula: 1RM = weight × (1 + reps/30)
-  return Math.round(weight * (1 + reps / 30));
+  if (reps === 1) return weight;
+  if (reps === 0 || weight === 0) return 0;
+  
+  // Standard Epley formula: 1RM = weight × (1 + reps/30)
+  const oneRM = weight * (1 + reps / 30);
+  
+  // Ensure result is finite and positive
+  return Number.isFinite(oneRM) && oneRM > 0 ? Math.round(oneRM) : 0;
 }
 
 /**
@@ -195,54 +203,74 @@ export function findPersonalRecords(
 ): PersonalRecord[] {
   const records: PersonalRecord[] = [];
   
+  // Only find records if previous records are provided
+  if (Object.keys(previousRecords).length === 0) {
+    return records;
+  }
+  
   workout.exercises.forEach(exercise => {
     const exerciseRecords = previousRecords[exercise.exercise_id] || {};
     
-    exercise.sets
-      .filter(set => set.completed && set.type !== 'warmup')
-      .forEach(set => {
-        // Max weight record
-        const currentMaxWeight = exerciseRecords.max_weight || 0;
-        if (set.weight > currentMaxWeight) {
-          records.push({
-            exerciseId: exercise.exercise_id,
-            type: 'max_weight',
-            value: set.weight,
-            setData: set,
-            previousRecord: currentMaxWeight,
-          });
-        }
-        
-        // Max reps record (at same or higher weight)
-        const currentMaxReps = exerciseRecords.max_reps || 0;
-        if (set.reps > currentMaxReps) {
-          records.push({
-            exerciseId: exercise.exercise_id,
-            type: 'max_reps',
-            value: set.reps,
-            setData: set,
-            previousRecord: currentMaxReps,
-          });
-        }
-        
-        // Max 1RM record
-        const estimated1RM = calculateOneRepMax(set.weight, set.reps);
-        const currentMax1RM = exerciseRecords.max_1rm || 0;
-        if (estimated1RM > currentMax1RM) {
-          records.push({
-            exerciseId: exercise.exercise_id,
-            type: 'max_1rm',
-            value: estimated1RM,
-            setData: set,
-            previousRecord: currentMax1RM,
-          });
-        }
-      });
+    // Only check for records if this exercise has previous records
+    if (Object.keys(exerciseRecords).length === 0) {
+      return;
+    }
     
-    // Max volume record for exercise
+    const workingSets = exercise.sets.filter(set => set.completed && set.type !== 'warmup');
+    
+    // Skip if no working sets
+    if (workingSets.length === 0) {
+      return;
+    }
+    
+    // Find the best values in this workout
+    const maxWeight = Math.max(...workingSets.map(set => set.weight));
+    const maxReps = Math.max(...workingSets.map(set => set.reps));
+    const max1RM = Math.max(...workingSets.map(set => calculateOneRepMax(set.weight, set.reps)));
+    
+    // Check for max weight record
+    const currentMaxWeight = exerciseRecords.max_weight;
+    if (currentMaxWeight !== undefined && maxWeight > currentMaxWeight) {
+      const bestWeightSet = workingSets.find(set => set.weight === maxWeight)!;
+      records.push({
+        exerciseId: exercise.exercise_id,
+        type: 'max_weight',
+        value: maxWeight,
+        setData: bestWeightSet,
+        previousRecord: currentMaxWeight,
+      });
+    }
+    
+    // Check for max reps record
+    const currentMaxReps = exerciseRecords.max_reps;
+    if (currentMaxReps !== undefined && maxReps > currentMaxReps) {
+      const bestRepsSet = workingSets.find(set => set.reps === maxReps)!;
+      records.push({
+        exerciseId: exercise.exercise_id,
+        type: 'max_reps',
+        value: maxReps,
+        setData: bestRepsSet,
+        previousRecord: currentMaxReps,
+      });
+    }
+    
+    // Check for max 1RM record
+    const currentMax1RM = exerciseRecords.max_1rm;
+    if (currentMax1RM !== undefined && max1RM > currentMax1RM) {
+      const best1RMSet = workingSets.find(set => calculateOneRepMax(set.weight, set.reps) === max1RM)!;
+      records.push({
+        exerciseId: exercise.exercise_id,
+        type: 'max_1rm',
+        value: max1RM,
+        setData: best1RMSet,
+        previousRecord: currentMax1RM,
+      });
+    }
+    
+    // Check for max volume record
     const exerciseVolume = calculateExerciseVolume(exercise);
-    const currentMaxVolume = exerciseRecords.max_volume || 0;
-    if (exerciseVolume > currentMaxVolume) {
+    const currentMaxVolume = exerciseRecords.max_volume;
+    if (currentMaxVolume !== undefined && exerciseVolume > currentMaxVolume) {
       records.push({
         exerciseId: exercise.exercise_id,
         type: 'max_volume',
@@ -275,6 +303,11 @@ export function calculateWorkoutMetrics(
   previousRecords?: Record<string, Record<string, number>>
 ): WorkoutMetrics {
   try {
+    // Validate workout input
+    if (!workout || !workout.exercises || !Array.isArray(workout.exercises)) {
+      throw new Error('Invalid workout data');
+    }
+
     return {
       duration: calculateWorkoutDuration(workout),
       totalVolume: calculateWorkoutVolume(workout),
@@ -283,7 +316,7 @@ export function calculateWorkoutMetrics(
       tonnage: calculateTonnage(workout),
       averageIntensity: calculateWorkoutIntensity(workout),
       completion: calculateWorkoutCompletion(workout),
-      personalRecords: findPersonalRecords(workout, previousRecords),
+      personalRecords: findPersonalRecords(workout, previousRecords || {}),
     };
   } catch (error) {
     logger.error('Error calculating workout metrics', error);

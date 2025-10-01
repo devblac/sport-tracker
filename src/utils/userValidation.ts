@@ -16,16 +16,40 @@ import {
 import { logger } from '@/utils/logger';
 
 /**
+ * Validation error type
+ */
+export interface ValidationError {
+  field?: string;
+  message: string;
+  code?: string;
+}
+
+/**
  * Validation result type
  */
 export interface ValidationResult<T> {
   success: boolean;
   data?: T;
   errors?: string[];
+  validationErrors?: ValidationError[];
 }
 
 /**
- * Generic validation function
+ * Standardized error message formatter
+ */
+const formatValidationError = (issue: z.ZodIssue): ValidationError => {
+  const field = Array.isArray(issue.path) && issue.path.length > 0 ? issue.path.join('.') : undefined;
+  const message = issue.message || 'Validation error';
+  
+  return {
+    field,
+    message,
+    code: issue.code,
+  };
+};
+
+/**
+ * Generic validation function with standardized error format
  */
 const validateData = <T>(schema: z.ZodSchema<T>, data: unknown): ValidationResult<T> => {
   try {
@@ -58,24 +82,29 @@ const validateData = <T>(schema: z.ZodSchema<T>, data: unknown): ValidationResul
     });
     
     if (error instanceof z.ZodError) {
-      // Safely handle the issues array (ZodError uses 'issues', not 'errors')
+      // Process validation issues with standardized format
       let errors: string[] = ['Validation error occurred'];
+      let validationErrors: ValidationError[] = [];
       
       try {
         if (error.issues && Array.isArray(error.issues)) {
-          errors = error.issues.map(issue => {
-            const path = Array.isArray(issue.path) ? issue.path.join('.') : '';
-            const message = issue.message || 'Validation error';
-            return path ? `${path}: ${message}` : message;
-          });
+          validationErrors = error.issues.map(formatValidationError);
+          
+          // Create simple error messages for backward compatibility
+          errors = error.issues.map(issue => issue.message || 'Validation error');
         }
       } catch (mappingError) {
         logger.error('Error processing validation issues', mappingError);
         errors = ['Error processing validation details'];
+        validationErrors = [{
+          message: 'Error processing validation details',
+          code: 'processing_error'
+        }];
       }
       
       logger.warn('Validation failed', { 
         errors, 
+        validationErrors,
         data: typeof data === 'object' ? JSON.stringify(data) : data,
         errorDetails: error.message 
       });
@@ -83,6 +112,7 @@ const validateData = <T>(schema: z.ZodSchema<T>, data: unknown): ValidationResul
       return {
         success: false,
         errors,
+        validationErrors,
       };
     }
     
@@ -93,6 +123,10 @@ const validateData = <T>(schema: z.ZodSchema<T>, data: unknown): ValidationResul
     return {
       success: false,
       errors: [errorMessage],
+      validationErrors: [{
+        message: errorMessage,
+        code: 'unknown_error'
+      }],
     };
   }
 };
@@ -251,16 +285,28 @@ export const validateDisplayName = (displayName: string): ValidationResult<strin
   const sanitized = sanitizeUserInput(displayName);
   
   if (sanitized.length === 0) {
+    const errorMessage = 'Display name cannot be empty';
     return {
       success: false,
-      errors: ['Display name cannot be empty'],
+      errors: [errorMessage],
+      validationErrors: [{
+        field: 'display_name',
+        message: errorMessage,
+        code: 'required'
+      }],
     };
   }
   
   if (sanitized.length > 50) {
+    const errorMessage = 'Display name is too long (max 50 characters)';
     return {
       success: false,
-      errors: ['Display name is too long (max 50 characters)'],
+      errors: [errorMessage],
+      validationErrors: [{
+        field: 'display_name',
+        message: errorMessage,
+        code: 'too_long'
+      }],
     };
   }
   
@@ -277,9 +323,15 @@ export const validateBio = (bio: string): ValidationResult<string> => {
   const sanitized = sanitizeUserInput(bio);
   
   if (sanitized.length > 500) {
+    const errorMessage = 'Bio is too long (max 500 characters)';
     return {
       success: false,
-      errors: ['Bio is too long (max 500 characters)'],
+      errors: [errorMessage],
+      validationErrors: [{
+        field: 'bio',
+        message: errorMessage,
+        code: 'too_long'
+      }],
     };
   }
   
@@ -330,16 +382,28 @@ export const validateAge = (birthDate: Date): ValidationResult<number> => {
     : age;
   
   if (actualAge < 13) {
+    const errorMessage = 'Users must be at least 13 years old';
     return {
       success: false,
-      errors: ['Users must be at least 13 years old'],
+      errors: [errorMessage],
+      validationErrors: [{
+        field: 'birth_date',
+        message: errorMessage,
+        code: 'too_young'
+      }],
     };
   }
   
   if (actualAge > 120) {
+    const errorMessage = 'Please enter a valid birth date';
     return {
       success: false,
-      errors: ['Please enter a valid birth date'],
+      errors: [errorMessage],
+      validationErrors: [{
+        field: 'birth_date',
+        message: errorMessage,
+        code: 'invalid_date'
+      }],
     };
   }
   
@@ -358,9 +422,15 @@ export const validateHeight = (height: number, units: 'metric' | 'imperial'): Va
   
   if (height < minHeight || height > maxHeight) {
     const unit = units === 'metric' ? 'cm' : 'inches';
+    const errorMessage = `Height must be between ${minHeight} and ${maxHeight} ${unit}`;
     return {
       success: false,
-      errors: [`Height must be between ${minHeight} and ${maxHeight} ${unit}`],
+      errors: [errorMessage],
+      validationErrors: [{
+        field: 'height',
+        message: errorMessage,
+        code: 'out_of_range'
+      }],
     };
   }
   
@@ -379,9 +449,15 @@ export const validateWeight = (weight: number, units: 'metric' | 'imperial'): Va
   
   if (weight < minWeight || weight > maxWeight) {
     const unit = units === 'metric' ? 'kg' : 'lbs';
+    const errorMessage = `Weight must be between ${minWeight} and ${maxWeight} ${unit}`;
     return {
       success: false,
-      errors: [`Weight must be between ${minWeight} and ${maxWeight} ${unit}`],
+      errors: [errorMessage],
+      validationErrors: [{
+        field: 'weight',
+        message: errorMessage,
+        code: 'out_of_range'
+      }],
     };
   }
   

@@ -471,6 +471,13 @@ export class IndexedDBManager {
   }
 
   /**
+   * Get the database instance (for advanced operations)
+   */
+  getDatabase(): IDBDatabase | null {
+    return this.db;
+  }
+
+  /**
    * Close the database connection
    */
   close(): void {

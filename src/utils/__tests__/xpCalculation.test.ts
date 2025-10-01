@@ -97,12 +97,17 @@ describe('XP Calculation', () => {
     });
 
     it('should apply weekend bonus', () => {
+      const weekdayWorkout = {
+        ...mockWorkout,
+        completedAt: new Date('2025-01-27T10:00:00Z') // Monday
+      };
+      
       const weekendWorkout = {
         ...mockWorkout,
         completedAt: new Date('2025-01-26T10:00:00Z') // Sunday
       };
       
-      const weekdayXP = calculateWorkoutXP(mockWorkout, mockUserStreak);
+      const weekdayXP = calculateWorkoutXP(weekdayWorkout, mockUserStreak);
       const weekendXP = calculateWorkoutXP(weekendWorkout, mockUserStreak);
       
       expect(weekendXP).toBeGreaterThan(weekdayXP);

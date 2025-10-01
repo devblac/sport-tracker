@@ -4,6 +4,36 @@
 // Types for trainer marketplace, payments, and premium content
 // ============================================================================
 
+export interface PremiumContentData {
+  // Workout plan content
+  weeks?: number;
+  workoutsPerWeek?: number;
+  exercises?: number;
+  includes?: string[];
+  
+  // Video course content
+  modules?: number;
+  totalVideos?: number;
+  
+  // E-book content
+  pages?: number;
+  chapters?: string[];
+  
+  // Nutrition guide content
+  mealPlans?: number;
+  recipes?: number;
+  
+  // Template content
+  templateType?: string;
+  customizations?: string[];
+  
+  // Common fields
+  downloadable?: boolean;
+  accessDuration?: number; // days
+  supportIncluded?: boolean;
+  certificateIncluded?: boolean;
+}
+
 export interface TrainerProfile {
   id: string;
   userId: string;
@@ -57,10 +87,7 @@ export interface PremiumContent {
   duration?: number; // minutes for videos, weeks for plans
   previewImages: string[];
   previewVideo?: string;
-  content: {
-    // Flexible content structure based on type
-    [key: string]: any;
-  };
+  content: PremiumContentData;
   rating: number;
   totalReviews: number;
   totalSales: number;
@@ -241,7 +268,7 @@ export interface CreateContentForm {
   duration?: number;
   previewImages: File[];
   previewVideo?: File;
-  content: any;
+  content: PremiumContentData;
 }
 
 export interface TrainerProfileForm {

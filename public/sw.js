@@ -1,213 +1,442 @@
-// Advanced Service Worker for Sport Tracker PWA
-// Version 1.0.0
+/**
+ * Service Worker for Push Notifications
+ * 
+ * Handles push notifications, background sync, and notification interactions.
+ */
 
-const CACHE_NAME = 'sport-tracker-v1';
-const STATIC_CACHE = 'sport-tracker-static-v1';
-const DYNAMIC_CACHE = 'sport-tracker-dynamic-v1';
-const API_CACHE = 'sport-tracker-api-v1';
-const IMAGE_CACHE = 'sport-tracker-images-v1';
+const CACHE_NAME = 'fitness-app-v1';
+const NOTIFICATION_CACHE = 'notifications-v1';
 
-// Cache strategies configuration
-const CACHE_STRATEGIES = {
-  // Static assets - Cache First
-  static: [
-    '/',
-    '/index.html',
-    '/manifest.json',
-    '/favicon.ico',
-    '/assets/',
-    '/src/',
-  ],
-  
-  // API calls - Network First with fallback
-  api: [
-    '/api/',
-  ],
-  
-  // Images and media - Cache First with network fallback
-  images: [
-    '/images/',
-    '/assets/images/',
-    '.jpg',
-    '.jpeg',
-    '.png',
-    '.gif',
-    '.webp',
-    '.svg',
-  ],
-  
-  // Dynamic content - Stale While Revalidate
-  dynamic: [
-    '/exercises/',
-    '/workouts/',
-    '/progress/',
-    '/profile/',
-    '/social/',
-  ]
-};
-
-// Background sync tags
-const SYNC_TAGS = {
-  WORKOUT_SYNC: 'workout-sync',
-  EXERCISE_SYNC: 'exercise-sync',
-  PROFILE_SYNC: 'profile-sync',
-  OFFLINE_ACTIONS: 'offline-actions'
-};
-
-// Install event - Cache static assets
+// Install event
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing Service Worker...');
-  
-  event.waitUntil(
-    Promise.all([
-      // Cache static assets
-      caches.open(STATIC_CACHE).then((cache) => {
-        console.log('[SW] Caching static assets');
-        return cache.addAll([
-          '/',
-          '/index.html',
-          '/manifest.json',
-          '/favicon.ico',
-        ]);
-      }),
-      
-      // Skip waiting to activate immediately
-      self.skipWaiting()
-    ])
-  );
+  console.log('Service Worker installing...');
+  self.skipWaiting();
 });
 
-// Activate event - Clean up old caches
+// Activate event
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating Service Worker...');
+  console.log('Service Worker activating...');
+  event.waitUntil(self.clients.claim());
+});
+
+// Push event - handle incoming push notifications
+self.addEventListener('push', (event) => {
+  console.log('Push notification received:', event);
   
+  if (!event.data) {
+    return;
+  }
+
+  try {
+    const data = event.data.json();
+    const options = {
+      body: data.body,
+      icon: data.icon || '/pwa-192x192.png',
+      badge: data.badge || '/pwa-192x192.png',
+      image: data.image,
+      data: data.data,
+      actions: data.actions || [],
+      requireInteraction: data.requireInteraction || false,
+      silent: data.silent || false,
+      vibrate: data.vibrate || [200, 100, 200],
+      tag: data.tag || 'default',
+      timestamp: Date.now()
+    };
+
+    event.waitUntil(
+      self.registration.showNotification(data.title || 'Fitness App', options)
+    );
+  } catch (error) {
+    console.error('Error handling push notification:', error);
+    
+    // Fallback notification
+    event.waitUntil(
+      self.registration.showNotification('Fitness App', {
+        body: 'Tienes una nueva notificación',
+        icon: '/pwa-192x192.png',
+        badge: '/pwa-192x192.png'
+      })
+    );
+  }
+});
+
+// Notification click event
+self.addEventListener('notificationclick', (event) => {
+  console.log('Notification clicked:', event);
+  
+  event.notification.close();
+  
+  const data = event.notification.data || {};
+  const action = event.action;
+  
+  // Send message to main app
   event.waitUntil(
-    Promise.all([
-      // Clean up old caches
-      caches.keys().then((cacheNames) => {
-        return Promise.all(
-          cacheNames.map((cacheName) => {
-            if (cacheName !== STATIC_CACHE && 
-                cacheName !== DYNAMIC_CACHE && 
-                cacheName !== API_CACHE && 
-                cacheName !== IMAGE_CACHE) {
-              console.log('[SW] Deleting old cache:', cacheName);
-              return caches.delete(cacheName);
-            }
-          })
-        );
-      }),
+    self.clients.matchAll({ type: 'window' }).then((clients) => {
+      // Send message to all open clients
+      clients.forEach((client) => {
+        client.postMessage({
+          type: 'notification_clicked',
+          data: {
+            notificationId: data.notificationId,
+            userId: data.userId,
+            type: data.type,
+            action: action,
+            data: data.data,
+            timestamp: Date.now()
+          }
+        });
+      });
       
-      // Take control of all clients
-      self.clients.claim()
-    ])
+      // Handle specific actions
+      if (action) {
+        return handleNotificationAction(action, data);
+      } else {
+        // Default action - open app
+        return openApp();
+      }
+    })
   );
 });
 
-// Fetch event - Implement caching strategies
-self.addEventListener('fetch', (event) => {
-  const { request } = event;
-  const url = new URL(request.url);
+// Notification close event
+self.addEventListener('notificationclose', (event) => {
+  console.log('Notification closed:', event);
   
-  // Skip non-GET requests
-  if (request.method !== 'GET') {
-    return;
-  }
+  const data = event.notification.data || {};
   
-  // Skip chrome-extension and other non-http requests
-  if (!request.url.startsWith('http')) {
-    return;
-  }
-  
-  event.respondWith(handleFetch(request, url));
+  // Send message to main app
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window' }).then((clients) => {
+      clients.forEach((client) => {
+        client.postMessage({
+          type: 'notification_dismissed',
+          data: {
+            notificationId: data.notificationId,
+            userId: data.userId,
+            type: data.type,
+            timestamp: Date.now()
+          }
+        });
+      });
+    })
+  );
 });
 
-// Handle fetch with appropriate strategy
-async function handleFetch(request, url) {
-  try {
-    // Static assets - Cache First
-    if (isStaticAsset(url.pathname)) {
-      return await cacheFirst(request, STATIC_CACHE);
-    }
+// Handle notification actions
+async function handleNotificationAction(action, data) {
+  console.log('Handling notification action:', action, data);
+  
+  switch (action) {
+    case 'start_workout':
+      return openApp('/workout');
     
-    // API calls - Network First
-    if (isApiCall(url.pathname)) {
-      return await networkFirst(request, API_CACHE);
-    }
+    case 'view_progress':
+      return openApp('/progress');
     
-    // Images - Cache First
-    if (isImage(url.pathname)) {
-      return await cacheFirst(request, IMAGE_CACHE);
-    }
+    case 'view_achievements':
+      return openApp('/progress?tab=achievements');
     
-    // Dynamic content - Stale While Revalidate
-    if (isDynamicContent(url.pathname)) {
-      return await staleWhileRevalidate(request, DYNAMIC_CACHE);
-    }
+    case 'snooze_1h':
+      // Schedule a new notification for 1 hour later
+      return scheduleSnoozeNotification(data);
     
-    // Default - Network First
-    return await networkFirst(request, DYNAMIC_CACHE);
+    case 'accept_friend':
+      return openApp('/social?action=accept_friend&id=' + data.friendId);
     
-  } catch (error) {
-    console.error('[SW] Fetch error:', error);
-    return await getOfflineFallback(request);
+    case 'decline_friend':
+      return openApp('/social?action=decline_friend&id=' + data.friendId);
+    
+    case 'congratulate':
+      return openApp('/social?action=congratulate&id=' + data.friendId);
+    
+    default:
+      return openApp();
   }
 }
 
-// Cache First strategy
-async function cacheFirst(request, cacheName) {
-  const cache = await caches.open(cacheName);
-  const cachedResponse = await cache.match(request);
+// Open the app with optional path
+async function openApp(path = '/') {
+  const clients = await self.clients.matchAll({ type: 'window' });
+  
+  // Check if app is already open
+  for (const client of clients) {
+    if (client.url.includes(self.location.origin)) {
+      // Focus existing window and navigate if needed
+      if (path !== '/') {
+        client.postMessage({
+          type: 'navigate',
+          path: path
+        });
+      }
+      return client.focus();
+    }
+  }
+  
+  // Open new window
+  return self.clients.openWindow(self.location.origin + path);
+}
+
+// Schedule a snooze notification
+async function scheduleSnoozeNotification(originalData) {
+  // This would typically involve sending a message to the main app
+  // to schedule the notification through the notification service
+  const clients = await self.clients.matchAll({ type: 'window' });
+  
+  clients.forEach((client) => {
+    client.postMessage({
+      type: 'schedule_snooze',
+      data: {
+        originalData: originalData,
+        snoozeTime: Date.now() + (60 * 60 * 1000) // 1 hour
+      }
+    });
+  });
+}
+
+// Background sync for offline notifications
+self.addEventListener('sync', (event) => {
+  console.log('Background sync:', event.tag);
+  
+  if (event.tag === 'notification-sync') {
+    event.waitUntil(syncPendingNotifications());
+  }
+});
+
+// Sync pending notifications when back online
+async function syncPendingNotifications() {
+  try {
+    // This would sync with the server to get pending notifications
+    console.log('Syncing pending notifications...');
+    
+    // Send message to main app to handle sync
+    const clients = await self.clients.matchAll({ type: 'window' });
+    clients.forEach((client) => {
+      client.postMessage({
+        type: 'sync_notifications'
+      });
+    });
+  } catch (error) {
+    console.error('Failed to sync notifications:', error);
+  }
+}
+
+// Message handler for communication with main app
+self.addEventListener('message', (event) => {
+  console.log('Service worker received message:', event.data);
+  
+  const { type, data } = event.data;
+  
+  switch (type) {
+    case 'show_notification':
+      self.registration.showNotification(data.title, data.options);
+      break;
+    
+    case 'clear_notifications':
+      clearAllNotifications();
+      break;
+    
+    case 'schedule_notification':
+      scheduleNotification(data);
+      break;
+  }
+});
+
+// Clear all notifications
+async function clearAllNotifications() {
+  try {
+    const notifications = await self.registration.getNotifications();
+    notifications.forEach(notification => notification.close());
+    console.log(`Cleared ${notifications.length} notifications`);
+  } catch (error) {
+    console.error('Failed to clear notifications:', error);
+  }
+}
+
+// Schedule a notification (simplified version)
+function scheduleNotification(data) {
+  const delay = data.scheduledTime - Date.now();
+  
+  if (delay > 0) {
+    setTimeout(() => {
+      self.registration.showNotification(data.title, data.options);
+    }, delay);
+  }
+}
+
+// Enhanced fetch event with intelligent caching strategies
+self.addEventListener('fetch', (event) => {
+  // Only handle GET requests
+  if (event.request.method !== 'GET') {
+    return;
+  }
+  
+  // Skip non-HTTP requests
+  if (!event.request.url.startsWith('http')) {
+    return;
+  }
+
+  // Skip chrome-extension and other non-web requests
+  if (event.request.url.startsWith('chrome-extension://') || 
+      event.request.url.startsWith('moz-extension://')) {
+    return;
+  }
+
+  event.respondWith(handleFetchWithStrategy(event.request));
+});
+
+/**
+ * Handle fetch with intelligent caching strategy
+ */
+async function handleFetchWithStrategy(request) {
+  const url = new URL(request.url);
+  const strategy = getCachingStrategy(url);
+  
+  try {
+    switch (strategy) {
+      case 'cache-first':
+        return await cacheFirst(request);
+      case 'network-first':
+        return await networkFirst(request);
+      case 'stale-while-revalidate':
+        return await staleWhileRevalidate(request);
+      case 'network-only':
+        return await fetch(request);
+      case 'cache-only':
+        return await caches.match(request) || new Response('Not found', { status: 404 });
+      default:
+        return await networkFirst(request);
+    }
+  } catch (error) {
+    console.error('Fetch strategy failed:', error);
+    return await handleFetchError(request, error);
+  }
+}
+
+/**
+ * Determine caching strategy based on URL
+ */
+function getCachingStrategy(url) {
+  const pathname = url.pathname;
+  const origin = url.origin;
+  
+  // Static assets - cache first
+  if (pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/)) {
+    return 'cache-first';
+  }
+  
+  // API calls - network first with fallback
+  if (pathname.startsWith('/api/')) {
+    return 'network-first';
+  }
+  
+  // Exercise data and static content - stale while revalidate
+  if (pathname.includes('/exercises') || pathname.includes('/static')) {
+    return 'stale-while-revalidate';
+  }
+  
+  // HTML pages - network first
+  if (pathname.endsWith('/') || pathname.endsWith('.html') || !pathname.includes('.')) {
+    return 'network-first';
+  }
+  
+  // External resources - network only
+  if (origin !== self.location.origin) {
+    return 'network-only';
+  }
+  
+  // Default strategy
+  return 'network-first';
+}
+
+/**
+ * Cache-first strategy
+ */
+async function cacheFirst(request) {
+  const cachedResponse = await caches.match(request);
   
   if (cachedResponse) {
+    // Update cache in background if resource is old
+    const cacheDate = new Date(cachedResponse.headers.get('date') || 0);
+    const isOld = Date.now() - cacheDate.getTime() > 24 * 60 * 60 * 1000; // 24 hours
+    
+    if (isOld) {
+      // Background update
+      fetch(request).then(response => {
+        if (response.ok) {
+          const cache = caches.open(CACHE_NAME);
+          cache.then(c => c.put(request, response.clone()));
+        }
+      }).catch(() => {
+        // Ignore background update errors
+      });
+    }
+    
     return cachedResponse;
   }
   
-  try {
-    const networkResponse = await fetch(request);
-    if (networkResponse.ok) {
-      cache.put(request, networkResponse.clone());
-    }
-    return networkResponse;
-  } catch (error) {
-    console.log('[SW] Network failed, no cache available');
-    throw error;
+  // Not in cache, fetch and cache
+  const response = await fetch(request);
+  
+  if (response.ok) {
+    const cache = await caches.open(CACHE_NAME);
+    cache.put(request, response.clone());
   }
+  
+  return response;
 }
 
-// Network First strategy
-async function networkFirst(request, cacheName) {
-  const cache = await caches.open(cacheName);
-  
+/**
+ * Network-first strategy
+ */
+async function networkFirst(request) {
   try {
-    const networkResponse = await fetch(request);
-    if (networkResponse.ok) {
-      cache.put(request, networkResponse.clone());
+    const response = await fetch(request);
+    
+    if (response.ok) {
+      // Cache successful responses
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(request, response.clone());
     }
-    return networkResponse;
+    
+    return response;
   } catch (error) {
-    console.log('[SW] Network failed, trying cache');
-    const cachedResponse = await cache.match(request);
+    // Network failed, try cache
+    const cachedResponse = await caches.match(request);
+    
     if (cachedResponse) {
-      return cachedResponse;
+      // Add offline indicator header
+      const offlineResponse = new Response(cachedResponse.body, {
+        status: cachedResponse.status,
+        statusText: cachedResponse.statusText,
+        headers: {
+          ...Object.fromEntries(cachedResponse.headers.entries()),
+          'X-Served-From': 'cache',
+          'X-Cache-Date': cachedResponse.headers.get('date') || new Date().toISOString()
+        }
+      });
+      
+      return offlineResponse;
     }
+    
     throw error;
   }
 }
 
-// Stale While Revalidate strategy
-async function staleWhileRevalidate(request, cacheName) {
-  const cache = await caches.open(cacheName);
-  const cachedResponse = await cache.match(request);
+/**
+ * Stale-while-revalidate strategy
+ */
+async function staleWhileRevalidate(request) {
+  const cachedResponse = await caches.match(request);
   
-  // Always try to update cache in background
-  const networkPromise = fetch(request).then((networkResponse) => {
-    if (networkResponse.ok) {
-      cache.put(request, networkResponse.clone());
+  // Always try to update in background
+  const fetchPromise = fetch(request).then(response => {
+    if (response.ok) {
+      const cache = caches.open(CACHE_NAME);
+      cache.then(c => c.put(request, response.clone()));
     }
-    return networkResponse;
+    return response;
   }).catch(() => {
-    // Network failed, but we might have cache
+    // Ignore background update errors
   });
   
   // Return cached version immediately if available
@@ -215,226 +444,85 @@ async function staleWhileRevalidate(request, cacheName) {
     return cachedResponse;
   }
   
-  // If no cache, wait for network
-  return await networkPromise;
+  // No cached version, wait for network
+  return await fetchPromise;
 }
 
-// Helper functions to determine content type
-function isStaticAsset(pathname) {
-  return CACHE_STRATEGIES.static.some(pattern => 
-    pathname.startsWith(pattern) || pathname.includes(pattern)
-  );
-}
-
-function isApiCall(pathname) {
-  return CACHE_STRATEGIES.api.some(pattern => 
-    pathname.startsWith(pattern)
-  );
-}
-
-function isImage(pathname) {
-  return CACHE_STRATEGIES.images.some(pattern => 
-    pathname.includes(pattern) || pathname.endsWith(pattern)
-  );
-}
-
-function isDynamicContent(pathname) {
-  return CACHE_STRATEGIES.dynamic.some(pattern => 
-    pathname.startsWith(pattern)
-  );
-}
-
-// Offline fallback
-async function getOfflineFallback(request) {
+/**
+ * Handle fetch errors with intelligent fallbacks
+ */
+async function handleFetchError(request, error) {
   const url = new URL(request.url);
   
-  // For navigation requests, return cached index.html
-  if (request.mode === 'navigate') {
-    const cache = await caches.open(STATIC_CACHE);
-    const cachedIndex = await cache.match('/index.html');
-    if (cachedIndex) {
-      return cachedIndex;
+  // Try to serve from cache
+  const cachedResponse = await caches.match(request);
+  if (cachedResponse) {
+    return cachedResponse;
+  }
+  
+  // For HTML requests, serve offline page
+  if (request.headers.get('accept')?.includes('text/html')) {
+    const offlinePage = await caches.match('/offline.html');
+    if (offlinePage) {
+      return offlinePage;
     }
   }
   
-  // For API requests, return offline indicator
-  if (isApiCall(url.pathname)) {
-    return new Response(
-      JSON.stringify({
-        error: 'offline',
-        message: 'This request failed because you are offline',
-        timestamp: Date.now()
-      }),
-      {
-        status: 503,
-        statusText: 'Service Unavailable',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache'
-        }
+  // For API requests, return structured error
+  if (url.pathname.startsWith('/api/')) {
+    return new Response(JSON.stringify({
+      error: 'Network unavailable',
+      message: 'This request will be retried when connection is restored',
+      offline: true,
+      timestamp: Date.now()
+    }), {
+      status: 503,
+      statusText: 'Service Unavailable',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Offline-Error': 'true'
       }
-    );
+    });
   }
   
-  // For images, return placeholder
-  if (isImage(url.pathname)) {
-    return new Response(
-      '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><rect width="200" height="200" fill="#f3f4f6"/><text x="100" y="100" text-anchor="middle" dy=".3em" fill="#9ca3af">Offline</text></svg>',
-      {
-        headers: {
-          'Content-Type': 'image/svg+xml',
-          'Cache-Control': 'no-cache'
-        }
-      }
-    );
-  }
-  
-  throw new Error('No offline fallback available');
+  // Default error response
+  return new Response('Network error occurred', {
+    status: 503,
+    statusText: 'Service Unavailable'
+  });
 }
 
-// Background Sync
-self.addEventListener('sync', (event) => {
-  console.log('[SW] Background sync triggered:', event.tag);
-  
-  switch (event.tag) {
-    case SYNC_TAGS.WORKOUT_SYNC:
-      event.waitUntil(syncWorkouts());
-      break;
-    case SYNC_TAGS.EXERCISE_SYNC:
-      event.waitUntil(syncExercises());
-      break;
-    case SYNC_TAGS.PROFILE_SYNC:
-      event.waitUntil(syncProfile());
-      break;
-    case SYNC_TAGS.OFFLINE_ACTIONS:
-      event.waitUntil(syncOfflineActions());
-      break;
-    default:
-      console.log('[SW] Unknown sync tag:', event.tag);
-  }
-});
-
-// Sync functions
-async function syncWorkouts() {
+/**
+ * Periodic cache cleanup
+ */
+async function performCacheCleanup() {
   try {
-    console.log('[SW] Syncing workouts...');
+    const cacheNames = await caches.keys();
+    const currentCaches = [CACHE_NAME, NOTIFICATION_CACHE];
     
-    // Get pending workout data from IndexedDB
-    const pendingWorkouts = await getPendingData('workouts');
+    // Delete old caches
+    const deletePromises = cacheNames
+      .filter(cacheName => !currentCaches.includes(cacheName))
+      .map(cacheName => caches.delete(cacheName));
     
-    for (const workout of pendingWorkouts) {
-      try {
-        const response = await fetch('/api/workouts', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(workout)
-        });
-        
-        if (response.ok) {
-          await removePendingData('workouts', workout.id);
-          console.log('[SW] Workout synced:', workout.id);
-        }
-      } catch (error) {
-        console.error('[SW] Failed to sync workout:', workout.id, error);
-      }
+    await Promise.all(deletePromises);
+    
+    // Clean up current cache if too large
+    const cache = await caches.open(CACHE_NAME);
+    const requests = await cache.keys();
+    
+    if (requests.length > 500) { // Max 500 cached items
+      // Remove oldest 100 items
+      const toDelete = requests.slice(0, 100);
+      await Promise.all(toDelete.map(request => cache.delete(request)));
+      
+      console.log(`[ServiceWorker] Cleaned up ${toDelete.length} old cache entries`);
     }
+    
   } catch (error) {
-    console.error('[SW] Workout sync failed:', error);
+    console.error('[ServiceWorker] Cache cleanup failed:', error);
   }
 }
 
-async function syncExercises() {
-  try {
-    console.log('[SW] Syncing exercises...');
-    // Similar implementation for exercises
-  } catch (error) {
-    console.error('[SW] Exercise sync failed:', error);
-  }
-}
-
-async function syncProfile() {
-  try {
-    console.log('[SW] Syncing profile...');
-    // Similar implementation for profile
-  } catch (error) {
-    console.error('[SW] Profile sync failed:', error);
-  }
-}
-
-async function syncOfflineActions() {
-  try {
-    console.log('[SW] Syncing offline actions...');
-    // Sync any queued offline actions
-  } catch (error) {
-    console.error('[SW] Offline actions sync failed:', error);
-  }
-}
-
-// Helper functions for IndexedDB operations
-async function getPendingData(storeName) {
-  // This would integrate with your IndexedDB implementation
-  // For now, return empty array
-  return [];
-}
-
-async function removePendingData(storeName, id) {
-  // This would remove synced data from IndexedDB
-  console.log(`[SW] Removing synced data: ${storeName}/${id}`);
-}
-
-// Message handling
-self.addEventListener('message', (event) => {
-  const { type, payload } = event.data;
-  
-  switch (type) {
-    case 'SKIP_WAITING':
-      self.skipWaiting();
-      break;
-    case 'GET_VERSION':
-      event.ports[0].postMessage({ version: CACHE_NAME });
-      break;
-    case 'CLEAR_CACHE':
-      clearAllCaches().then(() => {
-        event.ports[0].postMessage({ success: true });
-      });
-      break;
-    case 'FORCE_SYNC':
-      if (payload.tag) {
-        self.registration.sync.register(payload.tag);
-      }
-      break;
-    default:
-      console.log('[SW] Unknown message type:', type);
-  }
-});
-
-// Clear all caches
-async function clearAllCaches() {
-  const cacheNames = await caches.keys();
-  await Promise.all(
-    cacheNames.map(cacheName => caches.delete(cacheName))
-  );
-  console.log('[SW] All caches cleared');
-}
-
-// Periodic background sync (if supported)
-self.addEventListener('periodicsync', (event) => {
-  if (event.tag === 'background-sync') {
-    event.waitUntil(performBackgroundSync());
-  }
-});
-
-async function performBackgroundSync() {
-  console.log('[SW] Performing periodic background sync');
-  // Sync all pending data
-  await Promise.all([
-    syncWorkouts(),
-    syncExercises(),
-    syncProfile(),
-    syncOfflineActions()
-  ]);
-}
-
-console.log('[SW] Service Worker loaded successfully');
+// Perform cache cleanup every hour
+setInterval(performCacheCleanup, 60 * 60 * 1000);

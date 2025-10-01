@@ -1,0 +1,66 @@
+{
+  "passed": false,
+  "coverage": {
+    "overall": 75,
+    "components": 60,
+    "utilities": 100,
+    "violations": [
+      {
+        "file": "src/components/Button.tsx",
+        "coverage": 60,
+        "threshold": 75,
+        "type": "component"
+      }
+    ]
+  },
+  "reliability": {
+    "current": 95,
+    "flakyTests": [
+      "test1",
+      "test2"
+    ],
+    "trend": [
+      96,
+      95,
+      95
+    ]
+  },
+  "accessibility": {
+    "automatedScore": 85,
+    "manualTestsRequired": 8,
+    "violations": 1
+  },
+  "alerts": [
+    {
+      "type": "coverage",
+      "severity": "high",
+      "message": "Overall coverage 75% below 90% threshold",
+      "remediation": "Add tests for uncovered code paths"
+    },
+    {
+      "type": "coverage-violations",
+      "severity": "medium",
+      "message": "1 files below coverage thresholds",
+      "remediation": "Fix coverage for: src/components/Button.tsx"
+    },
+    {
+      "type": "reliability",
+      "severity": "critical",
+      "message": "Test reliability 95% below 99% threshold",
+      "remediation": "Fix flaky tests and improve test stability"
+    },
+    {
+      "type": "flaky-tests",
+      "severity": "high",
+      "message": "2 flaky tests detected (2.0% rate)",
+      "remediation": "Fix flaky tests: test1, test2"
+    },
+    {
+      "type": "accessibility",
+      "severity": "medium",
+      "message": "Accessibility automated score 85% below 95% target",
+      "remediation": "Fix accessibility violations and improve WCAG compliance"
+    }
+  ],
+  "timestamp": "2025-09-30T16:33:34.054Z"
+}

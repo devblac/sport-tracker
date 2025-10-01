@@ -1,6 +1,7 @@
 import React from 'react';
 import { cn } from '@/utils';
 import { Eye, EyeOff } from 'lucide-react';
+import { sanitizeUserContent } from '@/utils/xssProtection';
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -9,6 +10,7 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   fullWidth?: boolean;
+  sanitizeInput?: boolean;
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -18,6 +20,7 @@ export const Input: React.FC<InputProps> = ({
   leftIcon,
   rightIcon,
   fullWidth = false,
+  sanitizeInput = true,
   className,
   type = 'text',
   id,
@@ -32,6 +35,16 @@ export const Input: React.FC<InputProps> = ({
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
+  };
+
+  // Handle input sanitization
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (sanitizeInput && type !== 'password' && type !== 'email') {
+      // Only sanitize for display/text inputs, not passwords or emails
+      const sanitized = sanitizeUserContent(e.target.value);
+      e.target.value = sanitized;
+    }
+    props.onChange?.(e);
   };
 
   return (
@@ -89,6 +102,7 @@ export const Input: React.FC<InputProps> = ({
             setIsFocused(false);
             props.onBlur?.(e);
           }}
+          onChange={handleInputChange}
           {...props}
         />
         

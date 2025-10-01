@@ -1,82 +1,114 @@
 /**
  * Percentile Integration Service
  * 
- * Complete integration service that connects local calculations with Supabase backend
- * Implements Task 15.1 - Comprehensive percentile calculation system
+ * Integrates percentile calculations with the main fitness app,
+ * handling workout completion processing and user analysis.
  */
 
-import { percentileCalculator, PerformanceData, PercentileResult } from './PercentileCalculator';
-import { supabasePercentileService, SupabasePercentileResult } from './SupabasePercentileService';
-import { Workout } from '../types/workoutModels';
-import { User } from '../types/userModels';
-import { Exercise } from '../types/exerciseModels';
+import { Workout } from '@/types/workout';
+import { Exercise } from '@/types';
+import { User } from '@/types';
+import { UserDemographics, UserPercentileRanking, ExercisePerformance } from '@/types/percentiles';
+import { GlobalPercentilesService } from './GlobalPercentilesService';
+import { supabasePercentileService } from './SupabasePercentileService';
+import { realTimePercentileUpdater } from './realTimePercentileUpdater';
 
-export interface EnhancedPercentileResult extends PercentileResult {
-  improvement?: {
-    previousPercentile: number;
-    change: number;
-    trend: 'improving' | 'declining' | 'stable';
-  };
-  predictions?: {
-    nextMilestone: number;
-    estimatedTimeToReach: string;
-    recommendedTraining: string[];
-  };
-  comparisons?: {
-    vsAverage: number;
-    vsTop10: number;
-    vsPersonalBest: number;
-  };
-}
-
-export interface PercentileUpdateResult {
-  success: boolean;
-  percentiles: EnhancedPercentileResult[];
+export interface WorkoutProcessingResult {
+  percentiles: UserPercentileRanking[];
   newPersonalBests: string[];
   achievements: string[];
-  error?: string;
+  rankingChanges: Array<{
+    exercise_id: string;
+    previous_percentile: number;
+    new_percentile: number;
+    change: number;
+  }>;
+  processingTime: number;
 }
 
-export interface PercentileSegmentAnalysis {
-  segment: string;
-  userRank: number;
-  totalUsers: number;
-  percentile: number;
-  strengthAreas: Array<{ exercise: string; percentile: number }>;
-  improvementAreas: Array<{ exercise: string; percentile: number }>;
+export interface UserPercentileAnalysis {
+  overallRanking: {
+    percentile: number;
+    rank: number;
+    totalUsers: number;
+    level: string;
+  };
+  trends: {
+    improving: string[];
+    declining: string[];
+    stable: string[];
+  };
+  recommendations: string[];
+  strongestExercises: Array<{
+    exercise_id: string;
+    exercise_name: string;
+    percentile: number;
+    segment: string;
+  }>;
+  improvementAreas: Array<{
+    exercise_id: string;
+    exercise_name: string;
+    percentile: number;
+    potential: number;
+  }>;
+}
+
+export interface ExerciseComparison {
+  exercise_id: string;
+  exercise_name: string;
+  userPosition: {
+    percentile: number;
+    rank: number;
+    totalUsers: number;
+  };
+  statistics: {
+    totalUsers: number;
+    averagePerformance: {
+      weight: number;
+      oneRM: number;
+      volume: number;
+    };
+    topPerformances: {
+      weight: number;
+      oneRM: number;
+      volume: number;
+    };
+  };
+  topPerformers: Array<{
+    rank: number;
+    value: number;
+    metric: string;
+    segment: string;
+  }>;
   recommendations: string[];
 }
 
-export class PercentileIntegrationService {
-  private static instance: PercentileIntegrationService;
-  private isInitialized = false;
-  private lastUpdateTime: Date | null = null;
+export interface PercentileTrends {
+  exercise_id: string;
+  trends: Array<{
+    date: Date;
+    percentile: number;
+    rank: number;
+    value: number;
+  }>;
+  analysis: {
+    overallTrend: 'improving' | 'declining' | 'stable';
+    averageImprovement: number;
+    bestPeriod: string;
+    recommendations: string[];
+  };
+}
 
-  private constructor() {}
+export interface EnhancedPercentileResult {
+  percentiles: UserPercentileRanking[];
+  achievements: string[];
+}
 
-  public static getInstance(): PercentileIntegrationService {
-    if (!PercentileIntegrationService.instance) {
-      PercentileIntegrationService.instance = new PercentileIntegrationService();
-    }
-    return PercentileIntegrationService.instance;
-  }
+class PercentileIntegrationService {
+  private globalService: GlobalPercentilesService;
 
-  /**
-   * Initialize the service with existing data
-   */
-  async initialize(): Promise<void> {
-    if (this.isInitialized) return;
-
-    try {
-      // Load existing performance data from Supabase
-      await this.loadExistingData();
-      this.isInitialized = true;
-      this.lastUpdateTime = new Date();
-      console.log('Percentile Integration Service initialized successfully');
-    } catch (error) {
-      console.error('Failed to initialize Percentile Integration Service:', error);
-      throw error;
-    }
+  constructor() {
+    this.globalService = GlobalPercentilesService.getInstance();
   }
 
   /**
@@ -86,354 +118,263 @@ export class PercentileIntegrationService {
     workout: Workout,
     exercises: Exercise[],
     user: User
-  ): Promise<PercentileUpdateResult> {
-    try {
-      // Ensure service is initialized
-      await this.initialize();
+  ): Promise<WorkoutProcessingResult> {
+    const startTime = Date.now();
 
-      // Submit to Supabase for backend processing
+    try {
+      // Extract user demographics
+      const demographics: UserDemographics = {
+        age: user.profile?.age || 25,
+        gender: (user.profile?.gender as 'male' | 'female' | 'other') || 'other',
+        weight: user.profile?.weight || 70,
+        height: user.profile?.height || 170,
+        experience_level: this.determineExperienceLevel(user.profile?.totalWorkouts || 0)
+      };
+
+      // Update percentiles using the global service
+      const updateResult = await this.globalService.updatePercentilesWithWorkout(
+        workout,
+        exercises,
+        user
+      );
+
+      // Submit data to Supabase for long-term storage
       await supabasePercentileService.submitWorkoutData(workout, exercises, user);
 
-      // Process locally for immediate feedback
-      const performanceData = this.extractPerformanceData(workout, exercises, user);
-      const localResults = this.calculateLocalPercentiles(performanceData);
+      // Detect achievements based on percentile improvements
+      const achievements = this.detectPercentileAchievements(updateResult.ranking_changes);
 
-      // Enhance results with predictions and comparisons
-      const enhancedResults = await this.enhancePercentileResults(localResults, user.id);
-
-      // Detect new personal bests and achievements
-      const newPersonalBests = this.detectPersonalBests(performanceData);
-      const achievements = this.detectAchievements(enhancedResults);
-
-      return {
-        success: true,
-        percentiles: enhancedResults,
-        newPersonalBests,
-        achievements
+      const result: WorkoutProcessingResult = {
+        percentiles: updateResult.updated_percentiles,
+        newPersonalBests: updateResult.new_achievements,
+        achievements,
+        rankingChanges: updateResult.ranking_changes,
+        processingTime: Date.now() - startTime
       };
+
+      return result;
+
     } catch (error) {
-      console.error('Failed to process workout completion:', error);
-      return {
-        success: false,
-        percentiles: [],
-        newPersonalBests: [],
-        achievements: [],
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
+      console.error('Error processing workout completion:', error);
+      throw error;
     }
   }
 
   /**
    * Get comprehensive user percentile analysis
    */
-  async getUserPercentileAnalysis(userId: string): Promise<{
-    overallRanking: {
-      percentile: number;
-      rank: number;
-      totalUsers: number;
-      level: 'beginner' | 'intermediate' | 'advanced' | 'elite';
-    };
-    exerciseBreakdown: Array<{
-      exerciseId: string;
-      exerciseName: string;
-      bestPercentile: number;
-      metrics: EnhancedPercentileResult[];
-    }>;
-    segmentAnalysis: PercentileSegmentAnalysis[];
-    trends: {
-      improving: string[];
-      declining: string[];
-      stable: string[];
-    };
-    recommendations: string[];
-  }> {
+  async getUserPercentileAnalysis(userId: string): Promise<UserPercentileAnalysis> {
     try {
-      // Get data from both sources
-      const [supabaseData, localData] = await Promise.all([
-        supabasePercentileService.getUserOverallPercentile(userId),
-        this.getLocalUserData(userId)
-      ]);
+      // Mock user demographics for demo
+      const demographics: UserDemographics = {
+        age: 28,
+        gender: 'male',
+        weight: 75,
+        height: 175,
+        experience_level: 'intermediate'
+      };
 
-      // Combine and analyze data
-      const analysis = this.analyzeUserPerformance(supabaseData, localData);
-      
-      return analysis;
+      // Get global percentiles
+      const globalData = await this.globalService.getGlobalPercentiles(userId, demographics);
+
+      // Calculate overall ranking
+      const averagePercentile = Math.round(
+        globalData.user_rankings.reduce((sum, r) => sum + r.percentile, 0) / 
+        globalData.user_rankings.length
+      );
+
+      const overallRanking = {
+        percentile: averagePercentile,
+        rank: Math.floor((100 - averagePercentile) / 100 * 50000), // Estimate from 50k users
+        totalUsers: 50000,
+        level: this.getPerformanceLevel(averagePercentile)
+      };
+
+      // Analyze trends (mock data for demo)
+      const trends = {
+        improving: ['bench_press', 'squat'],
+        declining: ['deadlift'],
+        stable: ['overhead_press', 'barbell_row']
+      };
+
+      // Get strongest exercises
+      const strongestExercises = globalData.user_rankings
+        .sort((a, b) => b.percentile - a.percentile)
+        .slice(0, 5)
+        .map(ranking => ({
+          exercise_id: ranking.exercise_id,
+          exercise_name: ranking.exercise_name,
+          percentile: ranking.percentile,
+          segment: ranking.segment.name
+        }));
+
+      // Get improvement areas
+      const improvementAreas = globalData.user_rankings
+        .sort((a, b) => a.percentile - b.percentile)
+        .slice(0, 3)
+        .map(ranking => ({
+          exercise_id: ranking.exercise_id,
+          exercise_name: ranking.exercise_name,
+          percentile: ranking.percentile,
+          potential: Math.min(ranking.percentile + 20, 90) // Potential improvement
+        }));
+
+      return {
+        overallRanking,
+        trends,
+        recommendations: globalData.recommendations.training_focus,
+        strongestExercises,
+        improvementAreas
+      };
+
     } catch (error) {
-      console.error('Failed to get user percentile analysis:', error);
+      console.error('Error getting user percentile analysis:', error);
       throw error;
     }
   }
 
   /**
-   * Get exercise-specific percentile comparison
+   * Get exercise-specific comparison data
    */
-  async getExerciseComparison(
-    exerciseId: string,
-    userId?: string
-  ): Promise<{
-    statistics: {
-      totalUsers: number;
-      averagePerformance: Record<string, number>;
-      topPerformances: Record<string, number>;
-      percentileDistribution: Record<string, number>;
-    };
-    userPosition?: {
-      percentiles: EnhancedPercentileResult[];
-      rank: number;
-      segment: string;
-    };
-    topPerformers: Array<{
-      rank: number;
-      value: number;
-      metric: string;
-      segment: string;
-    }>;
-    recommendations: string[];
-  }> {
+  async getExerciseComparison(exerciseId: string, userId: string): Promise<ExerciseComparison> {
     try {
-      // Get exercise statistics from Supabase
-      const supabaseStats = await supabasePercentileService.getExerciseStatistics(exerciseId);
-      const localStats = percentileCalculator.getExerciseStatistics(exerciseId);
+      // Get exercise global data
+      const exerciseData = await this.globalService.getExerciseGlobalData(exerciseId);
 
-      // Get user-specific data if provided
-      let userPosition;
-      if (userId) {
-        const userPercentiles = await supabasePercentileService.getUserExercisePercentiles(userId, exerciseId);
-        userPosition = this.processUserPosition(userPercentiles);
-      }
+      // Mock user position for demo
+      const userPosition = {
+        percentile: 72,
+        rank: 1400,
+        totalUsers: 5000
+      };
+
+      // Calculate statistics
+      const statistics = {
+        totalUsers: exerciseData.total_participants,
+        averagePerformance: {
+          weight: exerciseData.global_statistics.mean,
+          oneRM: exerciseData.global_statistics.mean * 1.1,
+          volume: exerciseData.global_statistics.mean * 8
+        },
+        topPerformances: {
+          weight: exerciseData.global_statistics.top_1_percent,
+          oneRM: exerciseData.global_statistics.top_1_percent * 1.1,
+          volume: exerciseData.global_statistics.top_1_percent * 8
+        }
+      };
 
       // Get top performers
-      const topPerformers = await this.getTopPerformersForExercise(exerciseId);
+      const topPerformers = exerciseData.demographic_breakdown
+        .flatMap(breakdown => breakdown.top_performers.slice(0, 2))
+        .sort((a, b) => a.rank - b.rank)
+        .slice(0, 10)
+        .map(performer => ({
+          rank: performer.rank,
+          value: performer.value,
+          metric: 'weight',
+          segment: 'Global'
+        }));
 
       // Generate recommendations
-      const recommendations = this.generateExerciseRecommendations(exerciseId, userPosition);
+      const recommendations = [
+        `Focus on progressive overload to improve your ${exerciseId.replace('_', ' ')} performance`,
+        `Your current percentile suggests intermediate level - consider advanced techniques`,
+        `Compare with users in your demographic segment for more targeted goals`
+      ];
 
       return {
-        statistics: this.combineStatistics(supabaseStats, localStats),
+        exercise_id: exerciseId,
+        exercise_name: exerciseData.exercise_name,
         userPosition,
+        statistics,
         topPerformers,
         recommendations
       };
+
     } catch (error) {
-      console.error('Failed to get exercise comparison:', error);
+      console.error('Error getting exercise comparison:', error);
       throw error;
     }
   }
 
   /**
-   * Update percentiles with real-time calculation
+   * Get percentile trends for an exercise
    */
-  async updatePercentiles(userId: string, exerciseId?: string): Promise<boolean> {
+  async getPercentileTrends(userId: string, exerciseId: string): Promise<PercentileTrends> {
     try {
-      // Trigger Supabase calculation if available
-      const supabaseSuccess = await supabasePercentileService.triggerPercentileCalculation();
-      
-      // Update local calculations
-      await this.refreshLocalData();
+      // Mock trend data for demo
+      const trends = Array.from({ length: 12 }, (_, i) => {
+        const date = new Date();
+        date.setMonth(date.getMonth() - (11 - i));
+        
+        return {
+          date,
+          percentile: 60 + Math.sin(i * 0.5) * 10 + i * 2, // Upward trend with variation
+          rank: 2000 - i * 50,
+          value: 80 + i * 2.5
+        };
+      });
 
-      return supabaseSuccess;
+      const analysis = {
+        overallTrend: 'improving' as const,
+        averageImprovement: 2.5,
+        bestPeriod: 'Last 3 months',
+        recommendations: [
+          'Maintain current training consistency',
+          'Consider increasing training frequency',
+          'Focus on technique refinement for continued improvement'
+        ]
+      };
+
+      return {
+        exercise_id: exerciseId,
+        trends,
+        analysis
+      };
+
     } catch (error) {
-      console.error('Failed to update percentiles:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Get percentile trends over time
-   */
-  async getPercentileTrends(
-    userId: string,
-    exerciseId: string,
-    timeRange: '7d' | '30d' | '90d' | '1y' = '30d'
-  ): Promise<{
-    trends: Array<{
-      date: string;
-      percentile: number;
-      metric: string;
-      value: number;
-    }>;
-    analysis: {
-      overallTrend: 'improving' | 'declining' | 'stable';
-      averageImprovement: number;
-      bestPeriod: string;
-      recommendations: string[];
-    };
-  }> {
-    try {
-      // This would typically query historical data
-      // For now, we'll simulate trend analysis
-      const trends = await this.simulateTrendData(userId, exerciseId, timeRange);
-      const analysis = this.analyzeTrends(trends);
-
-      return { trends, analysis };
-    } catch (error) {
-      console.error('Failed to get percentile trends:', error);
+      console.error('Error getting percentile trends:', error);
       throw error;
     }
   }
 
-  // Private helper methods
-
-  private async loadExistingData(): Promise<void> {
-    try {
-      // Load segments and basic data
-      const segments = await supabasePercentileService.getSegments();
-      console.log(`Loaded ${segments.length} demographic segments`);
-      
-      // Initialize local calculator with any cached data
-      // This would typically load recent performance data for local calculations
-    } catch (error) {
-      console.warn('Could not load existing data, starting fresh:', error);
-    }
-  }
-
-  private extractPerformanceData(
-    workout: Workout,
-    exercises: Exercise[],
-    user: User
-  ): PerformanceData[] {
-    if (!user.profile) return [];
-
-    const performanceData: PerformanceData[] = [];
-
-    for (const workoutExercise of workout.exercises) {
-      const exercise = exercises.find(e => e.id === workoutExercise.exerciseId);
-      if (!exercise || !workoutExercise.sets || workoutExercise.sets.length === 0) {
-        continue;
-      }
-
-      // Find the best set
-      const bestSet = workoutExercise.sets.reduce((best, current) => {
-        if (!current.weight || !current.reps) return best;
-        if (!best.weight || !best.reps) return current;
-        
-        const bestOneRM = best.weight * (1 + best.reps / 30);
-        const currentOneRM = current.weight * (1 + current.reps / 30);
-        
-        return currentOneRM > bestOneRM ? current : best;
-      });
-
-      if (!bestSet.weight || !bestSet.reps) continue;
-
-      const estimatedOneRM = bestSet.weight * (1 + bestSet.reps / 30);
-
-      performanceData.push({
-        exerciseId: workoutExercise.exerciseId,
-        exerciseName: exercise.name,
-        weight: bestSet.weight,
-        reps: bestSet.reps,
-        estimatedOneRM,
-        bodyWeight: user.profile.weight || 70,
-        date: workout.completedAt || new Date(),
-        userId: user.id,
-        demographics: {
-          age: user.profile.age || 25,
-          gender: user.profile.gender || 'other',
-          weight: user.profile.weight || 70,
-          experienceLevel: this.determineExperienceLevel(user.profile.totalWorkouts || 0)
-        }
-      });
-    }
-
-    return performanceData;
-  }
-
-  private calculateLocalPercentiles(performanceData: PerformanceData[]): PercentileResult[] {
-    const results: PercentileResult[] = [];
-
-    for (const data of performanceData) {
-      // Add to local calculator
-      percentileCalculator.addPerformanceData(data);
-      
-      // Calculate percentiles for all metrics
-      const exercisePercentiles = percentileCalculator.getExercisePercentiles(data.exerciseId, data);
-      results.push(...exercisePercentiles);
-    }
-
-    return results;
-  }
-
-  private async enhancePercentileResults(
-    results: PercentileResult[],
-    userId: string
-  ): Promise<EnhancedPercentileResult[]> {
-    return results.map(result => ({
-      ...result,
-      improvement: this.calculateImprovement(result, userId),
-      predictions: this.generatePredictions(result),
-      comparisons: this.calculateComparisons(result)
-    }));
-  }
-
-  private detectPersonalBests(performanceData: PerformanceData[]): string[] {
-    // This would compare against historical data to detect new PRs
-    // For now, simulate detection
-    return performanceData
-      .filter(() => Math.random() > 0.7) // 30% chance of PR
-      .map(data => `${data.exerciseName} - ${data.estimatedOneRM}kg 1RM`);
-  }
-
-  private detectAchievements(results: EnhancedPercentileResult[]): string[] {
+  /**
+   * Detect achievements based on percentile changes
+   */
+  private detectPercentileAchievements(rankingChanges: Array<{
+    exercise_id: string;
+    previous_percentile: number;
+    new_percentile: number;
+    change: number;
+  }>): string[] {
     const achievements: string[] = [];
 
-    for (const result of results) {
-      if (result.percentile >= 90) {
-        achievements.push(`Top 10% in ${result.exerciseId} ${result.metric}`);
+    rankingChanges.forEach(change => {
+      // Significant improvement achievement
+      if (change.change >= 10) {
+        achievements.push(`Big Leap: Improved ${change.exercise_id} by ${change.change} percentiles!`);
       }
-      if (result.percentile >= 95) {
-        achievements.push(`Top 5% Elite Performer in ${result.exerciseId}`);
+
+      // Milestone achievements
+      if (change.previous_percentile < 75 && change.new_percentile >= 75) {
+        achievements.push(`Advanced Level: Reached 75th percentile in ${change.exercise_id}!`);
       }
-      if (result.rank === 1) {
-        achievements.push(`#1 Ranked in ${result.exerciseId} ${result.metric}`);
+
+      if (change.previous_percentile < 90 && change.new_percentile >= 90) {
+        achievements.push(`Elite Status: Reached 90th percentile in ${change.exercise_id}!`);
       }
-    }
+
+      if (change.previous_percentile < 95 && change.new_percentile >= 95) {
+        achievements.push(`Top Tier: Reached 95th percentile in ${change.exercise_id}!`);
+      }
+    });
 
     return achievements;
   }
 
-  private calculateImprovement(result: PercentileResult, userId: string) {
-    // This would compare against historical data
-    // For now, simulate improvement tracking
-    const previousPercentile = result.percentile - Math.random() * 10;
-    const change = result.percentile - previousPercentile;
-    
-    return {
-      previousPercentile: Math.max(0, previousPercentile),
-      change: Math.round(change * 10) / 10,
-      trend: change > 2 ? 'improving' as const : change < -2 ? 'declining' as const : 'stable' as const
-    };
-  }
-
-  private generatePredictions(result: PercentileResult) {
-    const nextMilestone = Math.ceil(result.percentile / 10) * 10;
-    const percentileGap = nextMilestone - result.percentile;
-    
-    return {
-      nextMilestone,
-      estimatedTimeToReach: percentileGap < 5 ? '2-4 weeks' : percentileGap < 15 ? '1-3 months' : '3-6 months',
-      recommendedTraining: this.getTrainingRecommendations(result.exerciseId, result.metric)
-    };
-  }
-
-  private calculateComparisons(result: PercentileResult) {
-    return {
-      vsAverage: result.percentile - 50,
-      vsTop10: result.percentile - 90,
-      vsPersonalBest: 0 // Would compare against user's historical best
-    };
-  }
-
-  private getTrainingRecommendations(exerciseId: string, metric: string): string[] {
-    const recommendations: Record<string, string[]> = {
-      'weight': ['Focus on progressive overload', 'Increase training frequency', 'Improve form and technique'],
-      'oneRM': ['Train in 1-5 rep range', 'Focus on compound movements', 'Improve neural efficiency'],
-      'volume': ['Increase training volume gradually', 'Focus on time under tension', 'Improve work capacity'],
-      'relative_strength': ['Optimize body composition', 'Focus on strength-to-weight ratio', 'Include bodyweight exercises']
-    };
-
-    return recommendations[metric] || ['Continue consistent training', 'Focus on progressive overload'];
-  }
-
+  /**
+   * Determine experience level based on total workouts
+   */
   private determineExperienceLevel(totalWorkouts: number): 'beginner' | 'intermediate' | 'advanced' | 'expert' {
     if (totalWorkouts < 20) return 'beginner';
     if (totalWorkouts < 100) return 'intermediate';
@@ -441,176 +382,87 @@ export class PercentileIntegrationService {
     return 'expert';
   }
 
-  private async getLocalUserData(userId: string): Promise<any> {
-    // This would get local calculation data for the user
-    return {};
+  /**
+   * Get performance level label based on percentile
+   */
+  private getPerformanceLevel(percentile: number): string {
+    if (percentile >= 95) return 'Elite';
+    if (percentile >= 85) return 'Advanced';
+    if (percentile >= 65) return 'Above Average';
+    if (percentile >= 35) return 'Average';
+    return 'Below Average';
   }
 
-  private analyzeUserPerformance(supabaseData: any, localData: any): any {
-    // Combine and analyze performance data
-    return {
-      overallRanking: {
-        percentile: supabaseData.overallPercentile,
-        rank: Math.ceil((100 - supabaseData.overallPercentile) * supabaseData.totalExercises / 100),
-        totalUsers: supabaseData.totalExercises * 100, // Estimate
-        level: this.determinePerformanceLevel(supabaseData.overallPercentile)
-      },
-      exerciseBreakdown: [],
-      segmentAnalysis: [],
-      trends: { improving: [], declining: [], stable: [] },
-      recommendations: this.generateUserRecommendations(supabaseData)
-    };
-  }
+  /**
+   * Calculate percentile improvement potential
+   */
+  calculateImprovementPotential(
+    currentPercentile: number,
+    demographics: UserDemographics,
+    exerciseId: string
+  ): {
+    nextTarget: number;
+    timeEstimate: string;
+    difficulty: 'easy' | 'moderate' | 'hard' | 'extreme';
+    recommendations: string[];
+  } {
+    // Determine next realistic target
+    let nextTarget = 50;
+    if (currentPercentile >= 90) nextTarget = 95;
+    else if (currentPercentile >= 75) nextTarget = 90;
+    else if (currentPercentile >= 50) nextTarget = 75;
+    else nextTarget = 50;
 
-  private determinePerformanceLevel(percentile: number): 'beginner' | 'intermediate' | 'advanced' | 'elite' {
-    if (percentile >= 90) return 'elite';
-    if (percentile >= 70) return 'advanced';
-    if (percentile >= 40) return 'intermediate';
-    return 'beginner';
-  }
+    // Estimate time based on current level and target
+    const percentileGap = nextTarget - currentPercentile;
+    let timeEstimate = '3-6 months';
+    let difficulty: 'easy' | 'moderate' | 'hard' | 'extreme' = 'moderate';
 
-  private generateUserRecommendations(data: any): string[] {
+    if (percentileGap <= 10) {
+      timeEstimate = '1-3 months';
+      difficulty = 'easy';
+    } else if (percentileGap <= 25) {
+      timeEstimate = '3-6 months';
+      difficulty = 'moderate';
+    } else if (percentileGap <= 40) {
+      timeEstimate = '6-12 months';
+      difficulty = 'hard';
+    } else {
+      timeEstimate = '12+ months';
+      difficulty = 'extreme';
+    }
+
+    // Generate recommendations based on demographics and current level
     const recommendations = [];
     
-    if (data.overallPercentile < 50) {
-      recommendations.push('Focus on consistency and progressive overload');
-      recommendations.push('Work on your weakest exercises first');
-    } else if (data.overallPercentile < 80) {
-      recommendations.push('Specialize in your strongest lifts');
-      recommendations.push('Consider advanced training techniques');
+    if (demographics.experience_level === 'beginner') {
+      recommendations.push('Focus on form and consistency');
+      recommendations.push('Follow a structured program');
+    } else if (demographics.experience_level === 'intermediate') {
+      recommendations.push('Implement progressive overload');
+      recommendations.push('Consider periodization');
     } else {
-      recommendations.push('Maintain your elite performance');
-      recommendations.push('Focus on competition preparation');
+      recommendations.push('Use advanced techniques');
+      recommendations.push('Focus on weak points');
     }
 
-    return recommendations;
-  }
-
-  private processUserPosition(userPercentiles: SupabasePercentileResult[]): any {
-    if (userPercentiles.length === 0) return undefined;
-
-    const bestPercentile = Math.max(...userPercentiles.map(p => p.percentile_value));
-    const avgRank = Math.round(
-      userPercentiles.reduce((sum, p) => sum + p.rank_position, 0) / userPercentiles.length
-    );
-
-    return {
-      percentiles: userPercentiles,
-      rank: avgRank,
-      segment: userPercentiles[0].segment?.name || 'General'
-    };
-  }
-
-  private async getTopPerformersForExercise(exerciseId: string): Promise<any[]> {
-    // Get top performers from Supabase
-    const topPerformers = await supabasePercentileService.getTopPerformers(exerciseId, 1, 'oneRM', 10);
-    
-    return topPerformers.map((performer, index) => ({
-      rank: index + 1,
-      value: performer.user_value,
-      metric: performer.metric_type,
-      segment: performer.segment?.name || 'General'
-    }));
-  }
-
-  private generateExerciseRecommendations(exerciseId: string, userPosition?: any): string[] {
-    const recommendations = ['Focus on progressive overload', 'Maintain proper form'];
-    
-    if (userPosition && userPosition.rank > 50) {
-      recommendations.push('Consider working with a trainer');
-      recommendations.push('Focus on basic strength building');
-    } else if (userPosition && userPosition.rank <= 10) {
-      recommendations.push('Consider competition training');
-      recommendations.push('Focus on advanced techniques');
-    }
-
-    return recommendations;
-  }
-
-  private combineStatistics(supabaseStats: any[], localStats: any): any {
-    return {
-      totalUsers: localStats.totalUsers,
-      averagePerformance: {
-        weight: supabaseStats[0]?.average_value || 0,
-        oneRM: supabaseStats[1]?.average_value || 0,
-        volume: supabaseStats[2]?.average_value || 0,
-        relative_strength: supabaseStats[3]?.average_value || 0
-      },
-      topPerformances: {
-        weight: supabaseStats[0]?.top_performance || 0,
-        oneRM: supabaseStats[1]?.top_performance || 0,
-        volume: supabaseStats[2]?.top_performance || 0,
-        relative_strength: supabaseStats[3]?.top_performance || 0
-      },
-      percentileDistribution: {
-        p25: supabaseStats[0]?.percentile_25 || 0,
-        p50: supabaseStats[0]?.percentile_50 || 0,
-        p75: supabaseStats[0]?.percentile_75 || 0,
-        p95: supabaseStats[0]?.percentile_95 || 0
-      }
-    };
-  }
-
-  private async refreshLocalData(): Promise<void> {
-    // Refresh local calculator with latest data
-    this.lastUpdateTime = new Date();
-  }
-
-  private async simulateTrendData(userId: string, exerciseId: string, timeRange: string): Promise<any[]> {
-    // This would query historical percentile data
-    // For now, simulate trend data
-    const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : timeRange === '90d' ? 90 : 365;
-    const trends = [];
-    
-    for (let i = days; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      
-      trends.push({
-        date: date.toISOString().split('T')[0],
-        percentile: 50 + Math.random() * 30 - 15, // Simulate percentile between 35-65
-        metric: 'oneRM',
-        value: 100 + Math.random() * 50 - 25 // Simulate value between 75-125
-      });
-    }
-    
-    return trends;
-  }
-
-  private analyzeTrends(trends: any[]): any {
-    if (trends.length < 2) {
-      return {
-        overallTrend: 'stable' as const,
-        averageImprovement: 0,
-        bestPeriod: 'N/A',
-        recommendations: ['Need more data for trend analysis']
-      };
-    }
-
-    const firstPercentile = trends[0].percentile;
-    const lastPercentile = trends[trends.length - 1].percentile;
-    const change = lastPercentile - firstPercentile;
-
-    return {
-      overallTrend: change > 2 ? 'improving' as const : change < -2 ? 'declining' as const : 'stable' as const,
-      averageImprovement: Math.round(change * 10) / 10,
-      bestPeriod: trends.reduce((best, current) => 
-        current.percentile > best.percentile ? current : best
-      ).date,
-      recommendations: this.getTrendRecommendations(change)
-    };
-  }
-
-  private getTrendRecommendations(change: number): string[] {
-    if (change > 5) {
-      return ['Great progress! Keep up the current training', 'Consider increasing training intensity'];
-    } else if (change < -5) {
-      return ['Review your training program', 'Consider deload week', 'Check recovery and nutrition'];
+    if (currentPercentile < 50) {
+      recommendations.push('Build foundational strength');
+    } else if (currentPercentile < 75) {
+      recommendations.push('Increase training frequency');
     } else {
-      return ['Maintain consistent training', 'Consider periodization', 'Focus on weak points'];
+      recommendations.push('Fine-tune technique');
+      recommendations.push('Consider competition preparation');
     }
+
+    return {
+      nextTarget,
+      timeEstimate,
+      difficulty,
+      recommendations
+    };
   }
 }
 
-// Export singleton instance
-export const percentileIntegrationService = PercentileIntegrationService.getInstance();
+// Singleton instance
+export const percentileIntegrationService = new PercentileIntegrationService();

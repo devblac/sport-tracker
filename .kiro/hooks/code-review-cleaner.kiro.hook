@@ -1,0 +1,25 @@
+{
+  "enabled": true,
+  "name": "Code Review & Cleaner",
+  "description": "Automatically reviews modified files to identify and remove obsolete code, duplicated functions, unused imports, and security vulnerabilities. Ensures production-class code quality and security standards.",
+  "version": "1",
+  "when": {
+    "type": "userTriggered",
+    "patterns": [
+      "src/**/*.ts",
+      "src/**/*.tsx",
+      "src/**/*.js",
+      "src/**/*.jsx",
+      "*.ts",
+      "*.tsx",
+      "*.js",
+      "*.jsx",
+      "database/*.sql",
+      "supabase/**/*.sql"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Review the modified files for code quality and security issues. Identify and suggest removal of:\n\n1. **Obsolete Code**: Unused functions, components, or variables\n2. **Duplicated Code**: Similar functions or logic that can be consolidated\n3. **Security Issues**: Potential vulnerabilities, exposed secrets, or insecure patterns\n4. **Dead Imports**: Unused import statements\n5. **Deprecated Patterns**: Outdated React patterns or deprecated APIs\n6. **Performance Issues**: Inefficient code that could impact performance\n\nFor each issue found:\n- Explain why it's problematic\n- Provide the exact location (file:line)\n- Suggest specific fixes or removal\n- Prioritize security issues as critical\n\nFollow production-class standards:\n- Ensure TypeScript strict mode compliance\n- Validate Zod schema usage for inputs\n- Check for proper error handling\n- Verify authentication/authorization patterns\n- Confirm offline-first PWA compatibility\n\nFocus on maintainability, security, and performance optimization."
+  }
+}

@@ -26,6 +26,7 @@ import {
   Clock
 } from 'lucide-react';
 import { useSocialPosts } from '@/hooks/useSocialPosts';
+import { sanitizeUserContent } from '@/utils/xssProtection';
 
 import type { SocialPost, PostType } from '@/types/socialPosts';
 
@@ -297,7 +298,7 @@ export const SocialPostComponent: React.FC<SocialPostProps> = ({
             
             {post.description && (
               <p className="text-gray-600 dark:text-gray-400 text-sm">
-                {post.description}
+                {sanitizeUserContent(post.description)}
               </p>
             )}
 
@@ -396,7 +397,7 @@ export const SocialPostComponent: React.FC<SocialPostProps> = ({
                   <div className="flex-1">
                     <div className="bg-gray-100 dark:bg-gray-700 rounded-lg px-3 py-2">
                       <p className="text-sm text-gray-900 dark:text-white">
-                        {comment.content}
+                        {sanitizeUserContent(comment.content)}
                       </p>
                     </div>
                     <div className="flex items-center space-x-2 mt-1 text-xs text-gray-500 dark:text-gray-400">

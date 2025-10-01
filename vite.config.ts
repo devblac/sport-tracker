@@ -25,12 +25,16 @@ export default defineConfig({
                 maxAgeSeconds: 60 * 60 * 12, // 12 hours
               },
               networkTimeoutSeconds: 10,
-              cacheKeyWillBeUsed: async ({ request }) => {
-                // Remove auth tokens from cache keys for security
-                const url = new URL(request.url);
-                url.searchParams.delete('apikey');
-                return url.href;
-              },
+              plugins: [
+                {
+                  cacheKeyWillBeUsed: async ({ request }: { request: Request }) => {
+                    // Remove auth tokens from cache keys for security
+                    const url = new URL(request.url);
+                    url.searchParams.delete('apikey');
+                    return url.href;
+                  },
+                }
+              ],
             },
           },
           {
