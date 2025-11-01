@@ -1,27 +1,27 @@
 {
   "enabled": true,
-  "name": "Secure Auto Commit",
-  "description": "Automatically commits latest changes following security measures to verify no sensitive keys/values are committed and creates meaningful commit messages based on file changes",
-  "version": "1",
+  "name": "MVP Secure Auto Commit",
+  "description": "Securely commits changes with security checks for the MVP refactor, ensuring no secrets are exposed and commits follow conventional format",
+  "version": "2",
   "when": {
     "type": "userTriggered",
     "patterns": [
-      "src/**/*",
+      "app/**/*",
+      "components/**/*",
+      "hooks/**/*",
+      "lib/**/*",
+      "types/**/*",
+      "supabase/**/*",
       "package.json",
       "*.md",
       "*.ts",
       "*.tsx",
-      "*.js",
-      "*.jsx",
       "*.json",
-      "*.sql",
-      "database/**/*",
-      "supabase/**/*",
-      "docs/**/*"
+      "*.sql"
     ]
   },
   "then": {
     "type": "askAgent",
-    "prompt": "Review the changed files and perform a secure commit with the following steps:\n\n1. **Security Check**: Scan all changed files for sensitive information:\n   - API keys, tokens, passwords, or secrets\n   - Database connection strings or credentials  \n   - Private keys or certificates\n   - Personal identifiable information (PII)\n   - Any hardcoded sensitive values\n\n2. **Generate Meaningful Commit Message**: Based on the file changes, create a descriptive commit message following conventional commits format:\n   - Use appropriate type (feat, fix, docs, style, refactor, test, chore)\n   - Include scope when relevant (auth, ui, api, db, etc.)\n   - Write clear, concise description of what changed\n   - Add breaking change notes if applicable\n\n3. **Stage and Commit**: If security check passes:\n   - Stage the appropriate files (exclude sensitive files like .env.local)\n   - Create the commit with the generated message\n   - Provide summary of what was committed\n\n4. **Security Alert**: If sensitive data is detected:\n   - List the specific security issues found\n   - Recommend actions to fix them\n   - Do NOT commit until issues are resolved\n\nFocus on maintaining security while ensuring meaningful commit history for the Sport Tracker fitness PWA project."
+    "prompt": "Review changed files and perform secure commit for MVP refactor:\n\n1. **Security Check** (Critical):\n   - Supabase service keys (NEVER in client code)\n   - Supabase anon keys (only EXPO_PUBLIC_ prefixed)\n   - JWT tokens or refresh tokens\n   - Database connection strings\n   - API keys or secrets\n   - Private keys or certificates\n   - PII (emails, phone numbers, addresses)\n   - Hardcoded passwords or credentials\n\n2. **MVP Compliance Check**:\n   - Is this code essential for MVP?\n   - Does it follow simplification principles?\n   - Are there unnecessary abstractions?\n   - Is it free-tier optimized?\n   - Does it use direct Supabase calls?\n\n3. **Generate Commit Message** (Conventional Commits):\n   - Type: feat, fix, refactor, docs, chore, test, security\n   - Scope: auth, workout, social, gamification, offline, ui, db\n   - Description: Clear, concise summary\n   - Body: Additional context if needed\n   - Footer: Breaking changes or issue references\n\n   Examples:\n   - `feat(auth): implement Supabase Auth with SecureStore`\n   - `refactor(workout): simplify CRUD to direct Supabase calls`\n   - `fix(offline): correct sync queue processing order`\n   - `security(storage): move tokens from AsyncStorage to SecureStore`\n\n4. **Stage and Commit**:\n   - If security check passes: stage files and commit\n   - Exclude: .env, .env.local, node_modules/, dist/\n   - Include: source code, configs, migrations, docs\n   - Provide commit summary\n\n5. **Security Alert**:\n   - If sensitive data found: list issues and block commit\n   - Recommend fixes (move to .env, use SecureStore, etc.)\n   - Do NOT commit until resolved\n\nFocus on maintaining security while tracking MVP refactor progress."
   }
 }

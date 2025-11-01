@@ -1,27 +1,25 @@
 {
   "enabled": true,
-  "name": "Code Quality Analyzer",
-  "description": "Monitors source code files for changes and provides automated code quality analysis, suggesting improvements for readability, maintainability, and performance while maintaining existing functionality",
-  "version": "1",
+  "name": "MVP Code Quality Analyzer",
+  "description": "Monitors code files for changes and ensures they follow MVP refactor principles: minimal code, no over-engineering, security-first, free-tier optimized",
+  "version": "2",
   "when": {
     "type": "userTriggered",
     "patterns": [
-      "src/**/*.ts",
-      "src/**/*.tsx",
-      "src/**/*.js",
-      "src/**/*.jsx",
+      "app/**/*.tsx",
+      "components/**/*.tsx",
+      "hooks/**/*.ts",
+      "lib/**/*.ts",
+      "types/**/*.ts",
       "*.ts",
       "*.tsx",
-      "*.js",
-      "*.jsx",
-      "eslint.config.js",
-      "vite.config.ts",
-      "vitest.config.ts",
-      "tsconfig*.json"
+      "app.json",
+      "eas.json",
+      "tsconfig.json"
     ]
   },
   "then": {
     "type": "askAgent",
-    "prompt": "Analyze the modified code files for potential improvements. Focus on:\n\n1. **Code Smells & Anti-patterns**: Identify long functions, complex conditionals, duplicated code, and other code smells\n2. **Design Patterns**: Suggest appropriate design patterns that could improve the code structure\n3. **Best Practices**: Check for React best practices, TypeScript usage, performance optimizations, and security considerations\n4. **Readability**: Suggest improvements for variable naming, function structure, and code organization\n5. **Maintainability**: Identify areas that could be refactored for better maintainability\n6. **Performance**: Suggest optimizations for React rendering, bundle size, and runtime performance\n7. **Type Safety**: Recommend improvements for TypeScript usage and Zod schema validation\n8. **Architecture**: Evaluate component structure, state management, and separation of concerns\n\nConsider the project context:\n- React 19 + TypeScript + Vite + Tailwind CSS\n- Zustand for state management\n- Offline-first PWA architecture\n- Gamification and social features\n- Mobile-first responsive design\n\nProvide specific, actionable suggestions while preserving existing functionality. Include code examples where helpful.\n\n**Prioritize maintainability, security, and cost efficiency**"
+    "prompt": "Analyze the modified code files following MVP refactor principles. Focus on:\n\n1. **Simplification Check**:\n   - Is this code as simple as possible?\n   - Are there unnecessary abstractions or layers?\n   - Can inline logic replace extracted functions?\n   - Are functions < 50 lines?\n   - Is this code essential for MVP?\n\n2. **Over-Engineering Detection**:\n   - Service containers, repositories, or factories?\n   - Wrapper services around Supabase?\n   - Complex caching or query optimization?\n   - Premature abstractions?\n   - \"Just in case\" code?\n\n3. **Security Validation**:\n   - Are Supabase calls using RLS properly?\n   - Are tokens stored in SecureStore only?\n   - Is sensitive data whitelisted before local storage?\n   - Are inputs validated with Zod?\n   - Are service keys exposed?\n\n4. **Free-Tier Optimization**:\n   - Will this work on Supabase free tier?\n   - Are we using polling instead of real-time?\n   - Is offline sync limited to workouts only?\n   - Are queries efficient and indexed?\n\n5. **Code Style**:\n   - TypeScript strict mode (no `any`)?\n   - Direct Supabase calls in hooks?\n   - Descriptive naming?\n   - Comments explain \"why\" not \"what\"?\n   - Flat file structure?\n\nContext:\n- React Native Expo + TypeScript + Supabase\n- Target: 82% code reduction (215K → 38K lines)\n- No Redux/Zustand, use React hooks + Context\n- Offline for workouts only, not social\n- Security via RLS, not custom backend\n\nProvide specific suggestions to simplify, secure, and optimize. Reference `.kiro/specs/mvp-refactor/SIMPLIFICATION_STRATEGY.md` principles."
   }
 }

@@ -1,66 +1,104 @@
-# Project Structure & Organization
+# Project Structure & Organization (MVP Refactor)
 
-## Source Code Organization (`src/`)
+## Expo Project Structure
 
 ```
-src/
-├── components/         # Reusable React components
-│   ├── ui/            # Base UI components (buttons, inputs, etc.)
-│   ├── workouts/      # Workout-related components
-│   ├── social/        # Social features components
-│   ├── gamification/  # XP, achievements, streaks
-│   ├── realtime/      # Real-time features
-│   └── experiments/   # A/B testing components
-├── pages/             # Route-level page components
-├── layouts/           # Layout wrapper components
-├── stores/            # Zustand state stores
-├── services/          # API services and business logic
-├── hooks/             # Custom React hooks
-├── contexts/          # React context providers
-├── utils/             # Utility functions and helpers
-├── types/             # TypeScript type definitions
-├── schemas/           # Zod validation schemas
-├── constants/         # App constants and configuration
-├── data/              # Static data and mock data
-├── assets/            # Images, icons, and static assets
-└── lib/               # Third-party library configurations
+liftfire-expo/
+├── app/                          # Expo Router screens (file-based routing)
+│   ├── (auth)/
+│   │   ├── login.tsx            # Login screen
+│   │   └── signup.tsx           # Signup screen
+│   ├── (tabs)/                  # Main app tabs
+│   │   ├── index.tsx            # Home/Dashboard
+│   │   ├── workouts.tsx         # Workout list
+│   │   ├── social.tsx           # Friends activity feed
+│   │   └── profile.tsx          # User profile
+│   ├── workout/
+│   │   ├── [id].tsx             # Workout detail
+│   │   └── new.tsx              # Create workout
+│   └── _layout.tsx              # Root layout with auth guard
+├── components/                   # Reusable UI components
+│   ├── WorkoutCard.tsx
+│   ├── FriendWorkoutItem.tsx
+│   ├── LeaderboardList.tsx
+│   ├── AchievementBadge.tsx
+│   ├── XPBar.tsx
+│   └── StatsCard.tsx
+├── hooks/                        # Custom React hooks
+│   ├── useAuth.ts               # Authentication
+│   ├── useWorkouts.ts           # Workout CRUD
+│   ├── useSocial.ts             # Social features
+│   ├── useGamification.ts       # XP, levels, streaks
+│   └── useOfflineSync.ts        # Offline sync queue
+├── lib/                          # Core utilities
+│   ├── supabase.ts              # Supabase client setup
+│   ├── database.ts              # SQLite setup
+│   ├── offlineSync.ts           # Sync queue logic
+│   ├── secureStorage.ts         # SecureStore helpers
+│   └── gamification.ts          # XP calculation
+├── types/
+│   └── index.ts                 # TypeScript types
+├── .env.example                 # Environment variables template
+├── app.json                     # Expo configuration
+├── eas.json                     # EAS Build configuration
+├── package.json
+└── tsconfig.json
 ```
 
 ## Key Conventions
 
-### Component Organization
-- **Feature-based grouping**: Components grouped by domain (workouts, social, etc.)
-- **Lazy loading**: All page components are lazy-loaded for performance
-- **Barrel exports**: Use index files for clean imports
+### File Organization
+- **Flat structure**: Prefer fewer files over deep nesting
+- **Co-location**: Keep related code together
+- **No barrel exports**: Direct imports for clarity
 
 ### File Naming
-- **PascalCase** for React components (`WorkoutPlayer.tsx`)
-- **camelCase** for utilities, hooks, and services (`useWorkout.ts`)
-- **kebab-case** for non-component files when appropriate
+- **PascalCase** for React components (`WorkoutCard.tsx`)
+- **camelCase** for hooks, utilities, and libraries (`useAuth.ts`, `gamification.ts`)
+- **kebab-case** for config files (`app.json`, `eas.json`)
 
 ### Import Patterns
-- Use `@/` path alias for all internal imports
-- Group imports: external libraries first, then internal modules
-- Lazy load page components with React.lazy()
+- No path aliases (Expo handles this)
+- Relative imports for local files
+- Direct imports (no index.ts barrel files)
 
 ### State Management
-- **Zustand stores** in `/stores` directory
-- Feature-specific stores (auth, workout, social, etc.)
-- Persistent stores for offline-first functionality
+- **React hooks** + **Context API** only
+- No Zustand, Redux, or other state libraries
+- Direct Supabase calls in hooks
 
 ### Testing Structure
-- Tests co-located with components or in `/src/test` directory
-- Test utilities in `/src/tests` directory
-- Mock data and fixtures organized by feature
+- `__tests__/` folders next to tested files
+- Test utilities in `lib/` directory
+- Mock Supabase responses for unit tests
 
 ## Configuration Files
-- **Root level**: Build tools, linting, and project configuration
-- **Database**: SQL files and migrations in `/database` directory
-- **Supabase**: Configuration and functions in `/supabase` directory
-- **Documentation**: Project docs in `/docs` directory
+- **app.json**: Expo app configuration
+- **eas.json**: Build profiles (preview, production)
+- **.env**: Environment variables (not committed)
+- **.env.example**: Environment variables template
+- **tsconfig.json**: TypeScript configuration
 
 ## Development Patterns
-- **Offline-first**: All features should work without network
-- **Mobile-first**: Responsive design starting from mobile
-- **Performance-focused**: Code splitting and lazy loading by default
-- **Type-safe**: Comprehensive TypeScript usage with Zod validation
+- **Offline-first for workouts**: SQLite storage with sync queue
+- **Online-only for social**: No offline caching for social data
+- **Mobile-first**: React Native components, web via React Native Web
+- **Performance-focused**: FlatList for lists, lazy loading, code splitting
+- **Type-safe**: TypeScript strict mode, Zod validation
+- **Security-first**: RLS on all tables, tokens in SecureStore
+
+## What We Removed
+❌ Complex folder hierarchies (`src/services/`, `src/repositories/`)
+❌ Barrel exports (`index.ts` files)
+❌ Path aliases (`@/` imports)
+❌ Multiple service implementations
+❌ Service containers and registries
+❌ Test pages and example components
+❌ PWA/Vite configuration
+
+## Simplification Principles
+✅ **Fewer files**: ~150 files (vs ~700 in old codebase)
+✅ **Flat structure**: Max 2-3 levels deep
+✅ **Direct imports**: No abstraction layers
+✅ **Clear naming**: Descriptive, no abbreviations
+✅ **Co-located tests**: Tests next to source files

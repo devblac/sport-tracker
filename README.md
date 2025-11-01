@@ -1,52 +1,67 @@
-# 🏋️ Sport Tracker - Gamified Fitness PWA
+# 🏋️ LiftFire - Fitness Tracking MVP
 
 <div align="center">
 
-![Sport Tracker Logo](https://img.shields.io/badge/🏋️-Sport%20Tracker-FF6B35?style=for-the-badge&labelColor=1a1a1a)
+![LiftFire Logo](https://img.shields.io/badge/🏋️-LiftFire-FF6B35?style=for-the-badge&labelColor=1a1a1a)
 
-**Transform your fitness journey into an engaging, social, and rewarding experience**
+**Simple, powerful fitness tracking with gamification and social features**
 
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](https://choosealicense.com/licenses/mit/)
-[![React](https://img.shields.io/badge/React-18.3.1-61DAFB?style=flat-square&logo=react)](https://reactjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.5.3-3178C6?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
-[![Vite](https://img.shields.io/badge/Vite-5.4.8-646CFF?style=flat-square&logo=vite)](https://vitejs.dev/)
-[![PWA](https://img.shields.io/badge/PWA-Ready-5A0FC8?style=flat-square&logo=pwa)](https://web.dev/progressive-web-apps/)
+[![React Native](https://img.shields.io/badge/React%20Native-0.74.0-61DAFB?style=flat-square&logo=react)](https://reactnative.dev/)
+[![Expo](https://img.shields.io/badge/Expo-54.0.20-000020?style=flat-square&logo=expo)](https://expo.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.3.0-3178C6?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
+[![Supabase](https://img.shields.io/badge/Supabase-2.78.0-3ECF8E?style=flat-square&logo=supabase)](https://supabase.com/)
 
-[![Build Status](https://img.shields.io/badge/Build-Passing-success?style=flat-square&logo=github-actions)](https://github.com)
-[![Mobile Ready](https://img.shields.io/badge/Mobile-APK%20Ready-success?style=flat-square&logo=android)](https://developer.android.com/)
-[![Test Quality](https://img.shields.io/badge/Test%20Reliability-99%25%2B-success?style=flat-square&logo=vitest)](https://vitest.dev/)
-[![Security](https://img.shields.io/badge/Security-A%2B-success?style=flat-square&logo=security)](https://github.com)
-
-[![Supabase](https://img.shields.io/badge/Database-Supabase-3ECF8E?style=flat-square&logo=supabase)](https://supabase.com/)
-[![Capacitor](https://img.shields.io/badge/Mobile-Capacitor-119EFF?style=flat-square&logo=capacitor)](https://capacitorjs.com/)
-[![Tailwind CSS](https://img.shields.io/badge/Styling-Tailwind%20CSS-06B6D4?style=flat-square&logo=tailwindcss)](https://tailwindcss.com/)
-[![Zustand](https://img.shields.io/badge/State-Zustand-FF6B35?style=flat-square)](https://github.com/pmndrs/zustand)
+[![MVP Refactor](https://img.shields.io/badge/Status-MVP%20Refactor%20In%20Progress-orange?style=flat-square)](https://github.com)
+[![Code Reduction](https://img.shields.io/badge/Code%20Reduction-82%25%20Target-success?style=flat-square)](https://github.com)
+[![Cross Platform](https://img.shields.io/badge/Platform-Web%20%7C%20Android%20%7C%20iOS-blue?style=flat-square)](https://github.com)
 
 </div>
 
 ---
 
-## 🚀 **What is Sport Tracker?**
+## 🚀 **What is LiftFire?**
 
-Sport Tracker is a **comprehensive fitness PWA** that gamifies your workout experience through social features, achievement systems, and real-time tracking. Built with modern web technologies and designed for both web and mobile platforms, it delivers a native app experience that works offline-first.
+LiftFire is a **simplified fitness tracking application** built with React Native Expo that focuses on core value: workout tracking, basic gamification (XP, levels, streaks, achievements), and lightweight social features. This is an **MVP refactor** of the original Sport Tracker PWA, reducing complexity by 82% (215K → 38K lines) while maintaining essential functionality.
 
-**Key Innovation**: This project showcases **AI-powered development** using Kiro IDE, demonstrating how modern AI tools can accelerate feature development while maintaining high code quality and comprehensive testing.
+**Key Innovation**: This project demonstrates **radical simplification** and **AI-powered development** using Kiro IDE, showing how to eliminate over-engineering while delivering a production-ready cross-platform application.
 
 ### 🎯 **Key Highlights**
 
-- 🏋️ **Complete Workout System** - Templates, real-time tracking, and exercise library
-- 🎮 **Gamification Engine** - XP, levels, achievements, and streak tracking
-- 👥 **Social Fitness Network** - Connect with gym friends and share progress
-- 📱 **Native Mobile Experience** - PWA with Android APK support via Capacitor
-- 🔒 **Enterprise-Grade Security** - XSS protection, input sanitization, and secure authentication
-- ⚡ **Offline-First Architecture** - Works without internet connection using IndexedDB
-- 🤖 **AI-Powered Development** - Built using Kiro AI with spec-driven development
+- 🏋️ **Simple Workout Tracking** - CRUD operations with offline support (SQLite)
+- 🎮 **Basic Gamification** - XP calculation, user levels, streak tracking, simple achievements
+- 👥 **Lightweight Social** - Friend connections, activity feed, likes, weekly leaderboard
+- 📱 **True Cross-Platform** - Single React Native codebase for Web, Android, and iOS
+- 🔒 **Security-First** - Supabase Row Level Security (RLS), SecureStore for tokens
+- ⚡ **Offline-First for Workouts** - SQLite storage with background sync (workouts only)
+- 🤖 **Radically Simplified** - 82% code reduction (215K → 38K lines) with AI assistance
+
+### 📊 **MVP Refactor Status**
+
+This project is currently undergoing a **complete rewrite** from a complex React PWA to a simplified React Native Expo application:
+
+| Aspect | Old (PWA) | New (Expo MVP) | Status |
+|--------|-----------|----------------|--------|
+| **Framework** | React + Vite | React Native + Expo | ✅ Complete |
+| **Lines of Code** | ~215,000 | ~38,000 (target) | 🔄 In Progress |
+| **Dependencies** | ~150 packages | ~30 packages | ✅ Complete |
+| **Config Files** | 29 files | 6 files | ✅ Complete |
+| **Mobile** | Capacitor wrapper | Native Expo | ✅ Complete |
+| **Backend** | Complex services | Direct Supabase | 🔄 In Progress |
+| **State** | Zustand + complex | React hooks + Context | 🔄 In Progress |
+| **Offline** | IndexedDB (all data) | SQLite (workouts only) | 📋 Planned |
+| **Social** | Real-time + media | Polling + simple | 📋 Planned |
+
+**Current Phase**: Task 1 Complete (Project Setup) - See [liftfire-expo/SETUP_COMPLETE.md](liftfire-expo/SETUP_COMPLETE.md)  
+**Next Phase**: Task 2 (Supabase Database Schema) - See [.kiro/specs/mvp-refactor/tasks.md](.kiro/specs/mvp-refactor/tasks.md)
 
 ---
 
 ## 🏆 **Feature Implementation Status**
 
-### ✅ **Completed Features (100%)**
+> **Note**: The features below represent the **OLD React PWA version**. The new Expo MVP is being built from scratch with simplified versions of core features only. See [MVP Refactor Documentation](.kiro/specs/mvp-refactor/) for the new implementation plan.
+
+### ✅ **Completed Features (100%)** - OLD PWA VERSION
 
 #### **Core Workout System**
 - ✅ **Workout Templates** - Full CRUD operations with 20+ sample templates, template management, and usage tracking
@@ -244,53 +259,163 @@ Sport Tracker is a **comprehensive fitness PWA** that gamifies your workout expe
 
 ---
 
+## 🎯 **NEW: Expo MVP Feature Status**
+
+The new React Native Expo application is being built with **radical simplification** principles. Here's the current status:
+
+### ✅ **Completed (100%)**
+
+#### **Project Setup & Infrastructure**
+- ✅ **Expo Project Initialization** - TypeScript template with Expo SDK 54.0.20
+- ✅ **Expo Router Configuration** - File-based navigation setup
+- ✅ **Core Dependencies** - Supabase client, SQLite, SecureStore, NetInfo, Zod
+- ✅ **TypeScript Configuration** - Strict mode enabled, type-check passing
+- ✅ **Folder Structure** - app/, components/, hooks/, lib/, types/ directories
+- ✅ **Documentation** - README.md, .env.example, SETUP_COMPLETE.md
+- ✅ **Package.json Updates** - Simplified scripts (test, lint, format, type-check)
+
+### 🔄 **In Progress (0-25%)**
+
+#### **Supabase Database Schema (Task 2) - 0%**
+- 📋 Core database tables (users, workouts, exercises, friendships, likes, achievements)
+- 📋 Row Level Security (RLS) policies on all tables
+- 📋 Database indexes for query optimization
+- 📋 Materialized view for weekly leaderboard
+
+#### **Authentication Implementation (Task 3) - 0%**
+- 📋 Supabase client setup (lib/supabase.ts)
+- 📋 Secure token storage (lib/secureStorage.ts)
+- 📋 Authentication hook (hooks/useAuth.ts)
+- 📋 Login and signup screens
+
+#### **Local Storage & Offline (Task 4) - 0%**
+- 📋 SQLite database setup
+- 📋 Offline sync queue for workouts
+- 📋 NetInfo connectivity detection
+- 📋 Background sync on app foreground
+
+### 📋 **Planned (0%)**
+
+#### **Workout Tracking (Task 5)**
+- 📋 Workout data types and validation
+- 📋 Workout management hook (CRUD operations)
+- 📋 Workout list screen with pagination
+- 📋 Workout form components
+- 📋 Workout detail screen
+
+#### **Gamification System (Task 6)**
+- 📋 XP calculation logic (simplified)
+- 📋 Streak tracking
+- 📋 Achievement system (5-10 basic achievements)
+- 📋 Gamification hook
+- 📋 Gamification UI components (XPBar, StreakDisplay, AchievementBadge)
+
+#### **Social Features (Task 7)**
+- 📋 Friend system (send/accept requests)
+- 📋 Friends activity feed (polling, no real-time)
+- 📋 Like functionality (optimistic updates)
+- 📋 Weekly leaderboard (materialized view)
+
+#### **Profile & Progress (Task 8)**
+- 📋 Profile screen with stats
+- 📋 Progress statistics
+- 📋 Profile editing
+
+#### **Navigation & Layout (Task 9)**
+- 📋 Tab navigation (Home, Workouts, Social, Profile)
+- 📋 Authentication guard
+- 📋 Home/dashboard screen
+- 📋 Loading and error states
+
+#### **Polish & UX (Task 10)**
+- 📋 Toast notifications
+- 📋 Pull-to-refresh
+- 📋 Offline indicators
+- 📋 Performance optimization
+
+#### **Testing (Task 11)**
+- 📋 Unit tests for core logic
+- 📋 Authentication flow tests
+- 📋 Manual testing on Web + Android
+
+#### **Documentation & Deployment (Task 12)**
+- 📋 Complete README documentation
+- 📋 Deployment configurations (eas.json)
+- 📋 Production builds (Web, Android)
+
+### 📊 **MVP Progress Metrics**
+
+| Metric | Current | Target | Progress |
+|--------|---------|--------|----------|
+| **Tasks Complete** | 1/13 | 13/13 | 8% |
+| **Lines of Code** | ~1,000 | ~38,000 | 3% |
+| **Core Features** | 0/7 | 7/7 | 0% |
+| **Dependencies** | 23 | ~30 | 77% |
+| **Config Files** | 6 | 6 | 100% |
+
+**Estimated Completion**: 6 weeks (phased implementation)  
+**Current Phase**: Task 2 - Supabase Database Schema  
+**Documentation**: See [.kiro/specs/mvp-refactor/](.kiro/specs/mvp-refactor/) for complete specifications
+
+---
+
 ## 🛠️ **Technology Stack**
 
 <div align="center">
 
-### **Frontend Framework**
+### **NEW Expo MVP Stack**
+
+#### **Frontend Framework**
+![React Native](https://img.shields.io/badge/React%20Native-0.74.0-61DAFB?style=for-the-badge&logo=react&logoColor=white)
+![Expo](https://img.shields.io/badge/Expo-54.0.20-000020?style=for-the-badge&logo=expo&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.3.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![React Native Web](https://img.shields.io/badge/React%20Native%20Web-0.19.10-61DAFB?style=for-the-badge&logo=react&logoColor=white)
+
+#### **Backend & Database**
+![Supabase](https://img.shields.io/badge/Supabase-2.78.0-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-RLS%20Enabled-336791?style=for-the-badge&logo=postgresql&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-Offline%20Storage-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
+
+#### **State & Storage**
+![React Hooks](https://img.shields.io/badge/React%20Hooks-State%20Management-61DAFB?style=for-the-badge&logo=react&logoColor=white)
+![Expo SecureStore](https://img.shields.io/badge/SecureStore-Token%20Storage-000020?style=for-the-badge&logo=expo&logoColor=white)
+![AsyncStorage](https://img.shields.io/badge/AsyncStorage-UI%20State-orange?style=for-the-badge)
+
+#### **Validation & Navigation**
+![Zod](https://img.shields.io/badge/Zod-3.25.76-3E67B1?style=for-the-badge)
+![Expo Router](https://img.shields.io/badge/Expo%20Router-6.0.14-000020?style=for-the-badge&logo=expo&logoColor=white)
+![NetInfo](https://img.shields.io/badge/NetInfo-11.4.1-blue?style=for-the-badge)
+
+#### **Development & Testing**
+![Jest](https://img.shields.io/badge/Jest-React%20Native-C21325?style=for-the-badge&logo=jest&logoColor=white)
+![ESLint](https://img.shields.io/badge/ESLint-Expo%20Config-4B32C3?style=for-the-badge&logo=eslint&logoColor=white)
+![Prettier](https://img.shields.io/badge/Prettier-3.2.0-F7B93E?style=for-the-badge&logo=prettier&logoColor=white)
+
+---
+
+### **OLD PWA Stack (Being Replaced)**
+
+#### **Frontend Framework**
 ![React](https://img.shields.io/badge/React-18.3.1-61DAFB?style=for-the-badge&logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5.3-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-5.4.8-646CFF?style=for-the-badge&logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-3.4.13-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
 
-### **State Management & Validation**
+#### **State Management & Validation**
 ![Zustand](https://img.shields.io/badge/Zustand-5.0.0--rc.2-FF6B35?style=for-the-badge)
 ![Zod](https://img.shields.io/badge/Zod-3.23.8-3E67B1?style=for-the-badge)
 ![React Router](https://img.shields.io/badge/React%20Router-6.26.2-CA4245?style=for-the-badge&logo=reactrouter&logoColor=white)
 ![TanStack Query](https://img.shields.io/badge/TanStack%20Query-5.59.0-FF4154?style=for-the-badge)
 
-### **Backend & Database**
+#### **Backend & Database**
 ![Supabase](https://img.shields.io/badge/Supabase-2.45.4-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-336791?style=for-the-badge&logo=postgresql&logoColor=white)
 ![IndexedDB](https://img.shields.io/badge/IndexedDB-Offline%20Storage-orange?style=for-the-badge)
-![RLS](https://img.shields.io/badge/RLS-Row%20Level%20Security-green?style=for-the-badge)
 
-### **Mobile & PWA**
+#### **Mobile & PWA**
 ![Capacitor](https://img.shields.io/badge/Capacitor-6.1.2-119EFF?style=for-the-badge&logo=capacitor&logoColor=white)
 ![PWA](https://img.shields.io/badge/PWA-Vite%20Plugin-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white)
 ![Android](https://img.shields.io/badge/Android-APK%20Ready-3DDC84?style=for-the-badge&logo=android&logoColor=white)
-![Service Worker](https://img.shields.io/badge/Service%20Worker-Background%20Sync-purple?style=for-the-badge)
-
-### **UI & Animation**
-![Framer Motion](https://img.shields.io/badge/Framer%20Motion-11.11.7-0055FF?style=for-the-badge)
-![Recharts](https://img.shields.io/badge/Recharts-2.12.7-FF6B6B?style=for-the-badge)
-![Lucide Icons](https://img.shields.io/badge/Lucide-0.446.0-000000?style=for-the-badge)
-![Radix UI](https://img.shields.io/badge/Radix%20UI-Primitives-161618?style=for-the-badge)
-
-### **Security & Performance**
-![DOMPurify](https://img.shields.io/badge/DOMPurify-XSS%20Protection-red?style=for-the-badge)
-![React Hook Form](https://img.shields.io/badge/React%20Hook%20Form-7.53.0-EC5990?style=for-the-badge)
-![i18next](https://img.shields.io/badge/i18next-23.15.1-26A69A?style=for-the-badge)
-![TanStack Virtual](https://img.shields.io/badge/TanStack%20Virtual-3.10.8-FF4154?style=for-the-badge)
-![Jest Axe](https://img.shields.io/badge/Jest%20Axe-Accessibility-orange?style=for-the-badge)
-
-### **Development & Testing**
-![Vitest](https://img.shields.io/badge/Vitest-2.1.1-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)
-![Playwright](https://img.shields.io/badge/Playwright-1.47.2-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)
-![ESLint](https://img.shields.io/badge/ESLint-9.9.0-4B32C3?style=for-the-badge&logo=eslint&logoColor=white)
-![Prettier](https://img.shields.io/badge/Prettier-3.3.3-F7B93E?style=for-the-badge&logo=prettier&logoColor=white)
-![Jest Axe](https://img.shields.io/badge/Jest%20Axe-9.0.0-orange?style=for-the-badge)
 
 </div>
 
@@ -298,12 +423,42 @@ Sport Tracker is a **comprehensive fitness PWA** that gamifies your workout expe
 
 ## 🚀 **Quick Start**
 
-### **Prerequisites**
-- Node.js 18+ 
-- npm or yarn
-- Android Studio (for mobile development)
+### **NEW: Expo MVP (Recommended)**
 
-### **Installation**
+```bash
+# Navigate to Expo project
+cd liftfire-expo
+
+# Install dependencies
+npm install
+
+# Copy environment template
+cp .env.example .env
+# Edit .env with your Supabase credentials
+
+# Start Expo development server
+npm start
+
+# Then choose platform:
+# Press 'w' for web
+# Press 'a' for Android
+# Press 'i' for iOS (Mac only)
+```
+
+**Prerequisites for Expo MVP**:
+- Node.js 18+ (LTS recommended)
+- npm or yarn
+- Expo CLI (via npx)
+- Supabase account (free tier)
+- Android Studio (for Android development)
+
+**Documentation**: See [liftfire-expo/README.md](liftfire-expo/README.md) for complete setup instructions.
+
+---
+
+### **OLD: React PWA (Legacy)**
+
+> **Note**: The old PWA version is being replaced by the Expo MVP. Use this only for reference or legacy development.
 
 ```bash
 # Clone the repository
@@ -319,7 +474,7 @@ npm run dev
 # Open http://localhost:5173
 ```
 
-### **Mobile Development**
+**Mobile Development (Legacy)**:
 
 ```bash
 # Build for mobile
@@ -471,31 +626,66 @@ This project showcases the power of **AI-assisted development** using **Kiro IDE
 
 <div align="center">
 
+### **NEW: Expo MVP**
+
+![Total Files](https://img.shields.io/badge/Total%20Files-~20-blue?style=flat-square)
+![Lines of Code](https://img.shields.io/badge/Lines%20of%20Code-~1K%20%2F%2038K%20Target-green?style=flat-square)
+![Dependencies](https://img.shields.io/badge/Dependencies-23%20%2F%2030%20Target-purple?style=flat-square)
+![Config Files](https://img.shields.io/badge/Config%20Files-6-orange?style=flat-square)
+
+![Progress](https://img.shields.io/badge/Progress-Task%201%20Complete-success?style=flat-square)
+![Code Reduction](https://img.shields.io/badge/Code%20Reduction-82%25%20Target-success?style=flat-square)
+![Simplification](https://img.shields.io/badge/Simplification-Radical-success?style=flat-square)
+![Status](https://img.shields.io/badge/Status-MVP%20Refactor-orange?style=flat-square)
+
+### **OLD: React PWA (Legacy)**
+
 ![Total Files](https://img.shields.io/badge/Total%20Files-730+-blue?style=flat-square)
-![Lines of Code](https://img.shields.io/badge/Lines%20of%20Code-214K+-green?style=flat-square)
+![Lines of Code](https://img.shields.io/badge/Lines%20of%20Code-214K+-red?style=flat-square)
 ![Components](https://img.shields.io/badge/Components-200+-purple?style=flat-square)
 ![Services](https://img.shields.io/badge/Services-80+-orange?style=flat-square)
 
 ![Test Files](https://img.shields.io/badge/Test%20Files-1540+-yellow?style=flat-square)
 ![Test Reliability](https://img.shields.io/badge/Test%20Reliability-81.6%25-orange?style=flat-square)
-![Coverage Target](https://img.shields.io/badge/Coverage%20Target-90%25+-green?style=flat-square)
-![Quality Gates](https://img.shields.io/badge/Quality%20Gates-Implemented-success?style=flat-square)
+![Over Engineered](https://img.shields.io/badge/Status-Over%20Engineered-red?style=flat-square)
 
 </div>
 
-### **Codebase Highlights**
-- **730+ Files** - Comprehensive codebase with modular architecture
-- **214K+ Lines of Code** - Extensive TypeScript/React implementation
-- **200+ Components** - Reusable UI components with accessibility support
-- **80+ Services** - Complete backend service layer with optimization
-- **1,540 Tests** - Comprehensive test suite with reliability tracking
-- **World-Class Testing** - 99%+ reliability target with per-module coverage enforcement
+### **Expo MVP Highlights (NEW)**
+- **~20 Files** - Minimal, focused codebase with clear structure
+- **~1K Lines** - Currently implemented (target: ~38K for complete MVP)
+- **23 Dependencies** - Essential packages only (target: ~30 total)
+- **6 Config Files** - Simplified configuration (vs 29 in old version)
+- **Task 1 Complete** - Project setup and infrastructure ready
+- **82% Code Reduction** - From 215K to 38K lines target
+
+### **React PWA Highlights (OLD - Being Replaced)**
+- **730+ Files** - Over-engineered codebase with excessive abstraction
+- **214K+ Lines of Code** - Extensive but complex TypeScript/React implementation
+- **200+ Components** - Many unnecessary, duplicated, or over-abstracted
+- **80+ Services** - Service containers, repositories, and excessive layers
+- **1,540 Tests** - Comprehensive but slow test suite (3.87 min execution)
+- **Over-Engineered** - Target for radical simplification
 
 ---
 
 ## 📚 **Documentation**
 
 <div align="center">
+
+### **NEW: Expo MVP Documentation**
+
+| Category | Link | Description |
+|----------|------|-------------|
+| 🚀 **Getting Started** | [Expo MVP README](liftfire-expo/README.md) | Setup and quick start |
+| 📋 **Requirements** | [Requirements Doc](.kiro/specs/mvp-refactor/requirements.md) | MVP requirements |
+| 🎨 **Design** | [Design Doc](.kiro/specs/mvp-refactor/design.md) | Architecture and design |
+| ✅ **Tasks** | [Task List](.kiro/specs/mvp-refactor/tasks.md) | Implementation tasks |
+| 🔮 **Future Features** | [Future Enhancements](.kiro/specs/mvp-refactor/future-enhancements.md) | Post-MVP features |
+| 📊 **Simplification** | [Simplification Strategy](.kiro/specs/mvp-refactor/SIMPLIFICATION_STRATEGY.md) | Code reduction plan |
+| ✅ **Setup Complete** | [Setup Summary](liftfire-expo/SETUP_COMPLETE.md) | Task 1 completion |
+
+### **OLD: React PWA Documentation (Legacy)**
 
 | Category | Link | Description |
 |----------|------|-------------|
@@ -504,9 +694,6 @@ This project showcases the power of **AI-assisted development** using **Kiro IDE
 | 🔧 **Development** | [Contributing](docs/development/CONTRIBUTING.md) | Development guidelines |
 | 🔒 **Security** | [Security Guidelines](docs/technical/SECURITY_GUIDELINES.md) | Security implementation |
 | 🎯 **Features** | [Feature Roadmap](docs/features/FEATURE_ROADMAP.md) | Feature documentation |
-| 🏗️ **Deployment** | [Deployment Guide](docs/deployment/DEPLOYMENT.md) | Production deployment |
-| 🐛 **Troubleshooting** | [Common Issues](docs/troubleshooting/README.md) | Problem resolution |
-| 🎨 **Showcase** | [Demo & Screenshots](docs/showcase/README.md) | App demonstrations |
 
 </div>
 
@@ -678,75 +865,64 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 ## 🎯 **Current Development Focus**
 
-### **Active Development Areas**
-- 🔄 **Real-time Social Activity Feed** - Live activity stream with push notifications and real-time updates (75% complete)
-- 🔄 **Data Synchronization** - Background sync service worker integration and automatic data synchronization (70% complete)
-- 🔄 **Interactive Analytics & Charts** - Chart.js integration for data visualization and trend analysis (80% complete)
-- 🔄 **Payment Processing** - Stripe integration for premium subscriptions and trainer payments (50% complete)
+### **🚀 NEW: Expo MVP Refactor (Primary Focus)**
 
-### **Immediate Priorities (Next 2 Weeks)**
-1. **Complete Social Activity Feed** - Finish real-time updates and push notification system
-2. **Finalize Data Sync** - Complete background sync worker and conflict resolution
-3. **Chart Integration** - Add interactive charts for workout progress and analytics
-4. **iOS App Development** - Continue iOS version with App Store preparation
+**Current Phase**: Task 2 - Supabase Database Schema and Security
 
-### **Short-term Goals (1 Month)**
-1. **Android App Launch** - Play Store submission with production-ready APK
-2. **Premium Marketplace** - Complete payment processing and trainer content marketplace
-3. **AI Recommendations** - Enhanced personalized workout and exercise suggestions
-4. **Advanced Analytics** - Predictive performance models and comparative analytics
+**Immediate Priorities (Next 2 Weeks)**:
+1. **Supabase Database Schema** - Create core tables (users, workouts, exercises, friendships, likes, achievements)
+2. **Row Level Security (RLS)** - Implement security policies on all tables
+3. **Database Indexes** - Add indexes for query optimization
+4. **Authentication Implementation** - Supabase Auth integration with SecureStore
 
-### **Medium-term Goals (3 Months)**
-1. **iOS App Release** - Complete iOS development and App Store launch
-2. **Enterprise Features** - API platform, webhooks, and third-party integrations
-3. **Wearable Integration** - Heart rate monitors and fitness tracker sync
-4. **Community Features** - Forums, workout sharing, and user-generated contentr and automatic conflict resolution (70% complete)
-- 🔄 **Interactive Analytics** - Chart.js integration for workout progress visualization and trend analysis (80% complete)
-- 🔄 **Payment Integration** - Stripe implementation for premium subscriptions and trainer marketplace (50% complete)
-- 🔄 **iOS App Development** - Cross-platform mobile expansion with App Store preparation (40% complete)
-- 🔄 **AI Recommendations** - Enhanced personalized workout and exercise suggestions (30% complete)
+**Short-term Goals (1 Month)**:
+1. **Workout Tracking** - Complete CRUD operations with offline support
+2. **Basic Gamification** - XP calculation, levels, streaks, simple achievements
+3. **Offline Storage** - SQLite setup with sync queue for workouts
+4. **Profile & Progress** - User profile with basic statistics
 
-### **Immediate Priorities (Next 2 Weeks)**
-1. **Background Data Sync** - Complete service worker background synchronization system (30% remaining)
-2. **Live Activity Feed** - Real-time social activity stream with push notifications (25% remaining)
-3. **Chart Integration** - Interactive charts for workout progress and performance analytics (20% remaining)
-4. **Payment System Enhancement** - Complete Stripe integration for premium features (50% remaining)
+**Medium-term Goals (3 Months)**:
+1. **Social Features** - Friend system, activity feed, likes, leaderboard
+2. **Navigation & Polish** - Tab navigation, loading states, offline indicators
+3. **Testing** - Unit tests for core logic, manual testing on Web + Android
+4. **Production Deployment** - Web deployment (Netlify/Vercel), Android APK build
 
-### **Short-term Goals (1 Month)**
-1. **iOS App Launch** - App Store submission with production-ready iOS application
-2. **Payment System** - Complete Stripe integration for premium features and trainer payments
-3. **AI Enhancement** - Advanced recommendation engine with machine learning capabilities
-4. **Analytics Dashboard** - Comprehensive analytics with predictive performance models
+**MVP Completion Target**: 6 weeks (phased implementation)
 
-### **Medium-term Roadmap (3 Months)**
-1. **Enterprise Features** - API platform, webhooks, and third-party integrations
-2. **Advanced Social** - Community forums, live workout sessions, and group challenges
-3. **Wearable Integration** - Heart rate monitors, fitness trackers, and health data sync
-4. **Desktop Application** - Electron-based desktop app for Windows, macOS, and Linux
+**Documentation**: See [.kiro/specs/mvp-refactor/tasks.md](.kiro/specs/mvp-refactor/tasks.md) for detailed task breakdown
 
-### **Technical Excellence & Quality**
-- ✅ **Test Quality Infrastructure** - 99%+ reliability tracking, 90%+ coverage enforcement, and comprehensive validation system
-- ✅ **Quality Assurance Framework** - ReliabilityTracker, CoverageEnforcer, AccessibilityTester, and TestMetricsDashboard
-- ✅ **Security Hardening** - XSS protection, input validation, security middleware, and GDPR compliance
-- ✅ **Performance Monitoring** - Component performance testing, memory leak detection, and regression alerts
-- ✅ **Quality Gates** - Automated CI/CD quality validation with build blocking and real-time monitoring
-- ✅ **Accessibility Compliance** - WCAG 2.1 AA automated testing with comprehensive manual test scenarios
-- ✅ **Code Quality** - Comprehensive ESLint/Prettier setup, TypeScript strict mode, and architectural best practices
+---
+
+### **📦 OLD: React PWA (Maintenance Mode)**
+
+> **Note**: The old PWA version is in maintenance mode. No new features are being added. Focus is on the Expo MVP refactor.
+
+**Legacy Development Areas** (Paused):
+- ❌ Real-time Social Activity Feed (75% complete - deferred to MVP)
+- ❌ Data Synchronization (70% complete - replaced by SQLite sync)
+- ❌ Interactive Analytics & Charts (80% complete - deferred to post-MVP)
+- ❌ Payment Processing (50% complete - deferred to post-MVP)
+
+**Why Paused**: The old PWA codebase is being replaced by the simplified Expo MVP. These features will be reimplemented in simplified form post-MVP if needed.
 
 ---
 
 <div align="center">
 
-### **Ready to Transform Your Fitness Journey?**
+### **Ready to Build the Simplified MVP?**
 
-[![Get Started](https://img.shields.io/badge/🚀-Get%20Started-FF6B35?style=for-the-badge&labelColor=1a1a1a)](docs/getting-started/README.md)
-[![View Features](https://img.shields.io/badge/🎯-View%20Features-61DAFB?style=for-the-badge&labelColor=1a1a1a)](docs/features/FEATURE_ROADMAP.md)
-[![Build APK](https://img.shields.io/badge/📱-Build%20APK-3DDC84?style=for-the-badge&labelColor=1a1a1a)](docs/mobile/BUILD_APK_GUIDE.md)
+[![Get Started](https://img.shields.io/badge/🚀-Start%20Expo%20MVP-FF6B35?style=for-the-badge&labelColor=1a1a1a)](liftfire-expo/README.md)
+[![View Specs](https://img.shields.io/badge/📋-View%20Specifications-61DAFB?style=for-the-badge&labelColor=1a1a1a)](.kiro/specs/mvp-refactor/)
+[![Task List](https://img.shields.io/badge/✅-Implementation%20Tasks-3DDC84?style=for-the-badge&labelColor=1a1a1a)](.kiro/specs/mvp-refactor/tasks.md)
 
 ---
 
-**Built with ❤️ and 🏋️ by the Sport Tracker Team**
+**Built with ❤️ and 🤖 AI-Powered Simplification**
 
-*Powered by AI-assisted development with Kiro IDE*
+*Demonstrating radical code reduction (215K → 38K lines) with Kiro IDE*
+
+**Project Status**: MVP Refactor In Progress (Task 1/13 Complete)  
+**Target Completion**: 6 weeks (phased implementation)  
+**Code Reduction**: 82% (215,000 → 38,000 lines)
 
 </div>

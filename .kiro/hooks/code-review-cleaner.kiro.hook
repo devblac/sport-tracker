@@ -1,25 +1,23 @@
 {
   "enabled": true,
-  "name": "Code Review & Cleaner",
-  "description": "Automatically reviews modified files to identify and remove obsolete code, duplicated functions, unused imports, and security vulnerabilities. Ensures production-class code quality and security standards.",
-  "version": "1",
+  "name": "MVP Code Review & Cleaner",
+  "description": "Reviews code to remove over-engineering, ensure MVP scope compliance, and maintain security standards for the Expo + Supabase refactor",
+  "version": "2",
   "when": {
     "type": "userTriggered",
     "patterns": [
-      "src/**/*.ts",
-      "src/**/*.tsx",
-      "src/**/*.js",
-      "src/**/*.jsx",
+      "app/**/*.tsx",
+      "components/**/*.tsx",
+      "hooks/**/*.ts",
+      "lib/**/*.ts",
+      "types/**/*.ts",
       "*.ts",
       "*.tsx",
-      "*.js",
-      "*.jsx",
-      "database/*.sql",
-      "supabase/**/*.sql"
+      "supabase/migrations/*.sql"
     ]
   },
   "then": {
     "type": "askAgent",
-    "prompt": "Review the modified files for code quality and security issues. Identify and suggest removal of:\n\n1. **Obsolete Code**: Unused functions, components, or variables\n2. **Duplicated Code**: Similar functions or logic that can be consolidated\n3. **Security Issues**: Potential vulnerabilities, exposed secrets, or insecure patterns\n4. **Dead Imports**: Unused import statements\n5. **Deprecated Patterns**: Outdated React patterns or deprecated APIs\n6. **Performance Issues**: Inefficient code that could impact performance\n\nFor each issue found:\n- Explain why it's problematic\n- Provide the exact location (file:line)\n- Suggest specific fixes or removal\n- Prioritize security issues as critical\n\nFollow production-class standards:\n- Ensure TypeScript strict mode compliance\n- Validate Zod schema usage for inputs\n- Check for proper error handling\n- Verify authentication/authorization patterns\n- Confirm offline-first PWA compatibility\n\nFocus on maintainability, security, and performance optimization."
+    "prompt": "Review modified files for MVP compliance and suggest removal of:\n\n1. **Over-Engineering to Remove**:\n   - Service containers, registries, factories\n   - Repository patterns or data access layers\n   - Wrapper services around Supabase\n   - Complex caching layers\n   - Query optimizers\n   - Circuit breakers\n   - Multiple service implementations\n\n2. **Out-of-Scope Features**:\n   - Advanced analytics or A/B testing\n   - Viral content optimization\n   - Percentile calculations\n   - Marketplace or mentorship features\n   - Content moderation AI\n   - Real-time subscriptions (use polling)\n   - Media uploads (text only for MVP)\n\n3. **Security Issues**:\n   - Exposed service keys or secrets\n   - Tokens in SQLite/AsyncStorage (use SecureStore)\n   - Missing RLS policies\n   - Unvalidated inputs\n   - Sensitive data in local storage\n   - Insecure error messages\n\n4. **Code Duplication**:\n   - Duplicate functions or components\n   - Unused imports or variables\n   - Dead code or commented code\n   - Test pages or example files\n   - Backup files (*.bak, *.disabled)\n\n5. **Complexity to Simplify**:\n   - Deep folder hierarchies\n   - Barrel exports (index.ts)\n   - Path aliases (use relative imports)\n   - Complex state management\n   - Excessive abstraction\n\nFor each issue:\n- Explain why it violates MVP principles\n- Provide exact location\n- Suggest specific removal or simplification\n- Prioritize security issues\n\nReference: `.kiro/specs/mvp-refactor/future-enhancements.md` for deferred features."
   }
 }

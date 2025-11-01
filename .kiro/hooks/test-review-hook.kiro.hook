@@ -1,33 +1,20 @@
 {
   "enabled": true,
-  "name": "Test Case Review & Enhancement",
-  "description": "Reviews all test files to identify working and failing test cases, creates world-class test coverage for app functionality, and ensures proper mocking of external services like Supabase",
-  "version": "1",
+  "name": "MVP Test Review & Enhancement",
+  "description": "Reviews tests to ensure they cover MVP core logic, use simple mocking, and follow testing principles for the Expo + Supabase refactor",
+  "version": "2",
   "when": {
     "type": "userTriggered",
     "patterns": [
-      "src/test/**/*.{ts",
-      "tsx",
-      "js",
-      "jsx}",
-      "src/tests/**/*.{ts",
-      "tsx",
-      "js",
-      "jsx}",
-      "src/**/*.test.{ts",
-      "tsx",
-      "js",
-      "jsx}",
-      "src/**/*.spec.{ts",
-      "tsx",
-      "js",
-      "jsx}",
-      "vitest.config.ts",
+      "__tests__/**/*.{ts,tsx}",
+      "**/*.test.{ts,tsx}",
+      "**/*.spec.{ts,tsx}",
+      "jest.config.js",
       "package.json"
     ]
   },
   "then": {
     "type": "askAgent",
-    "prompt": "Review all test files in the codebase and analyze:\n\n1. **Test Coverage Analysis**: \n   - Identify which test cases are currently working vs failing\n   - Assess test coverage for core features (authentication, workouts, gamification, social features)\n   - Review test quality and completeness\n   - Ensure at least 90% code coverage across the entire codebase\n\n2. **Create World-Class Test Cases**:\n   - Design comprehensive test suites for all major app functionality\n   - Ensure tests cover edge cases and error scenarios\n   - Create integration tests for user workflows\n   - Add performance and accessibility tests where appropriate\n\n3. **Mock External Dependencies**:\n   - Implement proper mocking for Supabase calls and database operations\n   - Mock authentication services and API endpoints\n   - Create test fixtures for consistent test data\n   - Ensure tests run quickly without external dependencies\n\n4. **Test Structure & Organization**:\n   - Organize tests by feature/component following the project structure\n   - Implement test utilities and helpers for common operations\n   - Set up proper test configuration and environment\n   - Add snapshot testing for UI components where beneficial\n\n5. **Specific Focus Areas**:\n   - Authentication flows (login, logout, guest mode)\n   - Workout tracking and exercise database\n   - Gamification system (XP, achievements, streaks)\n   - Social features (friends, leaderboards, sharing)\n   - Offline functionality and PWA features\n   - Real-time features and state management\n\nProvide detailed test implementation recommendations with code examples, focusing on React Testing Library, Vitest, and proper TypeScript typing for all tests."
+    "prompt": "Review test files for MVP refactor compliance and quality:\n\n1. **Test Coverage Analysis** (Focus on Core Logic):\n   - XP calculation functions (lib/gamification.ts)\n   - Streak calculation logic (lib/streaks.ts)\n   - Achievement unlock conditions (lib/achievements.ts)\n   - Workout validation (Zod schemas)\n   - Offline sync queue operations (lib/offlineSync.ts)\n   - Date helpers and utilities\n\n2. **Test Scope** (MVP Only):\n   - ✅ Unit tests for business logic\n   - ✅ Integration tests for Supabase client\n   - ✅ Auth flow tests (signup, login, logout)\n   - ❌ NO E2E tests (manual testing for MVP)\n   - ❌ NO performance benchmarks\n   - ❌ NO test dashboards\n   - Target: 60%+ coverage for core logic\n\n3. **Mock Strategy** (Simple & Direct):\n   - Mock Supabase responses (not entire client)\n   - Mock SecureStore for token tests\n   - Mock NetInfo for offline tests\n   - Mock SQLite for sync tests\n   - NO complex mocking frameworks\n   - Keep mocks simple and readable\n\n4. **Test Structure**:\n   - Co-locate tests with source files\n   - Use descriptive test names\n   - Follow AAA pattern (Arrange, Act, Assert)\n   - Keep tests < 20 lines each\n   - One assertion per test when possible\n\n5. **Test Quality**:\n   - Test behavior, not implementation\n   - Focus on critical paths only\n   - Include edge cases for core logic\n   - Test error handling\n   - Fast tests (< 1 second each)\n\n6. **Specific Test Areas**:\n   - **Auth**: Signup, login, logout, token refresh\n   - **Workouts**: CRUD operations, offline queue\n   - **Gamification**: XP calculation, level progression, streaks\n   - **Social**: Friend requests, likes, leaderboard queries\n   - **Offline**: Queue operations, sync logic, conflict resolution\n   - **Validation**: Zod schema validation for all inputs\n\n7. **What NOT to Test**:\n   - UI components (manual testing)\n   - Supabase internals (trust the library)\n   - Third-party libraries\n   - Simple getters/setters\n   - Configuration files\n\n8. **Test Examples Needed**:\n   ```typescript\n   // Good: Test business logic\n   test('calculates XP with streak bonus', () => {\n     const xp = calculateWorkoutXP(60, 7); // 60 min, 7-day streak\n     expect(xp).toBe(72); // 60 * 1.2\n   });\n\n   // Good: Test error handling\n   test('handles invalid workout data', () => {\n     expect(() => validateWorkout({})).toThrow();\n   });\n\n   // Bad: Testing implementation details\n   test('calls supabase.from', () => { ... }); // Don't do this\n   ```\n\nProvide specific test recommendations focusing on simplicity and core logic coverage. Reference Jest + React Native Testing Library best practices."
   }
 }

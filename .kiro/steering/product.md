@@ -1,20 +1,29 @@
 # Product Overview
 
-**Sport Tracker - Fitness Gamified PWA** is a Progressive Web Application focused on fitness tracking with gamification elements. The app is designed to motivate users through social features, XP systems, achievements, and workout tracking.
+**LiftFire - Fitness Tracking MVP** is a React Native Expo application focused on simple workout tracking with basic gamification and lightweight social features. The app is designed to motivate users through XP, streaks, and friend competition.
 
-## Core Features
-- **Offline-First PWA**: Works without internet connection, installable as native app
-- **Gamification System**: XP, levels, achievements, streaks to motivate users
-- **Social Features**: Connect with gym friends, share progress, leagues/leaderboards
-- **Workout Tracking**: Exercise database, workout templates, real-time workout player
-- **Progress Analytics**: Charts, statistics, and progress visualization
-- **Multi-language Support**: Spanish primary, with internationalization support
+## MVP Core Features (Only)
+- **Workout Tracking**: Simple CRUD for workouts and exercises
+- **Basic Gamification**: XP calculation, user levels, streak tracking, 5-10 basic achievements
+- **Lightweight Social**: Friend connections, recent activity feed, likes on workouts, weekly leaderboard
+- **Offline Support**: SQLite storage for workouts with background sync (workouts only, not social)
+- **Cross-Platform**: Web + Android + iOS (single codebase with React Native Web)
+
+## Deferred Features (Post-MVP)
+See `.kiro/specs/mvp-refactor/future-enhancements.md` for complete list:
+- Advanced analytics, charts, progress visualization
+- Workout templates, exercise library, video demonstrations
+- Real-time updates, media uploads, push notifications
+- Comments, sharing, groups, complex leagues
+- Premium features, marketplace, mentorship
+- AI/ML features, wearables, enterprise tools
 
 ## Target Users
-Fitness enthusiasts who want to track workouts, compete with friends, and stay motivated through gamification elements.
+Fitness enthusiasts who want a simple, fast app to track workouts and compete with friends without complexity.
 
 ## Current Status
-- Core authentication and UI framework implemented
-- Gamification system in development
-- Social features being built
-- Database integration with Supabase in progress
+- **In Progress**: Complete MVP refactor from 215K lines to 38K lines (82% reduction)
+- **Technology**: React Native Expo + TypeScript + Supabase
+- **Approach**: Clean rewrite, not incremental refactor
+- **Timeline**: 6-week phased implementation
+- **Goal**: Production-ready MVP optimized for free-tier services
