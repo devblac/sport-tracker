@@ -14,8 +14,15 @@
   - Create README.md with setup instructions
   - _Requirements: 10.1, 10.2, 10.3_
 
-- [ ] 2. Supabase database schema and security
-  - [ ] 2.1 Create core database tables
+- [x] 2. Supabase database schema and security
+
+
+
+
+
+  - [x] 2.1 Create core database tables
+
+
     - Write migration for users table with XP, level, and streak fields
     - Write migration for workouts table with user_id foreign key
     - Write migration for exercises table with workout_id foreign key
@@ -25,7 +32,8 @@
     - Create materialized view weekly_leaderboard with refresh function
     - Create view weekly_leaderboard_public for anonymized access
     - _Requirements: 3.1, 3.5, 9.4_
-  - [ ] 2.2 Implement Row Level Security policies
+  - [x] 2.2 Implement Row Level Security policies
+
     - Enable RLS on all tables
     - Create policy: users can view all profiles (SELECT)
     - Create policy: users can update only own profile (UPDATE)
@@ -36,7 +44,8 @@
     - Create policy: users can manage own likes
     - Test RLS policies with different user contexts
     - _Requirements: 3.1, 3.4_
-  - [ ] 2.3 Create database indexes
+  - [x] 2.3 Create database indexes
+
     - Add index on workouts(user_id, completed_at DESC)
     - Add index on exercises(workout_id)
     - Add index on friendships(user_id, friend_id, status)
@@ -44,25 +53,37 @@
     - Add index on weekly_leaderboard(xp_week DESC)
     - _Requirements: 3.1_
 
-- [ ] 3. Authentication implementation
-  - [ ] 3.1 Set up Supabase client
+- [x] 3. Authentication implementation
+
+
+
+
+  - [x] 3.1 Set up Supabase client
+
+
     - Create lib/supabase.ts with Supabase client initialization
     - Configure Supabase URL and anon key from environment variables
     - Set up auth state change listener
     - _Requirements: 2.1, 2.5, 3.2, 3.3_
-  - [ ] 3.2 Create secure token storage
+  - [x] 3.2 Create secure token storage
+
+
     - Create lib/secureStorage.ts with SecureStore helpers
     - Implement saveToken, getToken, deleteToken functions
     - Add token validation before storage
     - _Requirements: 3.4, 3.5_
-  - [ ] 3.3 Build authentication hook
+  - [x] 3.3 Build authentication hook
+
+
     - Create hooks/useAuth.ts with sign up, login, logout functions
     - Implement session persistence using SecureStore
     - Add automatic token refresh logic
     - Handle auth state changes
     - Implement error handling for auth failures
     - _Requirements: 1.1, 3.4, 3.5_
-  - [ ] 3.4 Create authentication screens
+  - [x] 3.4 Create authentication screens
+
+
     - Create app/(auth)/login.tsx with email/password form
     - Create app/(auth)/signup.tsx with registration form
     - Add input validation (email format, password strength)
@@ -70,14 +91,23 @@
     - Show error messages for failed auth attempts
     - _Requirements: 1.1_
 
-- [ ] 4. Local storage and offline infrastructure
-  - [ ] 4.1 Set up SQLite database
+- [x] 4. Local storage and offline infrastructure
+
+
+
+
+
+  - [x] 4.1 Set up SQLite database
+
+
     - Create lib/database.ts with SQLite initialization
     - Define local schema for workouts, exercises, social_feed tables
     - Implement safe data whitelisting before persist
     - Add database migration logic for schema updates
     - _Requirements: 7.1, 7.3_
-  - [ ] 4.2 Implement offline sync queue
+  - [x] 4.2 Implement offline sync queue
+
+
     - Create lib/offlineSync.ts with queue management
     - Implement queueOperation function for offline workout actions ONLY
     - Create processQueue function to sync workouts when online
@@ -86,7 +116,9 @@
     - Store queue in SQLite with operation type and timestamp
     - NO offline queue for social features (likes, friends)
     - _Requirements: 7.2, 7.3, 7.4_
-  - [ ] 4.3 Create offline sync hook
+  - [x] 4.3 Create offline sync hook
+
+
     - Create hooks/useOfflineSync.ts
     - Expose queueOperation, syncNow, pendingCount
     - Add background sync on app foreground
