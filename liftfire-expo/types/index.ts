@@ -1,6 +1,41 @@
 // Core type definitions for LiftFire MVP
 import { z } from 'zod';
 
+// Exercise Library types (for exercise database)
+export interface ExerciseLibraryItem {
+  id: string;
+  name: string;
+  category: 'strength' | 'cardio' | 'flexibility';
+  muscle_groups: string[];
+  equipment: 'barbell' | 'dumbbell' | 'machine' | 'bodyweight' | 'cable' | 'other' | 'none';
+  difficulty: 1 | 2 | 3 | 4 | 5;
+  instructions: string;
+}
+
+// Workout template types
+export interface TemplateExercise {
+  id: string;
+  exercise_id: string;
+  name: string;
+  sets: number;
+  reps: number;
+  weight: number | null;
+  notes: string;
+}
+
+export interface WorkoutTemplate {
+  id: string;
+  user_id: string;
+  name: string;
+  notes: string;
+  is_template: true;
+  category: string;
+  difficulty: number;
+  estimated_duration: number; // minutes
+  exercises: TemplateExercise[];
+  created_at: string;
+}
+
 export interface User {
   id: string;
   email: string;
