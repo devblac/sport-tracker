@@ -10,7 +10,7 @@
         "--project-ref=kaifdxfseeusxsgmqftr"
       ],
       "env": {
-        "SUPABASE_ACCESS_TOKEN": "sbp_v0_3ea865bc162878ff68c7f9c79ec4e19e5f3bc1f1"
+        "SUPABASE_ACCESS_TOKEN": "sbp_c9f24bad3cdfbedc69e78534373b57cdd2a570c6"
       },
       "disabled": false,
       "autoApprove": [
@@ -19,7 +19,8 @@
         "list_tables",
         "list_migrations",
         "get_advisors",
-        "generate_typescript_types"
+        "generate_typescript_types",
+        "list_edge_functions"
       ]
     }
   }
