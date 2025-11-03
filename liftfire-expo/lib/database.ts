@@ -216,6 +216,114 @@ export const clearLocalData = async (): Promise<void> => {
   `);
 };
 
+// Workout CRUD operations for local storage
+export const getLocalWorkouts = async (userId: string): Promise<Workout[]> => {
+  const database = await getDatabase();
+  
+  const workouts = await database.getAllAsync<Workout>(
+    'SELECT * FROM workouts WHERE user_id = ? ORDER BY completed_at DESC',
+    [userId]
+  );
+
+  // Fetch exercises for each workout
+  const workoutsWithExercises = await Promise.all(
+    workouts.map(async (workout) => {
+      const exercises = await database.getAllAsync<Exercise>(
+        'SELECT * FROM exercises WHERE workout_id = ? ORDER BY created_at ASC',
+        [workout.id]
+      );
+      
+      return {
+        ...workout,
+        synced: Boolean(workout.synced),
+        exercises: exercises || [],
+      };
+    })
+  );
+
+  return workoutsWithExercises;
+};
+
+export const saveLocalWorkout = async (workout: Workout): Promise<void> => {
+  const database = await getDatabase();
+  const whitelistedWorkout = whitelistWorkoutData(workout);
+
+  try {
+    // Start transaction
+    await database.execAsync('BEGIN TRANSACTION');
+
+    // Insert or replace workout
+    await database.runAsync(
+      `INSERT OR REPLACE INTO workouts 
+       (id, user_id, name, notes, duration_minutes, xp_earned, completed_at, created_at, synced, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+      [
+        whitelistedWorkout.id!,
+        whitelistedWorkout.user_id!,
+        whitelistedWorkout.name!,
+        whitelistedWorkout.notes || null,
+        whitelistedWorkout.duration_minutes || null,
+        whitelistedWorkout.xp_earned || 0,
+        whitelistedWorkout.completed_at!,
+        whitelistedWorkout.created_at!,
+        whitelistedWorkout.synced ? 1 : 0,
+      ]
+    );
+
+    // Delete existing exercises for this workout
+    await database.runAsync('DELETE FROM exercises WHERE workout_id = ?', [workout.id]);
+
+    // Insert exercises if any
+    if (workout.exercises && workout.exercises.length > 0) {
+      for (const exercise of workout.exercises) {
+        const whitelistedExercise = whitelistExerciseData(exercise);
+        
+        await database.runAsync(
+          `INSERT INTO exercises 
+           (id, workout_id, name, sets, reps, weight, notes, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            whitelistedExercise.id!,
+            whitelistedExercise.workout_id!,
+            whitelistedExercise.name!,
+            whitelistedExercise.sets!,
+            whitelistedExercise.reps!,
+            whitelistedExercise.weight || null,
+            whitelistedExercise.notes || null,
+            whitelistedExercise.created_at!,
+          ]
+        );
+      }
+    }
+
+    // Commit transaction
+    await database.execAsync('COMMIT');
+  } catch (error) {
+    // Rollback on error
+    await database.execAsync('ROLLBACK');
+    throw error;
+  }
+};
+
+export const deleteLocalWorkout = async (workoutId: string): Promise<void> => {
+  const database = await getDatabase();
+  
+  try {
+    await database.execAsync('BEGIN TRANSACTION');
+    
+    // Delete exercises first (foreign key constraint)
+    await database.runAsync('DELETE FROM exercises WHERE workout_id = ?', [workoutId]);
+    
+    // Delete workout
+    await database.runAsync('DELETE FROM workouts WHERE id = ?', [workoutId]);
+    
+    await database.execAsync('COMMIT');
+  } catch (error) {
+    await database.execAsync('ROLLBACK');
+    throw error;
+  }
+};
+
 // Get database statistics for debugging
 export const getDatabaseStats = async () => {
   const database = await getDatabase();

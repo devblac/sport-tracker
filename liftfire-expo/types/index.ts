@@ -1,4 +1,5 @@
 // Core type definitions for LiftFire MVP
+import { z } from 'zod';
 
 export interface User {
   id: string;
@@ -76,3 +77,52 @@ export interface Achievement {
   description?: string;
   unlocked_at: string;
 }
+
+// Achievement definition (for checking unlock conditions)
+export interface AchievementDefinition {
+  type: string;
+  title: string;
+  description: string;
+  icon: string;
+  checkUnlock: (stats: UserStats) => boolean;
+}
+
+// User stats for achievement checking
+export interface UserStats {
+  workoutCount: number;
+  currentStreak: number;
+  longestStreak: number;
+  totalXP: number;
+  level: number;
+}
+
+// Validation schemas for workout creation and updates
+export const CreateWorkoutSchema = z.object({
+  name: z.string().min(1, 'Workout name is required').max(100, 'Workout name too long'),
+  notes: z.string().max(500, 'Notes too long').optional(),
+  duration_minutes: z.number().min(1, 'Duration must be at least 1 minute').max(600, 'Duration too long').optional(),
+  exercises: z.array(z.object({
+    name: z.string().min(1, 'Exercise name is required').max(100, 'Exercise name too long'),
+    sets: z.number().min(1, 'Sets must be at least 1').max(50, 'Too many sets'),
+    reps: z.number().min(1, 'Reps must be at least 1').max(1000, 'Too many reps'),
+    weight: z.number().min(0, 'Weight cannot be negative').max(2000, 'Weight too high').optional(),
+    notes: z.string().max(200, 'Exercise notes too long').optional(),
+  })).min(1, 'At least one exercise is required'),
+});
+
+export const UpdateWorkoutSchema = CreateWorkoutSchema.partial().extend({
+  id: z.string().uuid('Invalid workout ID'),
+});
+
+export const CreateExerciseSchema = z.object({
+  workout_id: z.string().uuid('Invalid workout ID'),
+  name: z.string().min(1, 'Exercise name is required').max(100, 'Exercise name too long'),
+  sets: z.number().min(1, 'Sets must be at least 1').max(50, 'Too many sets'),
+  reps: z.number().min(1, 'Reps must be at least 1').max(1000, 'Too many reps'),
+  weight: z.number().min(0, 'Weight cannot be negative').max(2000, 'Weight too high').optional(),
+  notes: z.string().max(200, 'Exercise notes too long').optional(),
+});
+
+export type CreateWorkoutInput = z.infer<typeof CreateWorkoutSchema>;
+export type UpdateWorkoutInput = z.infer<typeof UpdateWorkoutSchema>;
+export type CreateExerciseInput = z.infer<typeof CreateExerciseSchema>;
