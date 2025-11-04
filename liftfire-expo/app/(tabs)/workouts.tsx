@@ -15,7 +15,11 @@ import { router } from 'expo-router';
 import { useWorkouts } from '../../hooks/useWorkouts';
 import { useSyncStatusIndicator } from '../../hooks/useOfflineSync';
 import { WorkoutCard } from '../../components/WorkoutCard';
+import { LoadingSpinner } from '../../components/LoadingSpinner';
+import { ErrorMessage } from '../../components/ErrorMessage';
+import { ListSkeleton } from '../../components/SkeletonLoader';
 import { Workout } from '../../types';
+import { useTheme } from '../../hooks/useTheme';
 
 const WORKOUTS_PER_PAGE = 20;
 
@@ -148,13 +152,26 @@ export default function WorkoutsScreen() {
     </View>
   );
 
+  // Show loading state on initial load
   if (loading && workouts.length === 0) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Loading workouts...</Text>
-        </View>
+        {renderHeader()}
+        <ListSkeleton count={5} type="workout" />
+      </SafeAreaView>
+    );
+  }
+
+  // Show error state if there's an error and no cached workouts
+  if (error && workouts.length === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        {renderHeader()}
+        <ErrorMessage
+          message={error}
+          onRetry={handleRefresh}
+          fullScreen={false}
+        />
       </SafeAreaView>
     );
   }

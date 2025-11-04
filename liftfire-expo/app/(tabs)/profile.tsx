@@ -2,18 +2,24 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
 import { useGamification } from '../../hooks/useGamification';
+import { useWorkouts } from '../../hooks/useWorkouts';
 import { useTheme } from '../../hooks/useTheme';
 import { XPBar } from '../../components/XPBar';
 import { StreakDisplay } from '../../components/StreakDisplay';
 import { AchievementGrid } from '../../components/AchievementBadge';
+import { StatsCard } from '../../components/StatsCard';
+import { LoadingSpinner } from '../../components/LoadingSpinner';
+import { ErrorMessage } from '../../components/ErrorMessage';
 import { getAllAchievements } from '../../lib/achievements';
 
 type TabType = 'overview' | 'settings';
 
 export default function ProfileScreen() {
-  const { user, signOut } = useAuth();
+  const router = useRouter();
+  const { user, signOut, isAuthenticated } = useAuth();
   const {
     xp,
     level,
@@ -25,16 +31,44 @@ export default function ProfileScreen() {
     loading,
     error,
   } = useGamification();
+  const { workouts } = useWorkouts();
   
   const [activeTab, setActiveTab] = useState<TabType>('overview');
+  
+  // Calculate statistics
+  const totalWorkouts = workouts.length;
+  const totalXP = xp;
+  
+  // Calculate average workout duration
+  const avgDuration = workouts.length > 0
+    ? Math.round(
+        workouts.reduce((sum, w) => sum + (w.duration_minutes || 0), 0) / workouts.length
+      )
+    : 0;
+  
+  // Calculate weekly workout count (last 7 days)
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  const weeklyWorkouts = workouts.filter(
+    w => new Date(w.completed_at) >= oneWeekAgo
+  ).length;
+  
+  // Calculate current week progress (Monday to Sunday)
+  const now = new Date();
+  const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+  const daysFromMonday = currentDay === 0 ? 6 : currentDay - 1; // Adjust so Monday = 0
+  const mondayThisWeek = new Date(now);
+  mondayThisWeek.setDate(now.getDate() - daysFromMonday);
+  mondayThisWeek.setHours(0, 0, 0, 0);
+  
+  const currentWeekWorkouts = workouts.filter(
+    w => new Date(w.completed_at) >= mondayThisWeek
+  ).length;
 
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Loading profile...</Text>
-        </View>
+        <LoadingSpinner message="Loading profile..." fullScreen />
       </SafeAreaView>
     );
   }
@@ -42,9 +76,11 @@ export default function ProfileScreen() {
   if (error) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Error: {error}</Text>
-        </View>
+        <ErrorMessage
+          message={error}
+          onRetry={() => window.location.reload()}
+          fullScreen
+        />
       </SafeAreaView>
     );
   }
@@ -79,15 +115,62 @@ export default function ProfileScreen() {
 
   const renderOverviewTab = () => (
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
+      {/* Guest Mode Banner */}
+      {!isAuthenticated && (
+        <View style={styles.guestBanner}>
+          <View style={styles.guestBannerIcon}>
+            <Ionicons name="cloud-offline-outline" size={32} color="#FF9500" />
+          </View>
+          <View style={styles.guestBannerContent}>
+            <Text style={styles.guestBannerTitle}>Using Guest Mode</Text>
+            <Text style={styles.guestBannerText}>
+              Your workout data is stored locally on this device. Create an account to securely save your progress to the cloud and access it from any device.
+            </Text>
+            <TouchableOpacity
+              style={styles.guestBannerButton}
+              onPress={() => router.push('/(auth)/signup')}
+            >
+              <Ionicons name="person-add-outline" size={18} color="#FFFFFF" />
+              <Text style={styles.guestBannerButtonText}>Create Account</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.guestBannerButtonSecondary}
+              onPress={() => router.push('/(auth)/login')}
+            >
+              <Text style={styles.guestBannerButtonSecondaryText}>Already have an account? Sign In</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       {/* User Info Card */}
       <View style={styles.userCard}>
         <View style={styles.avatarContainer}>
           <Text style={styles.avatarText}>{getUserInitial()}</Text>
         </View>
-        <Text style={styles.username}>{user?.email || 'User'}</Text>
+        <Text style={styles.username}>
+          {user?.display_name || user?.username || user?.email || 'User'}
+        </Text>
+        {user?.display_name && (
+          <Text style={styles.usernameSecondary}>@{user.username}</Text>
+        )}
         <Text style={styles.levelText}>
           Level {level} • {xp} XP
         </Text>
+        <Text style={styles.workoutsCount}>
+          {totalWorkouts} {totalWorkouts === 1 ? 'Workout' : 'Workouts'} Completed
+        </Text>
+        
+        {/* Edit Profile Button - Only for authenticated users */}
+        {isAuthenticated && (
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => router.push('/profile/edit')}
+          >
+            <Ionicons name="create-outline" size={16} color="#007AFF" />
+            <Text style={styles.editButtonText}>Edit Profile</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* XP and Level */}
@@ -110,6 +193,37 @@ export default function ProfileScreen() {
         />
       </View>
 
+      {/* Progress Statistics */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Progress Statistics</Text>
+        <StatsCard
+          icon="barbell-outline"
+          label="Total Workouts"
+          value={totalWorkouts}
+          color="#007AFF"
+        />
+        <StatsCard
+          icon="trophy-outline"
+          label="Total XP"
+          value={totalXP.toLocaleString()}
+          color="#FF9500"
+        />
+        <StatsCard
+          icon="time-outline"
+          label="Average Duration"
+          value={`${avgDuration} min`}
+          color="#34C759"
+          subtitle={avgDuration > 0 ? 'per workout' : 'No workouts yet'}
+        />
+        <StatsCard
+          icon="calendar-outline"
+          label="This Week"
+          value={`${currentWeekWorkouts} workouts`}
+          color="#5856D6"
+          subtitle={`${weeklyWorkouts} in last 7 days`}
+        />
+      </View>
+
       {/* Achievements */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>
@@ -126,6 +240,28 @@ export default function ProfileScreen() {
 
   const renderSettingsTab = () => (
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
+      {/* Guest Mode Banner in Settings */}
+      {!isAuthenticated && (
+        <View style={styles.guestBanner}>
+          <View style={styles.guestBannerIcon}>
+            <Ionicons name="shield-checkmark-outline" size={32} color="#34C759" />
+          </View>
+          <View style={styles.guestBannerContent}>
+            <Text style={styles.guestBannerTitle}>Secure Your Data</Text>
+            <Text style={styles.guestBannerText}>
+              Create an account to enable cloud backup, sync across devices, and unlock social features like competing with friends.
+            </Text>
+            <TouchableOpacity
+              style={styles.guestBannerButton}
+              onPress={() => router.push('/(auth)/signup')}
+            >
+              <Ionicons name="person-add-outline" size={18} color="#FFFFFF" />
+              <Text style={styles.guestBannerButtonText}>Create Account</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       {/* Theme Settings */}
       <View style={styles.settingsCard}>
         <Text style={styles.settingsCardTitle}>Appearance</Text>
@@ -166,29 +302,47 @@ export default function ProfileScreen() {
         <Text style={styles.settingsCardTitle}>Data & Storage</Text>
         <TouchableOpacity style={styles.settingsItem}>
           <View style={styles.settingsItemLeft}>
-            <Ionicons name="cloud-outline" size={24} color="#007AFF" />
-            <Text style={styles.settingsItemText}>Sync Status</Text>
+            <Ionicons 
+              name={isAuthenticated ? "cloud-outline" : "phone-portrait-outline"} 
+              size={24} 
+              color="#007AFF" 
+            />
+            <Text style={styles.settingsItemText}>
+              {isAuthenticated ? 'Sync Status' : 'Storage Location'}
+            </Text>
           </View>
           <View style={styles.settingsItemRight}>
-            <Text style={styles.settingValue}>Active</Text>
+            <Text style={styles.settingValue}>
+              {isAuthenticated ? 'Active' : 'Local Only'}
+            </Text>
             <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
           </View>
         </TouchableOpacity>
-      </View>
-
-      {/* Account Actions */}
-      <View style={styles.settingsCard}>
-        <Text style={styles.settingsCardTitle}>Account</Text>
-        <TouchableOpacity style={styles.settingsItem} onPress={signOut}>
-          <View style={styles.settingsItemLeft}>
-            <Ionicons name="log-out-outline" size={24} color="#FF3B30" />
-            <Text style={[styles.settingsItemText, { color: '#FF3B30' }]}>
-              Sign Out
+        {!isAuthenticated && (
+          <View style={styles.warningBox}>
+            <Ionicons name="warning-outline" size={16} color="#FF9500" />
+            <Text style={styles.warningText}>
+              Your data is only stored on this device. If you uninstall the app or clear data, your progress will be lost.
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
-        </TouchableOpacity>
+        )}
       </View>
+
+      {/* Account Actions - Only for authenticated users */}
+      {isAuthenticated && (
+        <View style={styles.settingsCard}>
+          <Text style={styles.settingsCardTitle}>Account</Text>
+          <TouchableOpacity style={styles.settingsItem} onPress={signOut}>
+            <View style={styles.settingsItemLeft}>
+              <Ionicons name="log-out-outline" size={24} color="#FF3B30" />
+              <Text style={[styles.settingsItemText, { color: '#FF3B30' }]}>
+                Sign Out
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* App Info */}
       <View style={styles.appInfo}>
@@ -399,6 +553,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#8E8E93',
   },
+  workoutsCount: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#007AFF',
+    marginTop: 8,
+  },
+  usernameSecondary: {
+    fontSize: 14,
+    color: '#8E8E93',
+    marginTop: 2,
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E3F2FD',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginTop: 12,
+    gap: 6,
+  },
+  editButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
   section: {
     paddingHorizontal: 16,
     marginBottom: 16,
@@ -502,5 +683,80 @@ const styles = StyleSheet.create({
   themeOptionDescription: {
     fontSize: 13,
     color: '#8E8E93',
+  },
+  guestBanner: {
+    backgroundColor: '#FFF9E6',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#FFE5B4',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  guestBannerIcon: {
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  guestBannerContent: {
+    alignItems: 'center',
+  },
+  guestBannerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1C1C1E',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  guestBannerText: {
+    fontSize: 14,
+    color: '#3C3C43',
+    lineHeight: 20,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  guestBannerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 10,
+    gap: 8,
+    width: '100%',
+    marginBottom: 8,
+  },
+  guestBannerButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  guestBannerButtonSecondary: {
+    paddingVertical: 8,
+  },
+  guestBannerButtonSecondaryText: {
+    fontSize: 14,
+    color: '#007AFF',
+    textAlign: 'center',
+  },
+  warningBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FFF3E0',
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  warningText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#8E8E93',
+    lineHeight: 18,
   },
 });

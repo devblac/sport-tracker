@@ -189,6 +189,29 @@ export default function LoginScreen() {
                 <Text style={styles.signupLink}>Sign Up</Text>
               </TouchableOpacity>
             </View>
+
+            {/* Divider */}
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>OR</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Guest Mode Button */}
+            <TouchableOpacity
+              style={styles.guestButton}
+              onPress={() => router.replace('/(tabs)')}
+              disabled={loading}
+            >
+              <Text style={styles.guestButtonText}>Continue as Guest</Text>
+            </TouchableOpacity>
+
+            {/* Guest Mode Info */}
+            <View style={styles.guestInfo}>
+              <Text style={styles.guestInfoText}>
+                Try the app without an account. Your data will be stored locally on this device only.
+              </Text>
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -290,5 +313,45 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#3b82f6',
     fontWeight: '600',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 24,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#ddd',
+  },
+  dividerText: {
+    marginHorizontal: 16,
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  guestButton: {
+    height: 50,
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#3b82f6',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  guestButtonText: {
+    color: '#3b82f6',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  guestInfo: {
+    marginTop: 12,
+    paddingHorizontal: 8,
+  },
+  guestInfoText: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 18,
   },
 });

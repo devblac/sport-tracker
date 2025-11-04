@@ -280,8 +280,14 @@
     - Create Edge Function to refresh materialized view hourly
     - _Requirements: 9.4_
 
-- [ ] 8. Profile and progress screens
-  - [ ] 8.1 Create profile screen
+- [x] 8. Profile and progress screens
+
+
+
+
+  - [x] 8.1 Create profile screen
+
+
     - Create app/(tabs)/profile.tsx
     - Display user avatar, username, display name
     - Show XP, level, current streak, longest streak
@@ -289,14 +295,18 @@
     - Add edit profile button
     - Show total workouts count
     - _Requirements: 1.3, 8.5_
-  - [ ] 8.2 Build progress statistics
+  - [x] 8.2 Build progress statistics
+
+
     - Create components/StatsCard.tsx for stat display
     - Calculate total workouts, total XP, average workout duration
     - Show weekly workout count
     - Display current week progress
     - Add simple charts for workout history (optional)
     - _Requirements: 1.3_
-  - [ ] 8.3 Implement profile editing
+  - [x] 8.3 Implement profile editing
+
+
     - Create app/profile/edit.tsx screen
     - Allow editing display name and avatar
     - Use Supabase Storage for avatar uploads
@@ -304,21 +314,31 @@
     - Show success/error messages
     - _Requirements: 1.1_
 
-- [ ] 9. Navigation and app layout
-  - [ ] 9.1 Set up Expo Router navigation
+- [x] 9. Navigation and app layout
+
+
+
+
+  - [x] 9.1 Set up Expo Router navigation
+
+
     - Configure app/\_layout.tsx with tab navigation
     - Create tabs for Home, Workouts, Social, Profile
     - Add authentication guard for protected routes
     - Implement deep linking support
     - _Requirements: 4.3, 4.4_
-  - [ ] 9.2 Create home/dashboard screen
+  - [x] 9.2 Create home/dashboard screen
+
+
     - Create app/(tabs)/index.tsx
     - Show quick stats (today's workouts, current streak)
     - Display recent workouts (last 5)
     - Show friend activity preview
     - Add quick action buttons (Start Workout, View Progress)
     - _Requirements: 1.3_
-  - [ ] 9.3 Implement loading and error states
+  - [x] 9.3 Implement loading and error states
+
+
     - Create components/LoadingSpinner.tsx
     - Create components/ErrorMessage.tsx
     - Add loading states to all data fetching

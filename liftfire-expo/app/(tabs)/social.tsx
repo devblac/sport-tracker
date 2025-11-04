@@ -9,18 +9,100 @@ import {
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useAuth } from '../../hooks/useAuth';
 import { useSocial } from '../../hooks/useSocial';
 import { FriendWorkoutItem } from '../../components/FriendWorkoutItem';
 import { LeaderboardList } from '../../components/LeaderboardList';
+import { LoadingSpinner } from '../../components/LoadingSpinner';
+import { ErrorMessage } from '../../components/ErrorMessage';
+import { ListSkeleton } from '../../components/SkeletonLoader';
 import { FriendWorkout } from '../../types';
+import { useTheme } from '../../hooks/useTheme';
 
 type TabType = 'feed' | 'leaderboard';
 
 export default function SocialScreen() {
+  const router = useRouter();
+  const { colors } = useTheme();
+  const { isAuthenticated } = useAuth();
   const { feed, loading, error, toggleLike, refreshFeed } = useSocial();
   const [refreshing, setRefreshing] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<TabType>('feed');
   const [friendsOnly, setFriendsOnly] = React.useState(false);
+
+  // Show guest message if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: colors.text }]}>Social</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+            Connect with friends and compete
+          </Text>
+        </View>
+
+        <View style={[styles.guestContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.guestIconContainer, { backgroundColor: colors.primary + '20' }]}>
+            <Ionicons name="people" size={64} color={colors.primary} />
+          </View>
+          
+          <Text style={[styles.guestTitle, { color: colors.text }]}>
+            Social Features Require an Account
+          </Text>
+          
+          <Text style={[styles.guestMessage, { color: colors.textSecondary }]}>
+            Create an account to unlock social features like:
+          </Text>
+
+          <View style={styles.featureList}>
+            <View style={styles.featureItem}>
+              <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+              <Text style={[styles.featureText, { color: colors.text }]}>
+                Add friends and see their workouts
+              </Text>
+            </View>
+            <View style={styles.featureItem}>
+              <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+              <Text style={[styles.featureText, { color: colors.text }]}>
+                Like and comment on activities
+              </Text>
+            </View>
+            <View style={styles.featureItem}>
+              <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+              <Text style={[styles.featureText, { color: colors.text }]}>
+                Compete on weekly leaderboards
+              </Text>
+            </View>
+            <View style={styles.featureItem}>
+              <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+              <Text style={[styles.featureText, { color: colors.text }]}>
+                Sync your data across devices
+              </Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.guestButton, { backgroundColor: colors.primary }]}
+            onPress={() => router.push('/(auth)/signup')}
+          >
+            <Ionicons name="person-add" size={20} color="#FFFFFF" />
+            <Text style={styles.guestButtonText}>Create Account</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.guestButtonSecondary, { borderColor: colors.primary }]}
+            onPress={() => router.push('/(auth)/login')}
+          >
+            <Text style={[styles.guestButtonSecondaryText, { color: colors.primary }]}>
+              Already have an account? Sign In
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -42,21 +124,16 @@ export default function SocialScreen() {
 
   const renderEmpty = () => {
     if (loading && !refreshing) {
-      return (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Loading feed...</Text>
-        </View>
-      );
+      return <ListSkeleton count={5} type="feed" />;
     }
 
     if (error) {
       return (
-        <View style={styles.centerContainer}>
-          <Text style={styles.errorIcon}>⚠️</Text>
-          <Text style={styles.errorText}>{error}</Text>
-          <Text style={styles.errorHint}>Pull down to retry</Text>
-        </View>
+        <ErrorMessage
+          message={error}
+          onRetry={handleRefresh}
+          fullScreen={false}
+        />
       );
     }
 
@@ -274,5 +351,74 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     textAlign: 'center',
+  },
+  guestContainer: {
+    flex: 1,
+    margin: 20,
+    padding: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  guestIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  guestTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  guestMessage: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 24,
+  },
+  featureList: {
+    width: '100%',
+    marginBottom: 32,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 12,
+  },
+  featureText: {
+    fontSize: 15,
+    flex: 1,
+  },
+  guestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 12,
+    gap: 8,
+    width: '100%',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  guestButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  guestButtonSecondary: {
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 2,
+    width: '100%',
+    alignItems: 'center',
+  },
+  guestButtonSecondaryText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
