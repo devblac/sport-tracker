@@ -57,7 +57,16 @@ export function useGamification(): UseGamificationReturn {
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        throw new Error('Not authenticated');
+        // Guest mode - return default values
+        setXp(0);
+        setLevel(1);
+        setLevelProgress(0);
+        setXpToNextLevel(100);
+        setCurrentStreak(0);
+        setLongestStreak(0);
+        setAchievements([]);
+        setLoading(false);
+        return;
       }
 
       // Fetch user profile with XP and streak data

@@ -13,11 +13,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
 import { useSocial } from '../../hooks/useSocial';
+import { useOfflineSync } from '../../hooks/useOfflineSync';
 import { FriendWorkoutItem } from '../../components/FriendWorkoutItem';
 import { LeaderboardList } from '../../components/LeaderboardList';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { ErrorMessage } from '../../components/ErrorMessage';
 import { ListSkeleton } from '../../components/SkeletonLoader';
+import { OfflineBanner } from '../../components/OfflineBanner';
 import { FriendWorkout } from '../../types';
 import { useTheme } from '../../hooks/useTheme';
 
@@ -28,6 +30,7 @@ export default function SocialScreen() {
   const { colors } = useTheme();
   const { isAuthenticated } = useAuth();
   const { feed, loading, error, toggleLike, refreshFeed } = useSocial();
+  const { syncNow } = useOfflineSync();
   const [refreshing, setRefreshing] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<TabType>('feed');
   const [friendsOnly, setFriendsOnly] = React.useState(false);
@@ -106,6 +109,12 @@ export default function SocialScreen() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
+    // Trigger sync first, then refresh feed
+    try {
+      await syncNow();
+    } catch (err) {
+      console.error('Sync failed during refresh:', err);
+    }
     await refreshFeed();
     setRefreshing(false);
   };
@@ -121,6 +130,13 @@ export default function SocialScreen() {
   const renderItem = ({ item }: { item: FriendWorkout }) => (
     <FriendWorkoutItem workout={item} onLike={handleLike} />
   );
+
+  // Optimize FlatList performance with getItemLayout
+  const getItemLayout = React.useCallback((data: any, index: number) => ({
+    length: 160, // Approximate height of FriendWorkoutItem
+    offset: 160 * index,
+    index,
+  }), []);
 
   const renderEmpty = () => {
     if (loading && !refreshing) {
@@ -150,6 +166,7 @@ export default function SocialScreen() {
 
   return (
     <View style={styles.container}>
+      <OfflineBanner />
       <View style={styles.header}>
         <Text style={styles.title}>Social</Text>
         <Text style={styles.subtitle}>
@@ -205,6 +222,7 @@ export default function SocialScreen() {
           data={feed}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
+          getItemLayout={getItemLayout}
           contentContainerStyle={[
             styles.listContent,
             feed.length === 0 && styles.emptyListContent,
@@ -218,6 +236,10 @@ export default function SocialScreen() {
             />
           }
           showsVerticalScrollIndicator={false}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          updateCellsBatchingPeriod={50}
+          windowSize={10}
         />
       ) : (
         <LeaderboardList friendsOnly={friendsOnly} />

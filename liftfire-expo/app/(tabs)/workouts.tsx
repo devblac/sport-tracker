@@ -13,13 +13,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useWorkouts } from '../../hooks/useWorkouts';
-import { useSyncStatusIndicator } from '../../hooks/useOfflineSync';
+import { useSyncStatusIndicator, useOfflineSync } from '../../hooks/useOfflineSync';
 import { WorkoutCard } from '../../components/WorkoutCard';
-import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { ErrorMessage } from '../../components/ErrorMessage';
 import { ListSkeleton } from '../../components/SkeletonLoader';
+import { OfflineBanner } from '../../components/OfflineBanner';
 import { Workout } from '../../types';
-import { useTheme } from '../../hooks/useTheme';
 
 const WORKOUTS_PER_PAGE = 20;
 
@@ -34,7 +33,8 @@ export default function WorkoutsScreen() {
     clearError,
   } = useWorkouts();
 
-  const { statusText, statusColor, isOnline } = useSyncStatusIndicator();
+  const { statusText, statusColor } = useSyncStatusIndicator();
+  const { syncNow } = useOfflineSync();
 
   const [currentPage, setCurrentPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -60,8 +60,14 @@ export default function WorkoutsScreen() {
 
   const handleRefresh = useCallback(async () => {
     clearError();
+    // Trigger sync first, then refresh workouts
+    try {
+      await syncNow();
+    } catch (err) {
+      console.error('Sync failed during refresh:', err);
+    }
     await refreshWorkouts();
-  }, [refreshWorkouts, clearError]);
+  }, [refreshWorkouts, clearError, syncNow]);
 
   const handleLoadMore = useCallback(async () => {
     if (loadingMore || !hasMoreWorkouts) return;
@@ -111,6 +117,13 @@ export default function WorkoutsScreen() {
       </View>
     );
   };
+
+  // Optimize FlatList performance with getItemLayout
+  const getItemLayout = useCallback((data: any, index: number) => ({
+    length: 140, // Approximate height of WorkoutCard
+    offset: 140 * index,
+    index,
+  }), []);
 
   const renderHeader = () => (
     <View style={styles.header}>
@@ -178,10 +191,12 @@ export default function WorkoutsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <OfflineBanner />
       <FlatList
         data={paginatedWorkouts}
         renderItem={renderWorkoutCard}
         keyExtractor={(item) => item.id}
+        getItemLayout={getItemLayout}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmptyState}
         ListFooterComponent={renderLoadMoreFooter}
@@ -196,6 +211,10 @@ export default function WorkoutsScreen() {
         showsVerticalScrollIndicator={false}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.1}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        updateCellsBatchingPeriod={50}
+        windowSize={10}
       />
 
       <TouchableOpacity style={styles.fab} onPress={handleCreateWorkout}>

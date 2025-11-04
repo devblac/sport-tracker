@@ -13,6 +13,7 @@ import { AchievementGrid } from '../../components/AchievementBadge';
 import { StatsCard } from '../../components/StatsCard';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { ErrorMessage } from '../../components/ErrorMessage';
+import { OfflineBanner } from '../../components/OfflineBanner';
 import { getAllAchievements } from '../../lib/achievements';
 
 type TabType = 'overview' | 'settings';
@@ -73,7 +74,9 @@ export default function ProfileScreen() {
     );
   }
 
-  if (error) {
+  // Only show error for authenticated users
+  // Guest users should see the profile with default values
+  if (error && isAuthenticated) {
     return (
       <SafeAreaView style={styles.container}>
         <ErrorMessage
@@ -86,6 +89,7 @@ export default function ProfileScreen() {
   }
 
   const getUserInitial = () => {
+    if (!isAuthenticated) return 'G'; // G for Guest
     if (!user?.email) return '?';
     return user.email.charAt(0).toUpperCase();
   };
@@ -149,10 +153,15 @@ export default function ProfileScreen() {
           <Text style={styles.avatarText}>{getUserInitial()}</Text>
         </View>
         <Text style={styles.username}>
-          {user?.display_name || user?.username || user?.email || 'User'}
+          {isAuthenticated 
+            ? (user?.display_name || user?.username || user?.email || 'User')
+            : 'Guest User'}
         </Text>
-        {user?.display_name && (
+        {isAuthenticated && user?.display_name && (
           <Text style={styles.usernameSecondary}>@{user.username}</Text>
+        )}
+        {!isAuthenticated && (
+          <Text style={styles.usernameSecondary}>Local workouts only</Text>
         )}
         <Text style={styles.levelText}>
           Level {level} • {xp} XP
@@ -354,6 +363,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <OfflineBanner />
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Profile</Text>

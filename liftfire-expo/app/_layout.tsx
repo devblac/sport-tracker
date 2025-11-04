@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useAuth } from '../hooks/useAuth';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import Toast from 'react-native-toast-message';
 
 /**
  * Root layout with authentication guard
@@ -38,14 +39,17 @@ export default function RootLayout() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-      <Stack.Screen name="workout" options={{ headerShown: false }} />
-      <Stack.Screen name="profile/edit" options={{ headerShown: false }} />
-      <Stack.Screen name="templates" options={{ headerShown: false }} />
-      <Stack.Screen name="exercises" options={{ headerShown: false }} />
-    </Stack>
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="workout" options={{ headerShown: false }} />
+        <Stack.Screen name="profile/edit" options={{ headerShown: false }} />
+        <Stack.Screen name="templates" options={{ headerShown: false }} />
+        <Stack.Screen name="exercises" options={{ headerShown: false }} />
+      </Stack>
+      <Toast />
+    </>
   );
 }
 

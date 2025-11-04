@@ -1,6 +1,6 @@
 // Home Screen - Dashboard with quick stats and recent activity
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../hooks/useTheme';
@@ -8,7 +8,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useGamification } from '../../hooks/useGamification';
 import { useWorkouts } from '../../hooks/useWorkouts';
 import { useSocial } from '../../hooks/useSocial';
-import { Workout, FriendWorkout } from '../../types';
+import { OfflineBanner } from '../../components/OfflineBanner';
 
 export default function HomeScreen() {
   const { colors } = useTheme();
@@ -36,6 +36,7 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <OfflineBanner />
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>

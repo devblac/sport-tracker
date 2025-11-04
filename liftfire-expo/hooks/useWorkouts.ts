@@ -11,6 +11,7 @@ import {
   UpdateWorkoutSchema 
 } from '../types';
 import { getLocalWorkouts, saveLocalWorkout, deleteLocalWorkout } from '../lib/database';
+import { showSuccessToast, showErrorToast } from '../lib/toast';
 
 interface WorkoutsState {
   workouts: Workout[];
@@ -207,6 +208,8 @@ export const useWorkouts = (): UseWorkoutsReturn => {
         exercises: newWorkout.exercises,
       });
 
+      showSuccessToast(`Workout "${newWorkout.name}" created! +${xpEarned} XP`, 'Workout Completed');
+
       return { success: true, workout: newWorkout };
 
     } catch (error) {
@@ -214,6 +217,7 @@ export const useWorkouts = (): UseWorkoutsReturn => {
       
       const errorMessage = error instanceof Error ? error.message : 'Failed to create workout';
       setState(prev => ({ ...prev, error: errorMessage }));
+      showErrorToast(errorMessage);
       
       return { success: false, error: errorMessage };
     }
@@ -281,6 +285,8 @@ export const useWorkouts = (): UseWorkoutsReturn => {
         exercises: updatedWorkout.exercises,
       });
 
+      showSuccessToast('Workout updated successfully');
+
       return { success: true, workout: updatedWorkout };
 
     } catch (error) {
@@ -288,6 +294,7 @@ export const useWorkouts = (): UseWorkoutsReturn => {
       
       const errorMessage = error instanceof Error ? error.message : 'Failed to update workout';
       setState(prev => ({ ...prev, error: errorMessage }));
+      showErrorToast(errorMessage);
       
       return { success: false, error: errorMessage };
     }
@@ -323,6 +330,8 @@ export const useWorkouts = (): UseWorkoutsReturn => {
         await queueOperation('DELETE_WORKOUT', 'workouts', id, { workout_id: id });
       }
 
+      showSuccessToast('Workout deleted successfully');
+
       return { success: true };
 
     } catch (error) {
@@ -330,6 +339,7 @@ export const useWorkouts = (): UseWorkoutsReturn => {
       
       const errorMessage = error instanceof Error ? error.message : 'Failed to delete workout';
       setState(prev => ({ ...prev, error: errorMessage }));
+      showErrorToast(errorMessage);
       
       // Revert optimistic update on error
       const existingWorkout = state.workouts.find(w => w.id === id);

@@ -2,6 +2,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { supabase } from './supabase';
 import { getDatabase, whitelistWorkoutData, whitelistExerciseData } from './database';
 import { Workout, Exercise } from '../types';
+import { showSyncToast } from './toast';
 
 // Types for sync operations
 export interface SyncOperation {
@@ -134,6 +135,10 @@ export const processQueue = async (): Promise<void> => {
     }
 
     console.log(`Processing ${operations.length} pending operations`);
+    showSyncToast('syncing', operations.length);
+
+    let successCount = 0;
+    let failureCount = 0;
 
     for (const operation of operations) {
       try {
@@ -151,9 +156,11 @@ export const processQueue = async (): Promise<void> => {
           ['completed', operation.id!]
         );
 
+        successCount++;
         console.log('Successfully synced operation:', operation.id);
       } catch (error) {
         console.error('Failed to sync operation:', operation.id, error);
+        failureCount++;
         
         // Increment retry count and mark as failed if max retries reached
         const newRetryCount = operation.retry_count + 1;
@@ -171,6 +178,13 @@ export const processQueue = async (): Promise<void> => {
           );
         }
       }
+    }
+
+    // Show sync result toast
+    if (successCount > 0 && failureCount === 0) {
+      showSyncToast('synced', successCount);
+    } else if (failureCount > 0) {
+      showSyncToast('failed');
     }
 
     // Clean up completed operations older than 24 hours

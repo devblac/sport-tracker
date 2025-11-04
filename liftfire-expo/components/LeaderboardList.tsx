@@ -195,11 +195,19 @@ export const LeaderboardList: React.FC<LeaderboardListProps> = ({ friendsOnly = 
     );
   };
 
+  // Optimize FlatList performance with getItemLayout
+  const getItemLayout = useCallback((data: any, index: number) => ({
+    length: 80, // Approximate height of leaderboard item
+    offset: 80 * index,
+    index,
+  }), []);
+
   return (
     <FlatList
       data={entries}
       renderItem={renderItem}
       keyExtractor={(item, index) => `${item.username}-${index}`}
+      getItemLayout={getItemLayout}
       contentContainerStyle={[
         styles.listContent,
         entries.length === 0 && styles.emptyListContent,
@@ -213,6 +221,10 @@ export const LeaderboardList: React.FC<LeaderboardListProps> = ({ friendsOnly = 
         />
       }
       showsVerticalScrollIndicator={false}
+      removeClippedSubviews={true}
+      maxToRenderPerBatch={10}
+      updateCellsBatchingPeriod={50}
+      windowSize={10}
     />
   );
 };

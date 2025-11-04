@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { Friendship, User } from '../types';
+import { showSuccessToast, showErrorToast } from '../lib/toast';
 
 export const useFriends = () => {
   const [friends, setFriends] = useState<Friendship[]>([]);
@@ -148,10 +149,14 @@ export const useFriends = () => {
 
       if (insertError) throw insertError;
 
+      showSuccessToast('Friend request sent successfully');
+
       // Refresh friends list
       await fetchFriends();
     } catch (err: any) {
-      setError(err.message || 'Failed to send friend request');
+      const errorMessage = err.message || 'Failed to send friend request';
+      setError(errorMessage);
+      showErrorToast(errorMessage);
       console.error('Error sending friend request:', err);
       throw err;
     } finally {
@@ -172,10 +177,14 @@ export const useFriends = () => {
 
       if (updateError) throw updateError;
 
+      showSuccessToast('Friend request accepted');
+
       // Refresh friends list
       await fetchFriends();
     } catch (err: any) {
-      setError(err.message || 'Failed to accept friend request');
+      const errorMessage = err.message || 'Failed to accept friend request';
+      setError(errorMessage);
+      showErrorToast(errorMessage);
       console.error('Error accepting friend request:', err);
       throw err;
     } finally {
