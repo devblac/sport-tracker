@@ -3,17 +3,27 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { useAuth } from '../hooks/useAuth';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import Toast from 'react-native-toast-message';
+import { ThemeProvider } from '../contexts/ThemeContext';
 
 /**
- * Root layout with authentication guard
+ * Root layout with authentication guard and theme provider
  * 
  * Features:
  * - Supports guest mode (no forced login)
  * - Redirects authenticated users away from auth screens
  * - Supports deep linking
  * - Shows loading state during auth check
+ * - Provides theme context to entire app
  */
 export default function RootLayout() {
+  return (
+    <ThemeProvider>
+      <RootNavigator />
+    </ThemeProvider>
+  );
+}
+
+function RootNavigator() {
   const { user, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();

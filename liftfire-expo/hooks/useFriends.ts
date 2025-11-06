@@ -97,11 +97,12 @@ export const useFriends = () => {
 
       if (sentError) throw sentError;
 
-      setFriends((acceptedFriends || []) as any);
-      setPendingRequests((pending || []) as any);
-      setSentRequests((sent || []) as any);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch friends');
+      setFriends((acceptedFriends || []) as unknown as Friendship[]);
+      setPendingRequests((pending || []) as unknown as Friendship[]);
+      setSentRequests((sent || []) as unknown as Friendship[]);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch friends';
+      setError(errorMessage);
       console.error('Error fetching friends:', err);
     } finally {
       setLoading(false);
@@ -153,8 +154,8 @@ export const useFriends = () => {
 
       // Refresh friends list
       await fetchFriends();
-    } catch (err: any) {
-      const errorMessage = err.message || 'Failed to send friend request';
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to send friend request';
       setError(errorMessage);
       showErrorToast(errorMessage);
       console.error('Error sending friend request:', err);
@@ -181,8 +182,8 @@ export const useFriends = () => {
 
       // Refresh friends list
       await fetchFriends();
-    } catch (err: any) {
-      const errorMessage = err.message || 'Failed to accept friend request';
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to accept friend request';
       setError(errorMessage);
       showErrorToast(errorMessage);
       console.error('Error accepting friend request:', err);
@@ -207,8 +208,9 @@ export const useFriends = () => {
 
       // Refresh friends list
       await fetchFriends();
-    } catch (err: any) {
-      setError(err.message || 'Failed to reject friend request');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to reject friend request';
+      setError(errorMessage);
       console.error('Error rejecting friend request:', err);
       throw err;
     } finally {
@@ -237,8 +239,8 @@ export const useFriends = () => {
 
       if (searchError) throw searchError;
 
-      return (data || []) as any;
-    } catch (err: any) {
+      return (data || []) as User[];
+    } catch (err) {
       console.error('Error searching users:', err);
       return [];
     }

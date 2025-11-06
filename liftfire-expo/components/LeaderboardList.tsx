@@ -116,8 +116,9 @@ export const LeaderboardList: React.FC<LeaderboardListProps> = ({ friendsOnly = 
       }
 
       setLastFetch(now);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch leaderboard');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch leaderboard';
+      setError(errorMessage);
       console.error('Error fetching leaderboard:', err);
     } finally {
       setLoading(false);
@@ -196,7 +197,7 @@ export const LeaderboardList: React.FC<LeaderboardListProps> = ({ friendsOnly = 
   };
 
   // Optimize FlatList performance with getItemLayout
-  const getItemLayout = useCallback((data: any, index: number) => ({
+  const getItemLayout = useCallback((_data: unknown, index: number) => ({
     length: 80, // Approximate height of leaderboard item
     offset: 80 * index,
     index,

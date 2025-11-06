@@ -19,10 +19,12 @@ import { ErrorMessage } from '../../components/ErrorMessage';
 import { ListSkeleton } from '../../components/SkeletonLoader';
 import { OfflineBanner } from '../../components/OfflineBanner';
 import { Workout } from '../../types';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const WORKOUTS_PER_PAGE = 20;
 
 export default function WorkoutsScreen() {
+  const { colors } = useTheme();
   const {
     workouts,
     loading,
@@ -90,12 +92,12 @@ export default function WorkoutsScreen() {
 
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
-      <Ionicons name="fitness-outline" size={64} color="#C7C7CC" />
-      <Text style={styles.emptyTitle}>No Workouts Yet</Text>
-      <Text style={styles.emptySubtitle}>
+      <Ionicons name="fitness-outline" size={64} color={colors.textTertiary} />
+      <Text style={[styles.emptyTitle, { color: colors.text }]}>No Workouts Yet</Text>
+      <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
         Start your fitness journey by creating your first workout!
       </Text>
-      <TouchableOpacity style={styles.createButton} onPress={handleCreateWorkout}>
+      <TouchableOpacity style={[styles.createButton, { backgroundColor: colors.primary }]} onPress={handleCreateWorkout}>
         <Ionicons name="add" size={24} color="#FFFFFF" />
         <Text style={styles.createButtonText}>Create Workout</Text>
       </TouchableOpacity>
@@ -108,9 +110,9 @@ export default function WorkoutsScreen() {
     return (
       <View style={styles.loadMoreContainer}>
         {loadingMore ? (
-          <ActivityIndicator size="small" color="#007AFF" />
+          <ActivityIndicator size="small" color={colors.primary} />
         ) : (
-          <TouchableOpacity style={styles.loadMoreButton} onPress={handleLoadMore}>
+          <TouchableOpacity style={[styles.loadMoreButton, { backgroundColor: colors.primary }]} onPress={handleLoadMore}>
             <Text style={styles.loadMoreText}>Load More</Text>
           </TouchableOpacity>
         )}
@@ -119,16 +121,16 @@ export default function WorkoutsScreen() {
   };
 
   // Optimize FlatList performance with getItemLayout
-  const getItemLayout = useCallback((data: any, index: number) => ({
+  const getItemLayout = useCallback((_data: unknown, index: number) => ({
     length: 140, // Approximate height of WorkoutCard
     offset: 140 * index,
     index,
   }), []);
 
   const renderHeader = () => (
-    <View style={styles.header}>
+    <View style={[styles.header, { backgroundColor: colors.card }]}>
       <View style={styles.titleContainer}>
-        <Text style={styles.title}>My Workouts</Text>
+        <Text style={[styles.title, { color: colors.text }]}>My Workouts</Text>
         <View style={[styles.syncStatus, { backgroundColor: statusColor }]}>
           <Text style={styles.syncStatusText}>{statusText}</Text>
         </View>
@@ -136,30 +138,30 @@ export default function WorkoutsScreen() {
       
       {error && (
         <View style={styles.errorContainer}>
-          <Ionicons name="warning-outline" size={16} color="#FF3B30" />
-          <Text style={styles.errorText}>{error}</Text>
+          <Ionicons name="warning-outline" size={16} color={colors.error} />
+          <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
           <TouchableOpacity onPress={clearError}>
-            <Ionicons name="close" size={16} color="#FF3B30" />
+            <Ionicons name="close" size={16} color={colors.error} />
           </TouchableOpacity>
         </View>
       )}
 
       <View style={styles.statsContainer}>
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>{workouts.length}</Text>
-          <Text style={styles.statLabel}>Total Workouts</Text>
+          <Text style={[styles.statNumber, { color: colors.primary }]}>{workouts.length}</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Workouts</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>
+          <Text style={[styles.statNumber, { color: colors.primary }]}>
             {workouts.reduce((sum, w) => sum + w.xp_earned, 0)}
           </Text>
-          <Text style={styles.statLabel}>Total XP</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total XP</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>
+          <Text style={[styles.statNumber, { color: colors.primary }]}>
             {workouts.filter(w => !w.synced).length}
           </Text>
-          <Text style={styles.statLabel}>Pending Sync</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Pending Sync</Text>
         </View>
       </View>
     </View>
@@ -168,7 +170,7 @@ export default function WorkoutsScreen() {
   // Show loading state on initial load
   if (loading && workouts.length === 0) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}>
         {renderHeader()}
         <ListSkeleton count={5} type="workout" />
       </SafeAreaView>
@@ -178,7 +180,7 @@ export default function WorkoutsScreen() {
   // Show error state if there's an error and no cached workouts
   if (error && workouts.length === 0) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}>
         {renderHeader()}
         <ErrorMessage
           message={error}
@@ -190,7 +192,7 @@ export default function WorkoutsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}>
       <OfflineBanner />
       <FlatList
         data={paginatedWorkouts}
@@ -204,7 +206,7 @@ export default function WorkoutsScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor="#007AFF"
+            tintColor={colors.primary}
           />
         }
         contentContainerStyle={workouts.length === 0 ? styles.emptyList : undefined}
@@ -217,7 +219,7 @@ export default function WorkoutsScreen() {
         windowSize={10}
       />
 
-      <TouchableOpacity style={styles.fab} onPress={handleCreateWorkout}>
+      <TouchableOpacity style={[styles.fab, { backgroundColor: colors.primary }]} onPress={handleCreateWorkout}>
         <Ionicons name="add" size={28} color="#FFFFFF" />
       </TouchableOpacity>
     </SafeAreaView>
@@ -227,7 +229,6 @@ export default function WorkoutsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
   },
   loadingContainer: {
     flex: 1,
@@ -237,10 +238,8 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#8E8E93',
   },
   header: {
-    backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
     paddingVertical: 20,
     marginBottom: 16,
@@ -254,7 +253,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1C1C1E',
   },
   syncStatus: {
     paddingHorizontal: 8,
@@ -278,7 +276,6 @@ const styles = StyleSheet.create({
   errorText: {
     flex: 1,
     fontSize: 14,
-    color: '#FF3B30',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -290,11 +287,9 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#007AFF',
   },
   statLabel: {
     fontSize: 12,
-    color: '#8E8E93',
     marginTop: 4,
   },
   emptyList: {
@@ -309,20 +304,17 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1C1C1E',
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 16,
-    color: '#8E8E93',
     textAlign: 'center',
     marginBottom: 32,
   },
   createButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#007AFF',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 25,
@@ -340,7 +332,6 @@ const styles = StyleSheet.create({
   loadMoreButton: {
     paddingHorizontal: 20,
     paddingVertical: 10,
-    backgroundColor: '#007AFF',
     borderRadius: 20,
   },
   loadMoreText: {
@@ -354,7 +345,6 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#007AFF',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',

@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
+import { useTheme } from '../../contexts/ThemeContext';
 
 /**
  * Signup screen for new user registration
@@ -22,10 +23,12 @@ import { useAuth } from '../../hooks/useAuth';
  * - Loading state during registration
  * - Error message display
  * - Navigation to login screen
+ * - Dark mode support
  */
 export default function SignupScreen() {
   const router = useRouter();
   const { signUp, loading, error, clearError } = useAuth();
+  const { colors } = useTheme();
 
   const [formData, setFormData] = useState({
     email: '',
@@ -162,7 +165,7 @@ export default function SignupScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
@@ -172,21 +175,27 @@ export default function SignupScreen() {
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Start your fitness journey today</Text>
+            <Text style={[styles.title, { color: colors.text }]}>Create Account</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Start your fitness journey today</Text>
           </View>
 
           {/* Form */}
           <View style={styles.form}>
             {/* Email Input */}
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Email</Text>
               <TextInput
                 style={[
                   styles.input,
+                  { 
+                    backgroundColor: colors.card, 
+                    borderColor: colors.border, 
+                    color: colors.text 
+                  },
                   validationErrors.email && styles.inputError,
                 ]}
                 placeholder="your.email@example.com"
+                placeholderTextColor={colors.textTertiary}
                 value={formData.email}
                 onChangeText={(text) => updateField('email', text)}
                 autoCapitalize="none"
@@ -201,13 +210,19 @@ export default function SignupScreen() {
 
             {/* Username Input */}
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Username</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Username</Text>
               <TextInput
                 style={[
                   styles.input,
+                  { 
+                    backgroundColor: colors.card, 
+                    borderColor: colors.border, 
+                    color: colors.text 
+                  },
                   validationErrors.username && styles.inputError,
                 ]}
                 placeholder="username"
+                placeholderTextColor={colors.textTertiary}
                 value={formData.username}
                 onChangeText={(text) => updateField('username', text)}
                 autoCapitalize="none"
@@ -221,10 +236,18 @@ export default function SignupScreen() {
 
             {/* Display Name Input (Optional) */}
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Display Name (Optional)</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Display Name (Optional)</Text>
               <TextInput
-                style={styles.input}
+                style={[
+                  styles.input,
+                  { 
+                    backgroundColor: colors.card, 
+                    borderColor: colors.border, 
+                    color: colors.text 
+                  }
+                ]}
                 placeholder="Your Name"
+                placeholderTextColor={colors.textTertiary}
                 value={formData.displayName}
                 onChangeText={(text) => updateField('displayName', text)}
                 autoCapitalize="words"
@@ -234,13 +257,19 @@ export default function SignupScreen() {
 
             {/* Password Input */}
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Password</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Password</Text>
               <TextInput
                 style={[
                   styles.input,
+                  { 
+                    backgroundColor: colors.card, 
+                    borderColor: colors.border, 
+                    color: colors.text 
+                  },
                   validationErrors.password && styles.inputError,
                 ]}
                 placeholder="Create a strong password"
+                placeholderTextColor={colors.textTertiary}
                 value={formData.password}
                 onChangeText={(text) => updateField('password', text)}
                 secureTextEntry
@@ -255,13 +284,19 @@ export default function SignupScreen() {
 
             {/* Confirm Password Input */}
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Confirm Password</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Confirm Password</Text>
               <TextInput
                 style={[
                   styles.input,
+                  { 
+                    backgroundColor: colors.card, 
+                    borderColor: colors.border, 
+                    color: colors.text 
+                  },
                   validationErrors.confirmPassword && styles.inputError,
                 ]}
                 placeholder="Re-enter your password"
+                placeholderTextColor={colors.textTertiary}
                 value={formData.confirmPassword}
                 onChangeText={(text) => updateField('confirmPassword', text)}
                 secureTextEntry
@@ -283,44 +318,44 @@ export default function SignupScreen() {
 
             {/* Signup Button */}
             <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
+              style={[styles.button, { backgroundColor: colors.primary }, loading && styles.buttonDisabled]}
               onPress={handleSignup}
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={colors.primaryForeground} />
               ) : (
-                <Text style={styles.buttonText}>Create Account</Text>
+                <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>Create Account</Text>
               )}
             </TouchableOpacity>
 
             {/* Login Link */}
             <View style={styles.loginContainer}>
-              <Text style={styles.loginText}>Already have an account? </Text>
+              <Text style={[styles.loginText, { color: colors.textSecondary }]}>Already have an account? </Text>
               <TouchableOpacity onPress={handleLoginPress} disabled={loading}>
-                <Text style={styles.loginLink}>Sign In</Text>
+                <Text style={[styles.loginLink, { color: colors.primary }]}>Sign In</Text>
               </TouchableOpacity>
             </View>
 
             {/* Divider */}
             <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR</Text>
-              <View style={styles.dividerLine} />
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+              <Text style={[styles.dividerText, { color: colors.textSecondary }]}>OR</Text>
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
             </View>
 
             {/* Guest Mode Button */}
             <TouchableOpacity
-              style={styles.guestButton}
+              style={[styles.guestButton, { backgroundColor: colors.card, borderColor: colors.primary }]}
               onPress={() => router.replace('/(tabs)')}
               disabled={loading}
             >
-              <Text style={styles.guestButtonText}>Continue as Guest</Text>
+              <Text style={[styles.guestButtonText, { color: colors.primary }]}>Continue as Guest</Text>
             </TouchableOpacity>
 
             {/* Guest Mode Info */}
             <View style={styles.guestInfo}>
-              <Text style={styles.guestInfoText}>
+              <Text style={[styles.guestInfoText, { color: colors.textSecondary }]}>
                 Try the app without an account. Your data will be stored locally on this device only.
               </Text>
             </View>
@@ -334,7 +369,6 @@ export default function SignupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   scrollContent: {
     flexGrow: 1,
@@ -350,12 +384,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#1a1a1a',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
   },
   form: {
     width: '100%',
@@ -366,17 +398,14 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1a1a1a',
     marginBottom: 8,
   },
   input: {
     height: 50,
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 8,
     paddingHorizontal: 16,
     fontSize: 16,
-    backgroundColor: '#fff',
   },
   inputError: {
     borderColor: '#ef4444',
@@ -398,17 +427,15 @@ const styles = StyleSheet.create({
   },
   button: {
     height: 50,
-    backgroundColor: '#3b82f6',
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 8,
   },
   buttonDisabled: {
-    backgroundColor: '#93c5fd',
+    opacity: 0.5,
   },
   buttonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -419,11 +446,9 @@ const styles = StyleSheet.create({
   },
   loginText: {
     fontSize: 14,
-    color: '#666',
   },
   loginLink: {
     fontSize: 14,
-    color: '#3b82f6',
     fontWeight: '600',
   },
   divider: {
@@ -434,25 +459,20 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#ddd',
   },
   dividerText: {
     marginHorizontal: 16,
     fontSize: 14,
-    color: '#666',
     fontWeight: '500',
   },
   guestButton: {
     height: 50,
-    backgroundColor: '#fff',
     borderWidth: 2,
-    borderColor: '#3b82f6',
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
   guestButtonText: {
-    color: '#3b82f6',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -462,7 +482,6 @@ const styles = StyleSheet.create({
   },
   guestInfoText: {
     fontSize: 12,
-    color: '#666',
     textAlign: 'center',
     lineHeight: 18,
   },

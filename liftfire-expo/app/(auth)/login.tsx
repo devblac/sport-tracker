@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
+import { useTheme } from '../../contexts/ThemeContext';
 
 /**
  * Login screen with email/password authentication
@@ -21,10 +22,12 @@ import { useAuth } from '../../hooks/useAuth';
  * - Loading state during authentication
  * - Error message display
  * - Navigation to signup screen
+ * - Dark mode support
  */
 export default function LoginScreen() {
   const router = useRouter();
   const { signIn, loading, error, clearError } = useAuth();
+  const { colors } = useTheme();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -94,7 +97,7 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
@@ -104,21 +107,27 @@ export default function LoginScreen() {
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>Sign in to continue your fitness journey</Text>
+            <Text style={[styles.title, { color: colors.text }]}>Welcome Back</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Sign in to continue your fitness journey</Text>
           </View>
 
           {/* Form */}
           <View style={styles.form}>
             {/* Email Input */}
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Email</Text>
               <TextInput
                 style={[
                   styles.input,
+                  { 
+                    backgroundColor: colors.card, 
+                    borderColor: colors.border, 
+                    color: colors.text 
+                  },
                   validationErrors.email && styles.inputError,
                 ]}
                 placeholder="your.email@example.com"
+                placeholderTextColor={colors.textTertiary}
                 value={email}
                 onChangeText={(text) => {
                   setEmail(text);
@@ -138,13 +147,19 @@ export default function LoginScreen() {
 
             {/* Password Input */}
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Password</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Password</Text>
               <TextInput
                 style={[
                   styles.input,
+                  { 
+                    backgroundColor: colors.card, 
+                    borderColor: colors.border, 
+                    color: colors.text 
+                  },
                   validationErrors.password && styles.inputError,
                 ]}
                 placeholder="Enter your password"
+                placeholderTextColor={colors.textTertiary}
                 value={password}
                 onChangeText={(text) => {
                   setPassword(text);
@@ -171,44 +186,44 @@ export default function LoginScreen() {
 
             {/* Login Button */}
             <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
+              style={[styles.button, { backgroundColor: colors.primary }, loading && styles.buttonDisabled]}
               onPress={handleLogin}
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={colors.primaryForeground} />
               ) : (
-                <Text style={styles.buttonText}>Sign In</Text>
+                <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>Sign In</Text>
               )}
             </TouchableOpacity>
 
             {/* Sign Up Link */}
             <View style={styles.signupContainer}>
-              <Text style={styles.signupText}>Don't have an account? </Text>
+              <Text style={[styles.signupText, { color: colors.textSecondary }]}>Don't have an account? </Text>
               <TouchableOpacity onPress={handleSignUpPress} disabled={loading}>
-                <Text style={styles.signupLink}>Sign Up</Text>
+                <Text style={[styles.signupLink, { color: colors.primary }]}>Sign Up</Text>
               </TouchableOpacity>
             </View>
 
             {/* Divider */}
             <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR</Text>
-              <View style={styles.dividerLine} />
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+              <Text style={[styles.dividerText, { color: colors.textSecondary }]}>OR</Text>
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
             </View>
 
             {/* Guest Mode Button */}
             <TouchableOpacity
-              style={styles.guestButton}
+              style={[styles.guestButton, { backgroundColor: colors.card, borderColor: colors.primary }]}
               onPress={() => router.replace('/(tabs)')}
               disabled={loading}
             >
-              <Text style={styles.guestButtonText}>Continue as Guest</Text>
+              <Text style={[styles.guestButtonText, { color: colors.primary }]}>Continue as Guest</Text>
             </TouchableOpacity>
 
             {/* Guest Mode Info */}
             <View style={styles.guestInfo}>
-              <Text style={styles.guestInfoText}>
+              <Text style={[styles.guestInfoText, { color: colors.textSecondary }]}>
                 Try the app without an account. Your data will be stored locally on this device only.
               </Text>
             </View>
@@ -222,7 +237,6 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   scrollContent: {
     flexGrow: 1,
@@ -238,12 +252,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#1a1a1a',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
   },
   form: {
     width: '100%',
@@ -254,17 +266,14 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1a1a1a',
     marginBottom: 8,
   },
   input: {
     height: 50,
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 8,
     paddingHorizontal: 16,
     fontSize: 16,
-    backgroundColor: '#fff',
   },
   inputError: {
     borderColor: '#ef4444',
@@ -286,17 +295,15 @@ const styles = StyleSheet.create({
   },
   button: {
     height: 50,
-    backgroundColor: '#3b82f6',
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 8,
   },
   buttonDisabled: {
-    backgroundColor: '#93c5fd',
+    opacity: 0.5,
   },
   buttonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -307,11 +314,9 @@ const styles = StyleSheet.create({
   },
   signupText: {
     fontSize: 14,
-    color: '#666',
   },
   signupLink: {
     fontSize: 14,
-    color: '#3b82f6',
     fontWeight: '600',
   },
   divider: {
@@ -322,25 +327,20 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#ddd',
   },
   dividerText: {
     marginHorizontal: 16,
     fontSize: 14,
-    color: '#666',
     fontWeight: '500',
   },
   guestButton: {
     height: 50,
-    backgroundColor: '#fff',
     borderWidth: 2,
-    borderColor: '#3b82f6',
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
   guestButtonText: {
-    color: '#3b82f6',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -350,7 +350,6 @@ const styles = StyleSheet.create({
   },
   guestInfoText: {
     fontSize: 12,
-    color: '#666',
     textAlign: 'center',
     lineHeight: 18,
   },

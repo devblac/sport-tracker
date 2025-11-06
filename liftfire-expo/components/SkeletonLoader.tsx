@@ -6,7 +6,7 @@ interface SkeletonLoaderProps {
   width?: number | string;
   height?: number;
   borderRadius?: number;
-  style?: any;
+  style?: object;
 }
 
 /**

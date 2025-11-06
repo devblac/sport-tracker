@@ -7,11 +7,19 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "build:web": "expo export:web",
+    "build:android:preview": "eas build --platform android --profile preview",
+    "build:android:production": "eas build --platform android --profile production",
+    "build:ios:preview": "eas build --platform ios --profile preview",
+    "build:ios:production": "eas build --platform ios --profile production",
     "test": "jest",
+    "test:coverage": "jest --coverage",
     "lint": "eslint .",
     "format": "prettier --write .",
     "type-check": "tsc --noEmit",
-    "analyze": "npx expo export --platform web && npx source-map-explorer 'dist/**/*.js'"
+    "analyze": "npx expo export --platform web && npx source-map-explorer 'dist/**/*.js'",
+    "prebuild": "npm run type-check && npm run lint",
+    "validate": "npm run type-check && npm run lint && npm test"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

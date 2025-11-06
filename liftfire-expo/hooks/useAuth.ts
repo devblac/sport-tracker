@@ -79,8 +79,6 @@ export const useAuth = () => {
 
     // Set up auth state change listener
     const unsubscribe = setupAuthListener((event, session) => {
-      console.log('[useAuth] Auth state changed:', event);
-
       if (session?.user) {
         fetchUserProfile(session.user.id).then((profile) => {
           setAuthState({

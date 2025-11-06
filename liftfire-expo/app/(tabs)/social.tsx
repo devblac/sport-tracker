@@ -21,7 +21,7 @@ import { ErrorMessage } from '../../components/ErrorMessage';
 import { ListSkeleton } from '../../components/SkeletonLoader';
 import { OfflineBanner } from '../../components/OfflineBanner';
 import { FriendWorkout } from '../../types';
-import { useTheme } from '../../hooks/useTheme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 type TabType = 'feed' | 'leaderboard';
 
@@ -132,7 +132,7 @@ export default function SocialScreen() {
   );
 
   // Optimize FlatList performance with getItemLayout
-  const getItemLayout = React.useCallback((data: any, index: number) => ({
+  const getItemLayout = React.useCallback((_data: unknown, index: number) => ({
     length: 160, // Approximate height of FriendWorkoutItem
     offset: 160 * index,
     index,
@@ -165,30 +165,30 @@ export default function SocialScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}>
       <OfflineBanner />
-      <View style={styles.header}>
-        <Text style={styles.title}>Social</Text>
-        <Text style={styles.subtitle}>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+        <Text style={[styles.title, { color: colors.text }]}>Social</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           {activeTab === 'feed' ? 'See what your friends are up to' : 'Weekly rankings'}
         </Text>
       </View>
 
       {/* Tab selector */}
-      <View style={styles.tabContainer}>
+      <View style={[styles.tabContainer, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'feed' && styles.activeTab]}
+          style={[styles.tab, activeTab === 'feed' && [styles.activeTab, { backgroundColor: colors.primary }]]}
           onPress={() => setActiveTab('feed')}
         >
-          <Text style={[styles.tabText, activeTab === 'feed' && styles.activeTabText]}>
+          <Text style={[styles.tabText, { color: colors.textSecondary }, activeTab === 'feed' && styles.activeTabText]}>
             Feed
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'leaderboard' && styles.activeTab]}
+          style={[styles.tab, activeTab === 'leaderboard' && [styles.activeTab, { backgroundColor: colors.primary }]]}
           onPress={() => setActiveTab('leaderboard')}
         >
-          <Text style={[styles.tabText, activeTab === 'leaderboard' && styles.activeTabText]}>
+          <Text style={[styles.tabText, { color: colors.textSecondary }, activeTab === 'leaderboard' && styles.activeTabText]}>
             Leaderboard
           </Text>
         </TouchableOpacity>
@@ -196,20 +196,20 @@ export default function SocialScreen() {
 
       {/* Leaderboard filter toggle */}
       {activeTab === 'leaderboard' && (
-        <View style={styles.filterContainer}>
+        <View style={[styles.filterContainer, { backgroundColor: colors.card }]}>
           <TouchableOpacity
-            style={[styles.filterButton, !friendsOnly && styles.activeFilter]}
+            style={[styles.filterButton, { backgroundColor: colors.backgroundSecondary }, !friendsOnly && [styles.activeFilter, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]]}
             onPress={() => setFriendsOnly(false)}
           >
-            <Text style={[styles.filterText, !friendsOnly && styles.activeFilterText]}>
+            <Text style={[styles.filterText, { color: colors.textSecondary }, !friendsOnly && [styles.activeFilterText, { color: colors.primary }]]}>
               Global
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.filterButton, friendsOnly && styles.activeFilter]}
+            style={[styles.filterButton, { backgroundColor: colors.backgroundSecondary }, friendsOnly && [styles.activeFilter, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]]}
             onPress={() => setFriendsOnly(true)}
           >
-            <Text style={[styles.filterText, friendsOnly && styles.activeFilterText]}>
+            <Text style={[styles.filterText, { color: colors.textSecondary }, friendsOnly && [styles.activeFilterText, { color: colors.primary }]]}>
               Friends
             </Text>
           </TouchableOpacity>
@@ -251,33 +251,26 @@ export default function SocialScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   header: {
-    backgroundColor: '#fff',
     paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#000',
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 14,
-    color: '#666',
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   tab: {
     flex: 1,
@@ -287,19 +280,16 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   activeTab: {
-    backgroundColor: '#007AFF',
   },
   tabText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#666',
   },
   activeTabText: {
     color: '#fff',
   },
   filterContainer: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
     paddingHorizontal: 16,
     paddingVertical: 8,
     gap: 8,
@@ -309,20 +299,15 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     alignItems: 'center',
     borderRadius: 8,
-    backgroundColor: '#f0f0f0',
   },
   activeFilter: {
-    backgroundColor: '#E3F2FD',
     borderWidth: 1,
-    borderColor: '#007AFF',
   },
   filterText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
   },
   activeFilterText: {
-    color: '#007AFF',
   },
   listContent: {
     padding: 16,
@@ -340,7 +325,6 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#666',
   },
   emptyIcon: {
     fontSize: 64,
@@ -349,12 +333,10 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#000',
     marginBottom: 8,
   },
   emptyText: {
     fontSize: 14,
-    color: '#666',
     textAlign: 'center',
     lineHeight: 20,
   },
@@ -365,13 +347,11 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FF3B30',
     marginBottom: 8,
     textAlign: 'center',
   },
   errorHint: {
     fontSize: 14,
-    color: '#666',
     textAlign: 'center',
   },
   guestContainer: {

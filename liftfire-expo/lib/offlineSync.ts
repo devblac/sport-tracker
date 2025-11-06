@@ -10,7 +10,7 @@ export interface SyncOperation {
   operation_type: 'CREATE_WORKOUT' | 'UPDATE_WORKOUT' | 'DELETE_WORKOUT' | 'CREATE_EXERCISE' | 'UPDATE_EXERCISE' | 'DELETE_EXERCISE';
   table_name: 'workouts' | 'exercises';
   record_id: string;
-  data: any;
+  data: string; // JSON stringified data
   timestamp: string;
   retry_count: number;
   status: 'pending' | 'syncing' | 'completed' | 'failed';
@@ -27,11 +27,8 @@ export const initializeNetworkMonitoring = (): void => {
     const wasOffline = !isOnline;
     isOnline = state.isConnected ?? false;
     
-    console.log('Network state changed:', { isOnline, wasOffline });
-    
     // If we just came back online, process the queue
     if (isOnline && wasOffline) {
-      console.log('Back online - processing sync queue');
       processQueue().catch(error => {
         console.error('Failed to process queue after coming online:', error);
       });
@@ -41,7 +38,6 @@ export const initializeNetworkMonitoring = (): void => {
   // Get initial connectivity state
   NetInfo.fetch().then(state => {
     isOnline = state.isConnected ?? false;
-    console.log('Initial network state:', { isOnline });
   });
 };
 
@@ -58,7 +54,7 @@ export const queueOperation = async (
   operationType: SyncOperation['operation_type'],
   tableName: SyncOperation['table_name'],
   recordId: string,
-  data: any
+  data: Record<string, unknown>
 ): Promise<void> => {
   try {
     const database = await getDatabase();
@@ -97,8 +93,6 @@ export const queueOperation = async (
       ]
     );
 
-    console.log('Queued operation:', { operationType, tableName, recordId });
-
     // If we're online, try to process the queue immediately
     if (isOnline) {
       processQueue().catch(error => {
@@ -114,7 +108,6 @@ export const queueOperation = async (
 // Process the sync queue when online
 export const processQueue = async (): Promise<void> => {
   if (!isOnline) {
-    console.log('Offline - skipping queue processing');
     return;
   }
 
@@ -130,11 +123,8 @@ export const processQueue = async (): Promise<void> => {
     );
 
     if (operations.length === 0) {
-      console.log('No pending operations to sync');
       return;
     }
-
-    console.log(`Processing ${operations.length} pending operations`);
     showSyncToast('syncing', operations.length);
 
     let successCount = 0;
@@ -157,7 +147,6 @@ export const processQueue = async (): Promise<void> => {
         );
 
         successCount++;
-        console.log('Successfully synced operation:', operation.id);
       } catch (error) {
         console.error('Failed to sync operation:', operation.id, error);
         failureCount++;

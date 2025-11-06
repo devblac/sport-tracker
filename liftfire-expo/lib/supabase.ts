@@ -51,8 +51,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 
 // Auth state change listener setup
 // This will be called by the useAuth hook to handle session changes
+import { Session } from '@supabase/supabase-js';
+
 export const setupAuthListener = (
-  callback: (event: string, session: any) => void
+  callback: (event: string, session: Session | null) => void
 ) => {
   const { data } = supabase.auth.onAuthStateChange((event, session) => {
     callback(event, session);

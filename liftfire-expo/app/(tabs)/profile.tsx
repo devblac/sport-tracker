@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
 import { useGamification } from '../../hooks/useGamification';
 import { useWorkouts } from '../../hooks/useWorkouts';
-import { useTheme } from '../../hooks/useTheme';
+import { useTheme } from '../../contexts/ThemeContext';
 import { XPBar } from '../../components/XPBar';
 import { StreakDisplay } from '../../components/StreakDisplay';
 import { AchievementGrid } from '../../components/AchievementBadge';
@@ -20,6 +20,7 @@ type TabType = 'overview' | 'settings';
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const { user, signOut, isAuthenticated } = useAuth();
   const {
     xp,
@@ -68,7 +69,7 @@ export default function ProfileScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <LoadingSpinner message="Loading profile..." fullScreen />
       </SafeAreaView>
     );
@@ -78,7 +79,7 @@ export default function ProfileScreen() {
   // Guest users should see the profile with default values
   if (error && isAuthenticated) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <ErrorMessage
           message={error}
           onRetry={() => window.location.reload()}
@@ -121,17 +122,17 @@ export default function ProfileScreen() {
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
       {/* Guest Mode Banner */}
       {!isAuthenticated && (
-        <View style={styles.guestBanner}>
+        <View style={[styles.guestBanner, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.guestBannerIcon}>
-            <Ionicons name="cloud-offline-outline" size={32} color="#FF9500" />
+            <Ionicons name="cloud-offline-outline" size={32} color={colors.warning} />
           </View>
           <View style={styles.guestBannerContent}>
-            <Text style={styles.guestBannerTitle}>Using Guest Mode</Text>
-            <Text style={styles.guestBannerText}>
+            <Text style={[styles.guestBannerTitle, { color: colors.text }]}>Using Guest Mode</Text>
+            <Text style={[styles.guestBannerText, { color: colors.textSecondary }]}>
               Your workout data is stored locally on this device. Create an account to securely save your progress to the cloud and access it from any device.
             </Text>
             <TouchableOpacity
-              style={styles.guestBannerButton}
+              style={[styles.guestBannerButton, { backgroundColor: colors.primary }]}
               onPress={() => router.push('/(auth)/signup')}
             >
               <Ionicons name="person-add-outline" size={18} color="#FFFFFF" />
@@ -141,50 +142,50 @@ export default function ProfileScreen() {
               style={styles.guestBannerButtonSecondary}
               onPress={() => router.push('/(auth)/login')}
             >
-              <Text style={styles.guestBannerButtonSecondaryText}>Already have an account? Sign In</Text>
+              <Text style={[styles.guestBannerButtonSecondaryText, { color: colors.primary }]}>Already have an account? Sign In</Text>
             </TouchableOpacity>
           </View>
         </View>
       )}
 
       {/* User Info Card */}
-      <View style={styles.userCard}>
-        <View style={styles.avatarContainer}>
+      <View style={[styles.userCard, { backgroundColor: colors.card }]}>
+        <View style={[styles.avatarContainer, { backgroundColor: colors.primary }]}>
           <Text style={styles.avatarText}>{getUserInitial()}</Text>
         </View>
-        <Text style={styles.username}>
+        <Text style={[styles.username, { color: colors.text }]}>
           {isAuthenticated 
             ? (user?.display_name || user?.username || user?.email || 'User')
             : 'Guest User'}
         </Text>
         {isAuthenticated && user?.display_name && (
-          <Text style={styles.usernameSecondary}>@{user.username}</Text>
+          <Text style={[styles.usernameSecondary, { color: colors.textSecondary }]}>@{user.username}</Text>
         )}
         {!isAuthenticated && (
-          <Text style={styles.usernameSecondary}>Local workouts only</Text>
+          <Text style={[styles.usernameSecondary, { color: colors.textSecondary }]}>Local workouts only</Text>
         )}
-        <Text style={styles.levelText}>
+        <Text style={[styles.levelText, { color: colors.textSecondary }]}>
           Level {level} • {xp} XP
         </Text>
-        <Text style={styles.workoutsCount}>
+        <Text style={[styles.workoutsCount, { color: colors.primary }]}>
           {totalWorkouts} {totalWorkouts === 1 ? 'Workout' : 'Workouts'} Completed
         </Text>
         
         {/* Edit Profile Button - Only for authenticated users */}
         {isAuthenticated && (
           <TouchableOpacity
-            style={styles.editButton}
+            style={[styles.editButton, { backgroundColor: colors.primary + '20' }]}
             onPress={() => router.push('/profile/edit')}
           >
-            <Ionicons name="create-outline" size={16} color="#007AFF" />
-            <Text style={styles.editButtonText}>Edit Profile</Text>
+            <Ionicons name="create-outline" size={16} color={colors.primary} />
+            <Text style={[styles.editButtonText, { color: colors.primary }]}>Edit Profile</Text>
           </TouchableOpacity>
         )}
       </View>
 
       {/* XP and Level */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Level & XP</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Level & XP</Text>
         <XPBar
           level={level}
           xp={xp}
@@ -195,7 +196,7 @@ export default function ProfileScreen() {
 
       {/* Streak */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Workout Streak</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Workout Streak</Text>
         <StreakDisplay
           currentStreak={currentStreak}
           longestStreak={longestStreak}
@@ -204,24 +205,24 @@ export default function ProfileScreen() {
 
       {/* Progress Statistics */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Progress Statistics</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Progress Statistics</Text>
         <StatsCard
           icon="barbell-outline"
           label="Total Workouts"
           value={totalWorkouts}
-          color="#007AFF"
+          color={colors.primary}
         />
         <StatsCard
           icon="trophy-outline"
           label="Total XP"
           value={totalXP.toLocaleString()}
-          color="#FF9500"
+          color={colors.warning}
         />
         <StatsCard
           icon="time-outline"
           label="Average Duration"
           value={`${avgDuration} min`}
-          color="#34C759"
+          color={colors.success}
           subtitle={avgDuration > 0 ? 'per workout' : 'No workouts yet'}
         />
         <StatsCard
@@ -235,7 +236,7 @@ export default function ProfileScreen() {
 
       {/* Achievements */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
           Achievements ({achievements.length}/{allAchievementDefs.length})
         </Text>
         <AchievementGrid
@@ -251,17 +252,17 @@ export default function ProfileScreen() {
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
       {/* Guest Mode Banner in Settings */}
       {!isAuthenticated && (
-        <View style={styles.guestBanner}>
+        <View style={[styles.guestBanner, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.guestBannerIcon}>
-            <Ionicons name="shield-checkmark-outline" size={32} color="#34C759" />
+            <Ionicons name="shield-checkmark-outline" size={32} color={colors.success} />
           </View>
           <View style={styles.guestBannerContent}>
-            <Text style={styles.guestBannerTitle}>Secure Your Data</Text>
-            <Text style={styles.guestBannerText}>
+            <Text style={[styles.guestBannerTitle, { color: colors.text }]}>Secure Your Data</Text>
+            <Text style={[styles.guestBannerText, { color: colors.textSecondary }]}>
               Create an account to enable cloud backup, sync across devices, and unlock social features like competing with friends.
             </Text>
             <TouchableOpacity
-              style={styles.guestBannerButton}
+              style={[styles.guestBannerButton, { backgroundColor: colors.primary }]}
               onPress={() => router.push('/(auth)/signup')}
             >
               <Ionicons name="person-add-outline" size={18} color="#FFFFFF" />
@@ -272,18 +273,18 @@ export default function ProfileScreen() {
       )}
 
       {/* Theme Settings */}
-      <View style={styles.settingsCard}>
-        <Text style={styles.settingsCardTitle}>Appearance</Text>
+      <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
+        <Text style={[styles.settingsCardTitle, { color: colors.text }]}>Appearance</Text>
         <ThemeSelector />
       </View>
 
       {/* Notifications (Coming Soon) */}
-      <View style={styles.settingsCard}>
-        <Text style={styles.settingsCardTitle}>Notifications</Text>
+      <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
+        <Text style={[styles.settingsCardTitle, { color: colors.text }]}>Notifications</Text>
         <TouchableOpacity style={styles.settingsItem}>
           <View style={styles.settingsItemLeft}>
-            <Ionicons name="notifications-outline" size={24} color="#007AFF" />
-            <Text style={styles.settingsItemText}>Push Notifications</Text>
+            <Ionicons name="notifications-outline" size={24} color={colors.primary} />
+            <Text style={[styles.settingsItemText, { color: colors.text }]}>Push Notifications</Text>
           </View>
           <View style={styles.settingsItemRight}>
             <Text style={styles.comingSoonText}>Coming Soon</Text>
@@ -292,45 +293,45 @@ export default function ProfileScreen() {
       </View>
 
       {/* Privacy (Coming Soon) */}
-      <View style={styles.settingsCard}>
-        <Text style={styles.settingsCardTitle}>Privacy</Text>
+      <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
+        <Text style={[styles.settingsCardTitle, { color: colors.text }]}>Privacy</Text>
         <TouchableOpacity style={styles.settingsItem}>
           <View style={styles.settingsItemLeft}>
-            <Ionicons name="shield-outline" size={24} color="#007AFF" />
-            <Text style={styles.settingsItemText}>Profile Visibility</Text>
+            <Ionicons name="shield-outline" size={24} color={colors.primary} />
+            <Text style={[styles.settingsItemText, { color: colors.text }]}>Profile Visibility</Text>
           </View>
           <View style={styles.settingsItemRight}>
-            <Text style={styles.settingValue}>Public</Text>
-            <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+            <Text style={[styles.settingValue, { color: colors.textSecondary }]}>Public</Text>
+            <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
           </View>
         </TouchableOpacity>
       </View>
 
       {/* Data & Storage */}
-      <View style={styles.settingsCard}>
-        <Text style={styles.settingsCardTitle}>Data & Storage</Text>
+      <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
+        <Text style={[styles.settingsCardTitle, { color: colors.text }]}>Data & Storage</Text>
         <TouchableOpacity style={styles.settingsItem}>
           <View style={styles.settingsItemLeft}>
             <Ionicons 
               name={isAuthenticated ? "cloud-outline" : "phone-portrait-outline"} 
               size={24} 
-              color="#007AFF" 
+              color={colors.primary} 
             />
-            <Text style={styles.settingsItemText}>
+            <Text style={[styles.settingsItemText, { color: colors.text }]}>
               {isAuthenticated ? 'Sync Status' : 'Storage Location'}
             </Text>
           </View>
           <View style={styles.settingsItemRight}>
-            <Text style={styles.settingValue}>
+            <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
               {isAuthenticated ? 'Active' : 'Local Only'}
             </Text>
-            <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+            <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
           </View>
         </TouchableOpacity>
         {!isAuthenticated && (
           <View style={styles.warningBox}>
             <Ionicons name="warning-outline" size={16} color="#FF9500" />
-            <Text style={styles.warningText}>
+            <Text style={[styles.warningText, { color: colors.textSecondary }]}>
               Your data is only stored on this device. If you uninstall the app or clear data, your progress will be lost.
             </Text>
           </View>
@@ -339,57 +340,58 @@ export default function ProfileScreen() {
 
       {/* Account Actions - Only for authenticated users */}
       {isAuthenticated && (
-        <View style={styles.settingsCard}>
-          <Text style={styles.settingsCardTitle}>Account</Text>
+        <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
+          <Text style={[styles.settingsCardTitle, { color: colors.text }]}>Account</Text>
           <TouchableOpacity style={styles.settingsItem} onPress={signOut}>
             <View style={styles.settingsItemLeft}>
-              <Ionicons name="log-out-outline" size={24} color="#FF3B30" />
-              <Text style={[styles.settingsItemText, { color: '#FF3B30' }]}>
+              <Ionicons name="log-out-outline" size={24} color={colors.error} />
+              <Text style={[styles.settingsItemText, { color: colors.error }]}>
                 Sign Out
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+            <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
           </TouchableOpacity>
         </View>
       )}
 
       {/* App Info */}
       <View style={styles.appInfo}>
-        <Text style={styles.appInfoText}>LiftFire MVP v1.0.0</Text>
-        <Text style={styles.appInfoText}>Made with 💪 for fitness enthusiasts</Text>
+        <Text style={[styles.appInfoText, { color: colors.textSecondary }]}>LiftFire MVP v1.0.0</Text>
+        <Text style={[styles.appInfoText, { color: colors.textSecondary }]}>Made with 💪 for fitness enthusiasts</Text>
       </View>
     </ScrollView>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}>
       <OfflineBanner />
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profile</Text>
-        <Text style={styles.headerSubtitle}>Manage your account and preferences</Text>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Profile</Text>
+        <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>Manage your account and preferences</Text>
       </View>
 
       {/* Tab Navigation */}
-      <View style={styles.tabBar}>
+      <View style={[styles.tabBar, { backgroundColor: colors.backgroundSecondary }]}>
         {tabs.map((tab) => (
           <TouchableOpacity
             key={tab.id}
             style={[
               styles.tab,
-              activeTab === tab.id && styles.tabActive,
+              activeTab === tab.id && [styles.tabActive, { backgroundColor: colors.card }],
             ]}
             onPress={() => setActiveTab(tab.id)}
           >
             <Ionicons
               name={tab.icon as any}
               size={20}
-              color={activeTab === tab.id ? '#007AFF' : '#8E8E93'}
+              color={activeTab === tab.id ? colors.primary : colors.textSecondary}
             />
             <Text
               style={[
                 styles.tabText,
-                activeTab === tab.id && styles.tabTextActive,
+                { color: colors.textSecondary },
+                activeTab === tab.id && [styles.tabTextActive, { color: colors.primary }],
               ]}
             >
               {tab.label}
@@ -407,7 +409,7 @@ export default function ProfileScreen() {
 
 // Theme Selector Component
 function ThemeSelector() {
-  const { themeMode, changeTheme } = useTheme();
+  const { themeMode, changeTheme, colors } = useTheme();
 
   const themes = [
     { value: 'light' as const, label: 'Light', description: 'Classic light theme', icon: 'sunny-outline' },
@@ -422,7 +424,8 @@ function ThemeSelector() {
           key={theme.value}
           style={[
             styles.themeOption,
-            themeMode === theme.value && styles.themeOptionActive,
+            { backgroundColor: colors.backgroundSecondary },
+            themeMode === theme.value && [styles.themeOptionActive, { backgroundColor: colors.primary + '20', borderColor: colors.primary }],
           ]}
           onPress={() => changeTheme(theme.value)}
         >
@@ -430,22 +433,23 @@ function ThemeSelector() {
             <Ionicons
               name={theme.icon as any}
               size={24}
-              color={themeMode === theme.value ? '#007AFF' : '#8E8E93'}
+              color={themeMode === theme.value ? colors.primary : colors.textSecondary}
             />
             <View style={styles.themeOptionText}>
               <Text
                 style={[
                   styles.themeOptionLabel,
-                  themeMode === theme.value && styles.themeOptionLabelActive,
+                  { color: colors.text },
+                  themeMode === theme.value && [styles.themeOptionLabelActive, { color: colors.primary }],
                 ]}
               >
                 {theme.label}
               </Text>
-              <Text style={styles.themeOptionDescription}>{theme.description}</Text>
+              <Text style={[styles.themeOptionDescription, { color: colors.textSecondary }]}>{theme.description}</Text>
             </View>
           </View>
           {themeMode === theme.value && (
-            <Ionicons name="checkmark-circle" size={24} color="#007AFF" />
+            <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
           )}
         </TouchableOpacity>
       ))}
@@ -456,7 +460,6 @@ function ThemeSelector() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
   },
   loadingContainer: {
     flex: 1,
@@ -466,7 +469,6 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#8E8E93',
   },
   errorContainer: {
     flex: 1,
@@ -476,27 +478,24 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: '#FF3B30',
     textAlign: 'center',
   },
   header: {
     alignItems: 'center',
     paddingVertical: 16,
     paddingHorizontal: 16,
+    borderBottomWidth: 1,
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1C1C1E',
     marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#8E8E93',
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#E5E5EA',
     marginHorizontal: 16,
     marginBottom: 16,
     borderRadius: 10,
@@ -513,7 +512,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   tabActive: {
-    backgroundColor: '#FFFFFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -523,16 +521,13 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#8E8E93',
   },
   tabTextActive: {
-    color: '#007AFF',
   },
   tabContent: {
     flex: 1,
   },
   userCard: {
-    backgroundColor: '#FFFFFF',
     marginHorizontal: 16,
     marginBottom: 16,
     borderRadius: 12,
@@ -543,7 +538,6 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#007AFF',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
@@ -556,29 +550,24 @@ const styles = StyleSheet.create({
   username: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#1C1C1E',
     marginBottom: 4,
   },
   levelText: {
     fontSize: 14,
-    color: '#8E8E93',
   },
   workoutsCount: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#007AFF',
     marginTop: 8,
   },
   usernameSecondary: {
     fontSize: 14,
-    color: '#8E8E93',
     marginTop: 2,
   },
   editButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E3F2FD',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
@@ -588,7 +577,6 @@ const styles = StyleSheet.create({
   editButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#007AFF',
   },
   section: {
     paddingHorizontal: 16,
@@ -597,11 +585,9 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1C1C1E',
     marginBottom: 12,
   },
   settingsCard: {
-    backgroundColor: '#FFFFFF',
     marginHorizontal: 16,
     marginBottom: 16,
     borderRadius: 12,
@@ -610,7 +596,6 @@ const styles = StyleSheet.create({
   settingsCardTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1C1C1E',
     marginBottom: 16,
   },
   settingsItem: {
@@ -626,7 +611,6 @@ const styles = StyleSheet.create({
   },
   settingsItemText: {
     fontSize: 16,
-    color: '#1C1C1E',
   },
   settingsItemRight: {
     flexDirection: 'row',
@@ -635,7 +619,6 @@ const styles = StyleSheet.create({
   },
   settingValue: {
     fontSize: 14,
-    color: '#8E8E93',
   },
   comingSoonText: {
     fontSize: 12,
@@ -653,7 +636,6 @@ const styles = StyleSheet.create({
   },
   appInfoText: {
     fontSize: 12,
-    color: '#8E8E93',
   },
   themeSelector: {
     gap: 12,
@@ -664,13 +646,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 12,
     borderRadius: 8,
-    backgroundColor: '#F2F2F7',
     borderWidth: 2,
     borderColor: 'transparent',
   },
   themeOptionActive: {
-    backgroundColor: '#E3F2FD',
-    borderColor: '#007AFF',
   },
   themeOptionLeft: {
     flexDirection: 'row',
@@ -684,24 +663,19 @@ const styles = StyleSheet.create({
   themeOptionLabel: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#1C1C1E',
     marginBottom: 2,
   },
   themeOptionLabelActive: {
-    color: '#007AFF',
   },
   themeOptionDescription: {
     fontSize: 13,
-    color: '#8E8E93',
   },
   guestBanner: {
-    backgroundColor: '#FFF9E6',
     marginHorizontal: 16,
     marginBottom: 16,
     borderRadius: 12,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#FFE5B4',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -718,13 +692,11 @@ const styles = StyleSheet.create({
   guestBannerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1C1C1E',
     marginBottom: 8,
     textAlign: 'center',
   },
   guestBannerText: {
     fontSize: 14,
-    color: '#3C3C43',
     lineHeight: 20,
     textAlign: 'center',
     marginBottom: 16,
@@ -733,7 +705,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#007AFF',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 10,
@@ -751,7 +722,6 @@ const styles = StyleSheet.create({
   },
   guestBannerButtonSecondaryText: {
     fontSize: 14,
-    color: '#007AFF',
     textAlign: 'center',
   },
   warningBox: {
@@ -766,7 +736,6 @@ const styles = StyleSheet.create({
   warningText: {
     flex: 1,
     fontSize: 13,
-    color: '#8E8E93',
     lineHeight: 18,
   },
 });

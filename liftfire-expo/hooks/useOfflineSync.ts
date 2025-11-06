@@ -25,7 +25,7 @@ export interface UseOfflineSyncReturn {
     operationType: SyncOperation['operation_type'],
     tableName: SyncOperation['table_name'],
     recordId: string,
-    data: any
+    data: Record<string, unknown>
   ) => Promise<void>;
   
   // Manual sync controls
@@ -102,7 +102,6 @@ export const useOfflineSync = (): UseOfflineSyncReturn => {
       
       // If app is coming to foreground, trigger sync
       if (wasBackground && isActive) {
-        console.log('App came to foreground - triggering sync');
         handleSyncNow().catch(err => {
           console.error('Background sync failed:', err);
         });
@@ -155,7 +154,7 @@ export const useOfflineSync = (): UseOfflineSyncReturn => {
     operationType: SyncOperation['operation_type'],
     tableName: SyncOperation['table_name'],
     recordId: string,
-    data: any
+    data: Record<string, unknown>
   ) => {
     try {
       setError(null);
@@ -171,7 +170,6 @@ export const useOfflineSync = (): UseOfflineSyncReturn => {
   // Manual sync trigger
   const handleSyncNow = useCallback(async () => {
     if (isSyncing) {
-      console.log('Sync already in progress');
       return;
     }
 
@@ -181,8 +179,6 @@ export const useOfflineSync = (): UseOfflineSyncReturn => {
       
       await forceSyncNow();
       await updateSyncStatus();
-      
-      console.log('Manual sync completed');
     } catch (err) {
       console.error('Manual sync failed:', err);
       setError(err instanceof Error ? err.message : 'Sync failed');

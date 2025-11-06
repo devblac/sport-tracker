@@ -86,8 +86,9 @@ export const useSocial = () => {
       });
 
       setFeed(feedWithLikes);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch feed');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch feed';
+      setError(errorMessage);
       console.error('Error fetching feed:', err);
     } finally {
       setLoading(false);
@@ -138,7 +139,7 @@ export const useSocial = () => {
         );
         throw likeError;
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error liking workout:', err);
       throw err;
     }
@@ -187,7 +188,7 @@ export const useSocial = () => {
         );
         throw unlikeError;
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error unliking workout:', err);
       throw err;
     }
