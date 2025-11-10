@@ -28,6 +28,7 @@
     "@supabase/supabase-js": "^2.78.0",
     "@types/jest": "^30.0.0",
     "expo": "~54.0.20",
+    "expo-build-properties": "~0.14.4",
     "expo-constants": "~18.0.10",
     "expo-linking": "~8.0.8",
     "expo-router": "~6.0.14",
