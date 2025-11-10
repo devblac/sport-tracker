@@ -54,6 +54,14 @@ cd liftfire-expo
 npm install
 ```
 
+> **Note**: The project uses `.npmrc` with `legacy-peer-deps=true` to resolve React 19 compatibility issues with some testing libraries. This is automatically applied during installation.
+
+2. **Install dependencies**
+
+```bash
+npm install
+```
+
 This will install all required packages including:
 - React Native and Expo SDK
 - Supabase client
