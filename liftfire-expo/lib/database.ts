@@ -1,4 +1,5 @@
 import * as SQLite from 'expo-sqlite';
+import { Platform } from 'react-native';
 import { Workout, Exercise } from '../types';
 
 // Database configuration
@@ -8,7 +9,16 @@ const DATABASE_VERSION = 1;
 // Initialize SQLite database
 let db: SQLite.SQLiteDatabase | null = null;
 
-export const initializeDatabase = async (): Promise<SQLite.SQLiteDatabase> => {
+// Check if we're on web platform
+const isWeb = Platform.OS === 'web';
+
+export const initializeDatabase = async (): Promise<SQLite.SQLiteDatabase | null> => {
+  // On web, we skip SQLite and use localStorage instead
+  if (isWeb) {
+    console.log('[Database] Running on web - using localStorage instead of SQLite');
+    return null;
+  }
+
   if (db) {
     return db;
   }
@@ -190,7 +200,11 @@ const sanitizeText = (text: string): string => {
 };
 
 // Database operation helpers
-export const getDatabase = async (): Promise<SQLite.SQLiteDatabase> => {
+export const getDatabase = async (): Promise<SQLite.SQLiteDatabase | null> => {
+  if (isWeb) {
+    return null;
+  }
+  
   if (!db) {
     return await initializeDatabase();
   }
@@ -198,6 +212,10 @@ export const getDatabase = async (): Promise<SQLite.SQLiteDatabase> => {
 };
 
 export const closeDatabase = async (): Promise<void> => {
+  if (isWeb) {
+    return;
+  }
+  
   if (db) {
     await db.closeAsync();
     db = null;
@@ -206,7 +224,17 @@ export const closeDatabase = async (): Promise<void> => {
 
 // Clear all local data (for logout or reset)
 export const clearLocalData = async (): Promise<void> => {
+  if (isWeb) {
+    // On web, clear localStorage
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('liftfire_workouts');
+      localStorage.removeItem('liftfire_sync_queue');
+    }
+    return;
+  }
+
   const database = await getDatabase();
+  if (!database) return;
   
   await database.execAsync(`
     DELETE FROM workouts;
@@ -218,7 +246,24 @@ export const clearLocalData = async (): Promise<void> => {
 
 // Workout CRUD operations for local storage
 export const getLocalWorkouts = async (userId: string): Promise<Workout[]> => {
+  if (isWeb) {
+    // On web, use localStorage
+    if (typeof localStorage === 'undefined') return [];
+    
+    const stored = localStorage.getItem('liftfire_workouts');
+    if (!stored) return [];
+    
+    try {
+      const allWorkouts = JSON.parse(stored) as Workout[];
+      return allWorkouts.filter(w => w.user_id === userId);
+    } catch (error) {
+      console.error('Failed to parse workouts from localStorage:', error);
+      return [];
+    }
+  }
+
   const database = await getDatabase();
+  if (!database) return [];
   
   const workouts = await database.getAllAsync<Workout>(
     'SELECT * FROM workouts WHERE user_id = ? ORDER BY completed_at DESC',
@@ -245,8 +290,35 @@ export const getLocalWorkouts = async (userId: string): Promise<Workout[]> => {
 };
 
 export const saveLocalWorkout = async (workout: Workout): Promise<void> => {
-  const database = await getDatabase();
   const whitelistedWorkout = whitelistWorkoutData(workout);
+
+  if (isWeb) {
+    // On web, use localStorage
+    if (typeof localStorage === 'undefined') return;
+    
+    try {
+      const stored = localStorage.getItem('liftfire_workouts');
+      const workouts = stored ? JSON.parse(stored) : [];
+      
+      // Remove existing workout with same ID
+      const filtered = workouts.filter((w: Workout) => w.id !== workout.id);
+      
+      // Add updated workout
+      filtered.push({
+        ...whitelistedWorkout,
+        exercises: workout.exercises?.map(e => whitelistExerciseData(e)) || []
+      });
+      
+      localStorage.setItem('liftfire_workouts', JSON.stringify(filtered));
+    } catch (error) {
+      console.error('Failed to save workout to localStorage:', error);
+      throw error;
+    }
+    return;
+  }
+
+  const database = await getDatabase();
+  if (!database) return;
 
   try {
     // Start transaction
@@ -306,7 +378,27 @@ export const saveLocalWorkout = async (workout: Workout): Promise<void> => {
 };
 
 export const deleteLocalWorkout = async (workoutId: string): Promise<void> => {
+  if (isWeb) {
+    // On web, use localStorage
+    if (typeof localStorage === 'undefined') return;
+    
+    try {
+      const stored = localStorage.getItem('liftfire_workouts');
+      if (!stored) return;
+      
+      const workouts = JSON.parse(stored);
+      const filtered = workouts.filter((w: Workout) => w.id !== workoutId);
+      
+      localStorage.setItem('liftfire_workouts', JSON.stringify(filtered));
+    } catch (error) {
+      console.error('Failed to delete workout from localStorage:', error);
+      throw error;
+    }
+    return;
+  }
+
   const database = await getDatabase();
+  if (!database) return;
   
   try {
     await database.execAsync('BEGIN TRANSACTION');
@@ -326,7 +418,33 @@ export const deleteLocalWorkout = async (workoutId: string): Promise<void> => {
 
 // Get database statistics for debugging
 export const getDatabaseStats = async () => {
+  if (isWeb) {
+    // On web, count from localStorage
+    if (typeof localStorage === 'undefined') {
+      return { workouts: 0, exercises: 0, pendingSync: 0 };
+    }
+    
+    try {
+      const stored = localStorage.getItem('liftfire_workouts');
+      const workouts = stored ? JSON.parse(stored) : [];
+      const exerciseCount = workouts.reduce((sum: number, w: Workout) => 
+        sum + (w.exercises?.length || 0), 0
+      );
+      
+      return {
+        workouts: workouts.length,
+        exercises: exerciseCount,
+        pendingSync: 0 // No sync queue on web
+      };
+    } catch (error) {
+      return { workouts: 0, exercises: 0, pendingSync: 0 };
+    }
+  }
+
   const database = await getDatabase();
+  if (!database) {
+    return { workouts: 0, exercises: 0, pendingSync: 0 };
+  }
   
   const workoutCount = await database.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM workouts');
   const exerciseCount = await database.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM exercises');

@@ -1,8 +1,12 @@
 import NetInfo from '@react-native-community/netinfo';
+import { Platform } from 'react-native';
 import { supabase } from './supabase';
 import { getDatabase, whitelistWorkoutData, whitelistExerciseData } from './database';
 import { Workout, Exercise } from '../types';
 import { showSyncToast } from './toast';
+
+// Check if we're on web platform
+const isWeb = Platform.OS === 'web';
 
 // Types for sync operations
 export interface SyncOperation {
@@ -57,7 +61,25 @@ export const queueOperation = async (
   data: Record<string, unknown>
 ): Promise<void> => {
   try {
+    // On web, skip queue and sync immediately if online
+    if (isWeb) {
+      if (isOnline) {
+        const operation: SyncOperation = {
+          operation_type: operationType,
+          table_name: tableName,
+          record_id: recordId,
+          data: JSON.stringify(data),
+          timestamp: new Date().toISOString(),
+          retry_count: 0,
+          status: 'pending'
+        };
+        await processSingleOperation(operation);
+      }
+      return;
+    }
+
     const database = await getDatabase();
+    if (!database) return;
     
     // Whitelist data based on table type
     let whitelistedData;
@@ -111,8 +133,14 @@ export const processQueue = async (): Promise<void> => {
     return;
   }
 
+  // On web, there's no queue to process
+  if (isWeb) {
+    return;
+  }
+
   try {
     const database = await getDatabase();
+    if (!database) return;
     
     // Get pending operations ordered by timestamp
     const operations = await database.getAllAsync<SyncOperation>(
@@ -286,8 +314,14 @@ const syncDeleteExercise = async (exerciseId: string): Promise<void> => {
 
 // Get pending sync count
 export const getPendingSyncCount = async (): Promise<number> => {
+  if (isWeb) {
+    return 0; // No sync queue on web
+  }
+
   try {
     const database = await getDatabase();
+    if (!database) return 0;
+    
     const result = await database.getFirstAsync<{ count: number }>(
       'SELECT COUNT(*) as count FROM sync_queue WHERE status = "pending"'
     );
@@ -300,8 +334,25 @@ export const getPendingSyncCount = async (): Promise<number> => {
 
 // Get sync queue status
 export const getSyncQueueStatus = async () => {
+  if (isWeb) {
+    return {
+      pending: 0,
+      failed: 0,
+      syncing: 0,
+      isOnline
+    };
+  }
+
   try {
     const database = await getDatabase();
+    if (!database) {
+      return {
+        pending: 0,
+        failed: 0,
+        syncing: 0,
+        isOnline
+      };
+    }
     
     const pending = await database.getFirstAsync<{ count: number }>(
       'SELECT COUNT(*) as count FROM sync_queue WHERE status = "pending"'
@@ -343,8 +394,14 @@ export const forceSyncNow = async (): Promise<void> => {
 
 // Clear failed operations (for retry)
 export const clearFailedOperations = async (): Promise<void> => {
+  if (isWeb) {
+    return; // No sync queue on web
+  }
+
   try {
     const database = await getDatabase();
+    if (!database) return;
+    
     await database.runAsync('DELETE FROM sync_queue WHERE status = "failed"');
   } catch (error) {
     console.error('Failed to clear failed operations:', error);
@@ -354,8 +411,14 @@ export const clearFailedOperations = async (): Promise<void> => {
 
 // Retry failed operations
 export const retryFailedOperations = async (): Promise<void> => {
+  if (isWeb) {
+    return; // No sync queue on web
+  }
+
   try {
     const database = await getDatabase();
+    if (!database) return;
+    
     await database.runAsync(
       'UPDATE sync_queue SET status = "pending", retry_count = 0 WHERE status = "failed"'
     );
