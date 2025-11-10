@@ -1,4 +1,3 @@
-import * as SQLite from 'expo-sqlite';
 import { Platform } from 'react-native';
 import { Workout, Exercise } from '../types';
 
@@ -6,13 +5,22 @@ import { Workout, Exercise } from '../types';
 const DATABASE_NAME = 'liftfire.db';
 const DATABASE_VERSION = 1;
 
-// Initialize SQLite database
-let db: SQLite.SQLiteDatabase | null = null;
-
 // Check if we're on web platform
 const isWeb = Platform.OS === 'web';
 
-export const initializeDatabase = async (): Promise<SQLite.SQLiteDatabase | null> => {
+// Type for SQLite database (using any to avoid import issues on web)
+type SQLiteDatabase = any;
+
+// Conditionally import SQLite only on native platforms
+let SQLite: any = null;
+if (!isWeb) {
+  SQLite = require('expo-sqlite');
+}
+
+// Initialize SQLite database
+let db: SQLiteDatabase | null = null;
+
+export const initializeDatabase = async (): Promise<SQLiteDatabase | null> => {
   // On web, we skip SQLite and use localStorage instead
   if (isWeb) {
     console.log('[Database] Running on web - using localStorage instead of SQLite');
@@ -34,7 +42,7 @@ export const initializeDatabase = async (): Promise<SQLite.SQLiteDatabase | null
 };
 
 // Database migration logic
-const runMigrations = async (database: SQLite.SQLiteDatabase): Promise<void> => {
+const runMigrations = async (database: SQLiteDatabase): Promise<void> => {
   try {
     // Create version table if it doesn't exist
     await database.execAsync(`
@@ -44,6 +52,7 @@ const runMigrations = async (database: SQLite.SQLiteDatabase): Promise<void> => 
     `);
 
     // Get current version
+    // @ts-ignore - SQLite type is any to avoid web import issues
     const result = await database.getFirstAsync<{ version: number }>('SELECT version FROM database_version LIMIT 1');
     const currentVersion = result?.version || 0;
 
@@ -62,7 +71,7 @@ const runMigrations = async (database: SQLite.SQLiteDatabase): Promise<void> => 
 };
 
 // Migration V1: Create initial tables
-const runMigrationV1 = async (database: SQLite.SQLiteDatabase): Promise<void> => {
+const runMigrationV1 = async (database: SQLiteDatabase): Promise<void> => {
   await database.execAsync(`
     -- Workouts table for offline storage
     CREATE TABLE IF NOT EXISTS workouts (
@@ -200,7 +209,7 @@ const sanitizeText = (text: string): string => {
 };
 
 // Database operation helpers
-export const getDatabase = async (): Promise<SQLite.SQLiteDatabase | null> => {
+export const getDatabase = async (): Promise<SQLiteDatabase | null> => {
   if (isWeb) {
     return null;
   }
@@ -265,6 +274,7 @@ export const getLocalWorkouts = async (userId: string): Promise<Workout[]> => {
   const database = await getDatabase();
   if (!database) return [];
   
+  // @ts-ignore - SQLite type is any to avoid web import issues
   const workouts = await database.getAllAsync<Workout>(
     'SELECT * FROM workouts WHERE user_id = ? ORDER BY completed_at DESC',
     [userId]
@@ -272,7 +282,8 @@ export const getLocalWorkouts = async (userId: string): Promise<Workout[]> => {
 
   // Fetch exercises for each workout
   const workoutsWithExercises = await Promise.all(
-    workouts.map(async (workout) => {
+    workouts.map(async (workout: Workout) => {
+      // @ts-ignore - SQLite type is any to avoid web import issues
       const exercises = await database.getAllAsync<Exercise>(
         'SELECT * FROM exercises WHERE workout_id = ? ORDER BY created_at ASC',
         [workout.id]
@@ -446,8 +457,11 @@ export const getDatabaseStats = async () => {
     return { workouts: 0, exercises: 0, pendingSync: 0 };
   }
   
+  // @ts-ignore - SQLite type is any to avoid web import issues
   const workoutCount = await database.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM workouts');
+  // @ts-ignore - SQLite type is any to avoid web import issues
   const exerciseCount = await database.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM exercises');
+  // @ts-ignore - SQLite type is any to avoid web import issues
   const queueCount = await database.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM sync_queue WHERE status = "pending"');
   
   return {
