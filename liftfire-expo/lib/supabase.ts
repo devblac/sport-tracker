@@ -19,20 +19,30 @@ const ExpoSecureStoreAdapter = {
   getItem: async (key: string) => {
     if (Platform.OS === 'web') {
       // On web, use localStorage as SecureStore is not available
-      return localStorage.getItem(key);
+      // Check if localStorage is available (not available during SSR)
+      if (typeof localStorage !== 'undefined') {
+        return localStorage.getItem(key);
+      }
+      return null;
     }
     return await SecureStore.getItemAsync(key);
   },
   setItem: async (key: string, value: string) => {
     if (Platform.OS === 'web') {
-      localStorage.setItem(key, value);
+      // Check if localStorage is available (not available during SSR)
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(key, value);
+      }
       return;
     }
     await SecureStore.setItemAsync(key, value);
   },
   removeItem: async (key: string) => {
     if (Platform.OS === 'web') {
-      localStorage.removeItem(key);
+      // Check if localStorage is available (not available during SSR)
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(key);
+      }
       return;
     }
     await SecureStore.deleteItemAsync(key);
