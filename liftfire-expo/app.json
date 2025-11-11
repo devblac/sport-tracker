@@ -78,11 +78,7 @@
       ]
     ],
     "scheme": "liftfire",
-    "owner": "your-expo-username",
-    "updates": {
-      "fallbackToCacheTimeout": 0,
-      "url": "https://u.expo.dev/your-project-id"
-    },
+    "owner": "makvelousdev",
     "runtimeVersion": {
       "policy": "appVersion"
     },
@@ -91,7 +87,7 @@
         "origin": false
       },
       "eas": {
-        "projectId": "your-eas-project-id"
+        "projectId": "f643a6b0-0a25-40a3-8310-c33840fa8a5a"
       }
     }
   }

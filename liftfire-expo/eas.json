@@ -28,9 +28,6 @@
       "android": {
         "buildType": "app-bundle"
       },
-      "ios": {
-        "bundleIdentifier": "com.liftfire.app"
-      },
       "env": {
         "EXPO_PUBLIC_ENVIRONMENT": "production"
       },
