@@ -11,11 +11,13 @@ const isWeb = Platform.OS === 'web';
 // Type for SQLite database (using any to avoid import issues on web)
 type SQLiteDatabase = any;
 
-// Conditionally import SQLite only on native platforms
-let SQLite: any = null;
-if (!isWeb) {
-  SQLite = require('expo-sqlite');
-}
+// Lazy load SQLite only when needed on native platforms
+const getSQLite = () => {
+  if (isWeb) {
+    return null;
+  }
+  return require('expo-sqlite');
+};
 
 // Initialize SQLite database
 let db: SQLiteDatabase | null = null;
@@ -32,6 +34,11 @@ export const initializeDatabase = async (): Promise<SQLiteDatabase | null> => {
   }
 
   try {
+    const SQLite = getSQLite();
+    if (!SQLite) {
+      throw new Error('SQLite not available on web platform');
+    }
+    
     db = await SQLite.openDatabaseAsync(DATABASE_NAME);
     await runMigrations(db);
     return db;
