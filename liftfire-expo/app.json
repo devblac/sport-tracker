@@ -41,6 +41,11 @@
         "ACCESS_NETWORK_STATE",
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE"
       ],
       "edgeToEdgeEnabled": true,
@@ -89,6 +94,9 @@
       "eas": {
         "projectId": "f643a6b0-0a25-40a3-8310-c33840fa8a5a"
       }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/f643a6b0-0a25-40a3-8310-c33840fa8a5a"
     }
   }
 }
