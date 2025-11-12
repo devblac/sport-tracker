@@ -8,10 +8,8 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_ENVIRONMENT": "development"
-      },
-      "npm": {
-        "installFlags": ["--legacy-peer-deps"]
+        "EXPO_PUBLIC_ENVIRONMENT": "development",
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
       }
     },
     "preview": {
@@ -23,25 +21,21 @@
       },
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_ENVIRONMENT": "staging"
+        "EXPO_PUBLIC_ENVIRONMENT": "staging",
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
       },
-      "channel": "preview",
-      "npm": {
-        "installFlags": ["--legacy-peer-deps"]
-      }
+      "channel": "preview"
     },
     "production": {
       "android": {
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_ENVIRONMENT": "production"
+        "EXPO_PUBLIC_ENVIRONMENT": "production",
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
       },
       "channel": "production",
-      "autoIncrement": true,
-      "npm": {
-        "installFlags": ["--legacy-peer-deps"]
-      }
+      "autoIncrement": true
     }
   },
   "submit": {
