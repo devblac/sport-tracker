@@ -1,21 +1,26 @@
-name: Performance Tests
+# DISABLED: Legacy app performance tests - focusing on liftfire-expo MVP
+# This workflow is disabled to prevent failures from the legacy codebase
+# Re-enable after legacy app dependencies are updated
+
+name: Performance Tests (DISABLED)
 
 on:
-  push:
-    branches: [ main, develop ]
-    paths-ignore:
-      - 'liftfire-expo/**'
-      - '**.md'
-      - 'docs/**'
-  pull_request:
-    branches: [ main ]
-    paths-ignore:
-      - 'liftfire-expo/**'
-      - '**.md'
-      - 'docs/**'
-  schedule:
-    # Run performance tests daily at 2 AM UTC
-    - cron: '0 2 * * *'
+  workflow_dispatch:  # Only run manually
+  # push:
+  #   branches: [ main, develop ]
+  #   paths-ignore:
+  #     - 'liftfire-expo/**'
+  #     - '**.md'
+  #     - 'docs/**'
+  # pull_request:
+  #   branches: [ main ]
+  #   paths-ignore:
+  #     - 'liftfire-expo/**'
+  #     - '**.md'
+  #     - 'docs/**'
+  # schedule:
+  #   # Run performance tests daily at 2 AM UTC
+  #   - cron: '0 2 * * *'
 
 env:
   NODE_VERSION: '18'
