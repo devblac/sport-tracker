@@ -9,6 +9,9 @@
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_ENVIRONMENT": "development"
+      },
+      "npm": {
+        "installFlags": ["--legacy-peer-deps"]
       }
     },
     "preview": {
@@ -22,7 +25,10 @@
       "env": {
         "EXPO_PUBLIC_ENVIRONMENT": "staging"
       },
-      "channel": "preview"
+      "channel": "preview",
+      "npm": {
+        "installFlags": ["--legacy-peer-deps"]
+      }
     },
     "production": {
       "android": {
@@ -32,7 +38,10 @@
         "EXPO_PUBLIC_ENVIRONMENT": "production"
       },
       "channel": "production",
-      "autoIncrement": true
+      "autoIncrement": true,
+      "npm": {
+        "installFlags": ["--legacy-peer-deps"]
+      }
     }
   },
   "submit": {
