@@ -295,9 +295,9 @@ For future updates:
 
 ### Build Fails with ERESOLVE Error
 If you see `ERESOLVE could not resolve` or peer dependency conflicts:
-- The `eas.json` is configured with `--legacy-peer-deps` flag
+- The `eas.json` is configured with `NPM_CONFIG_LEGACY_PEER_DEPS=true` environment variable
 - This resolves React 19 compatibility issues with testing libraries
-- If the error persists, check that `eas.json` has `npm.installFlags` in all build profiles
+- If the error persists, check that all build profiles in `eas.json` have this env var set
 
 ### Build Fails (General)
 - Check EAS build logs at https://expo.dev
