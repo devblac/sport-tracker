@@ -80,7 +80,8 @@
             "deploymentTarget": "15.1"
           }
         }
-      ]
+      ],
+      "expo-font"
     ],
     "scheme": "liftfire",
     "owner": "makvelousdev",
