@@ -90,6 +90,10 @@ export default function WorkoutsScreen() {
     />
   ), [handleWorkoutPress, handleDeleteWorkout]);
 
+  const handleBrowseTemplates = useCallback(() => {
+    router.push('/templates');
+  }, []);
+
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
       <Ionicons name="fitness-outline" size={64} color={colors.textTertiary} />
@@ -97,10 +101,16 @@ export default function WorkoutsScreen() {
       <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
         Start your fitness journey by creating your first workout!
       </Text>
-      <TouchableOpacity style={[styles.createButton, { backgroundColor: colors.primary }]} onPress={handleCreateWorkout}>
-        <Ionicons name="add" size={24} color="#FFFFFF" />
-        <Text style={styles.createButtonText}>Create Workout</Text>
-      </TouchableOpacity>
+      <View style={styles.emptyActions}>
+        <TouchableOpacity style={[styles.createButton, { backgroundColor: colors.primary }]} onPress={handleCreateWorkout}>
+          <Ionicons name="add" size={24} color="#FFFFFF" />
+          <Text style={styles.createButtonText}>Create Workout</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.templateButton, { borderColor: colors.primary }]} onPress={handleBrowseTemplates}>
+          <Ionicons name="albums-outline" size={24} color={colors.primary} />
+          <Text style={[styles.templateButtonText, { color: colors.primary }]}>Use Template</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -135,6 +145,14 @@ export default function WorkoutsScreen() {
           <Text style={styles.syncStatusText}>{statusText}</Text>
         </View>
       </View>
+      
+      {workouts.length > 0 && (
+        <TouchableOpacity style={[styles.templatesLink, { backgroundColor: colors.backgroundSecondary }]} onPress={handleBrowseTemplates}>
+          <Ionicons name="albums-outline" size={20} color={colors.primary} />
+          <Text style={[styles.templatesLinkText, { color: colors.primary }]}>Browse Templates</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.primary} />
+        </TouchableOpacity>
+      )}
       
       {error && (
         <View style={styles.errorContainer}>
@@ -312,9 +330,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 32,
   },
+  emptyActions: {
+    gap: 12,
+    width: '100%',
+    paddingHorizontal: 32,
+  },
   createButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 25,
@@ -324,6 +348,34 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  templateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 25,
+    borderWidth: 2,
+    gap: 8,
+  },
+  templateButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  templatesLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
+    marginTop: 16,
+  },
+  templatesLinkText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
   },
   loadMoreContainer: {
     padding: 20,
