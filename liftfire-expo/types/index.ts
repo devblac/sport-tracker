@@ -55,6 +55,7 @@ export interface Workout {
   user_id: string;
   name: string;
   notes?: string;
+  comment?: string; // User comment about the workout (max 500 chars)
   duration_minutes?: number;
   xp_earned: number;
   completed_at: string;
@@ -113,6 +114,19 @@ export interface Achievement {
   unlocked_at: string;
 }
 
+export interface PersonalRecord {
+  id: string;
+  user_id: string;
+  exercise_id: string;
+  exercise_name: string;
+  weight: number;
+  reps: number;
+  estimated_1rm: number;
+  workout_id: string | null;
+  achieved_at: string;
+  created_at: string;
+}
+
 // Achievement definition (for checking unlock conditions)
 export interface AchievementDefinition {
   type: string;
@@ -135,6 +149,7 @@ export interface UserStats {
 export const CreateWorkoutSchema = z.object({
   name: z.string().min(1, 'Workout name is required').max(100, 'Workout name too long'),
   notes: z.string().max(500, 'Notes too long').optional(),
+  comment: z.string().max(500, 'Comment too long').optional(),
   duration_minutes: z.number().min(1, 'Duration must be at least 1 minute').max(600, 'Duration too long').optional(),
   exercises: z.array(z.object({
     name: z.string().min(1, 'Exercise name is required').max(100, 'Exercise name too long'),
@@ -158,6 +173,18 @@ export const CreateExerciseSchema = z.object({
   notes: z.string().max(200, 'Exercise notes too long').optional(),
 });
 
+export const CreatePersonalRecordSchema = z.object({
+  user_id: z.string().uuid('Invalid user ID'),
+  exercise_id: z.string().min(1, 'Exercise ID is required'),
+  exercise_name: z.string().min(1, 'Exercise name is required').max(100, 'Exercise name too long'),
+  weight: z.number().min(0, 'Weight cannot be negative').max(2000, 'Weight too high'),
+  reps: z.number().min(1, 'Reps must be at least 1').max(1000, 'Too many reps'),
+  estimated_1rm: z.number().min(0, 'Estimated 1RM cannot be negative'),
+  workout_id: z.string().uuid('Invalid workout ID').nullable(),
+  achieved_at: z.string().datetime('Invalid date format'),
+});
+
 export type CreateWorkoutInput = z.infer<typeof CreateWorkoutSchema>;
 export type UpdateWorkoutInput = z.infer<typeof UpdateWorkoutSchema>;
 export type CreateExerciseInput = z.infer<typeof CreateExerciseSchema>;
+export type CreatePersonalRecordInput = z.infer<typeof CreatePersonalRecordSchema>;

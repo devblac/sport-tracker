@@ -86,7 +86,15 @@ export const useWorkouts = (): UseWorkoutsReturn => {
       const { data: workoutsData, error: workoutsError } = await supabase
         .from('workouts')
         .select(`
-          *,
+          id,
+          user_id,
+          name,
+          notes,
+          comment,
+          duration_minutes,
+          xp_earned,
+          completed_at,
+          created_at,
           exercises (*)
         `)
         .eq('user_id', user.id)
@@ -175,6 +183,7 @@ export const useWorkouts = (): UseWorkoutsReturn => {
         user_id: user.id,
         name: validatedData.name,
         notes: validatedData.notes,
+        comment: validatedData.comment,
         duration_minutes: validatedData.duration_minutes,
         xp_earned: xpEarned,
         completed_at: new Date().toISOString(),

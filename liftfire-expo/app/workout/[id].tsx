@@ -276,6 +276,17 @@ export default function WorkoutDetailScreen() {
           </View>
         )}
 
+        {/* Workout Comment */}
+        {workout.comment && (
+          <View style={styles.commentCard}>
+            <View style={styles.commentHeader}>
+              <Ionicons name="chatbubble-outline" size={20} color="#007AFF" />
+              <Text style={styles.commentTitle}>Comment</Text>
+            </View>
+            <Text style={styles.commentText}>{workout.comment}</Text>
+          </View>
+        )}
+
         {/* Exercises */}
         <View style={styles.exercisesSection}>
           <Text style={styles.sectionTitle}>
@@ -407,6 +418,31 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   notesText: {
+    fontSize: 16,
+    color: '#3C3C43',
+    lineHeight: 22,
+  },
+  commentCard: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 12,
+    padding: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#007AFF',
+  },
+  commentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  commentTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1C1C1E',
+  },
+  commentText: {
     fontSize: 16,
     color: '#3C3C43',
     lineHeight: 22,

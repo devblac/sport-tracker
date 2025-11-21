@@ -86,6 +86,7 @@ const runMigrationV1 = async (database: SQLiteDatabase): Promise<void> => {
       user_id TEXT NOT NULL,
       name TEXT NOT NULL,
       notes TEXT,
+      comment TEXT,
       duration_minutes INTEGER,
       xp_earned INTEGER DEFAULT 0,
       completed_at TEXT NOT NULL,
@@ -146,7 +147,7 @@ const runMigrationV1 = async (database: SQLiteDatabase): Promise<void> => {
 // Data whitelisting functions to ensure only safe data is persisted
 export const whitelistWorkoutData = (workout: Partial<Workout>): Partial<Workout> => {
   const allowedFields: (keyof Workout)[] = [
-    'id', 'user_id', 'name', 'notes', 'duration_minutes', 
+    'id', 'user_id', 'name', 'notes', 'comment', 'duration_minutes', 
     'xp_earned', 'completed_at', 'created_at', 'synced'
   ];
 
@@ -164,6 +165,9 @@ export const whitelistWorkoutData = (workout: Partial<Workout>): Partial<Workout
   }
   if (whitelisted.notes) {
     whitelisted.notes = sanitizeText(whitelisted.notes);
+  }
+  if (whitelisted.comment) {
+    whitelisted.comment = sanitizeText(whitelisted.comment);
   }
 
   return whitelisted;
@@ -345,13 +349,14 @@ export const saveLocalWorkout = async (workout: Workout): Promise<void> => {
     // Insert or replace workout
     await database.runAsync(
       `INSERT OR REPLACE INTO workouts 
-       (id, user_id, name, notes, duration_minutes, xp_earned, completed_at, created_at, synced, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+       (id, user_id, name, notes, comment, duration_minutes, xp_earned, completed_at, created_at, synced, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
       [
         whitelistedWorkout.id!,
         whitelistedWorkout.user_id!,
         whitelistedWorkout.name!,
         whitelistedWorkout.notes || null,
+        whitelistedWorkout.comment || null,
         whitelistedWorkout.duration_minutes || null,
         whitelistedWorkout.xp_earned || 0,
         whitelistedWorkout.completed_at!,

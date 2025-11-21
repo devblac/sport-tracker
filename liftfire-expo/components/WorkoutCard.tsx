@@ -111,6 +111,15 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({
           {workout.notes}
         </Text>
       )}
+
+      {workout.comment && (
+        <View style={styles.commentContainer}>
+          <Ionicons name="chatbox-outline" size={14} color="#8E8E93" />
+          <Text style={styles.comment} numberOfLines={2}>
+            {workout.comment}
+          </Text>
+        </View>
+      )}
     </TouchableOpacity>
   );
 };
@@ -173,5 +182,20 @@ const styles = StyleSheet.create({
     color: '#6D6D70',
     marginTop: 12,
     fontStyle: 'italic',
+  },
+  commentContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5EA',
+  },
+  comment: {
+    flex: 1,
+    fontSize: 14,
+    color: '#3C3C43',
+    lineHeight: 20,
   },
 });

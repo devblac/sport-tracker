@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CreateWorkoutInput, CreateWorkoutSchema } from '../types';
+import { RestTimer } from './RestTimer';
+import { CommentInput } from './CommentInput';
 
 interface ExerciseFormData {
   id?: string;
@@ -38,6 +40,7 @@ export const WorkoutForm: React.FC<WorkoutFormProps> = ({
 }) => {
   const [workoutName, setWorkoutName] = useState(initialData?.name || '');
   const [workoutNotes, setWorkoutNotes] = useState(initialData?.notes || '');
+  const [workoutComment, setWorkoutComment] = useState('');
   const [duration, setDuration] = useState(
     initialData?.duration_minutes?.toString() || ''
   );
@@ -54,6 +57,7 @@ export const WorkoutForm: React.FC<WorkoutFormProps> = ({
   );
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showRestTimer, setShowRestTimer] = useState(false);
 
   const addExercise = useCallback(() => {
     setExercises(prev => [
@@ -109,6 +113,11 @@ export const WorkoutForm: React.FC<WorkoutFormProps> = ({
       newErrors.notes = 'Notes are too long';
     }
 
+    // Validate comment
+    if (workoutComment.length > 500) {
+      newErrors.comment = 'Comment is too long';
+    }
+
     // Validate exercises
     exercises.forEach((exercise, index) => {
       if (!exercise.name.trim()) {
@@ -158,6 +167,7 @@ export const WorkoutForm: React.FC<WorkoutFormProps> = ({
       const formData: CreateWorkoutInput = {
         name: workoutName.trim(),
         notes: workoutNotes.trim() || undefined,
+        comment: workoutComment.trim() || undefined,
         duration_minutes: duration ? Number(duration) : undefined,
         exercises: exercises.map(exercise => ({
           name: exercise.name.trim(),
@@ -176,7 +186,7 @@ export const WorkoutForm: React.FC<WorkoutFormProps> = ({
       console.error('Form submission error:', error);
       Alert.alert('Error', 'Failed to save workout. Please try again.');
     }
-  }, [validateForm, workoutName, workoutNotes, duration, exercises, onSubmit]);
+  }, [validateForm, workoutName, workoutNotes, workoutComment, duration, exercises, onSubmit]);
 
   const renderExercise = (exercise: ExerciseFormData, index: number) => (
     <View key={index} style={styles.exerciseContainer}>
@@ -284,12 +294,22 @@ export const WorkoutForm: React.FC<WorkoutFormProps> = ({
           <Text style={styles.errorText}>{errors[`exercise_${index}_notes`]}</Text>
         )}
       </View>
+
+      {/* Rest Timer Button */}
+      <TouchableOpacity
+        style={styles.restTimerButton}
+        onPress={() => setShowRestTimer(true)}
+      >
+        <Ionicons name="timer-outline" size={20} color="#007AFF" />
+        <Text style={styles.restTimerButtonText}>Start Rest Timer</Text>
+      </TouchableOpacity>
     </View>
   );
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={styles.form}>
+    <>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        <View style={styles.form}>
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Workout Name *</Text>
           <TextInput
@@ -349,6 +369,19 @@ export const WorkoutForm: React.FC<WorkoutFormProps> = ({
 
         {exercises.map((exercise, index) => renderExercise(exercise, index))}
 
+        <View style={styles.commentSection}>
+          <Text style={styles.sectionTitle}>How did it go?</Text>
+          <CommentInput
+            value={workoutComment}
+            onChangeText={setWorkoutComment}
+            placeholder="Share your thoughts about this workout... How did you feel? Any PRs? What went well?"
+            maxLength={500}
+            label="Workout Comment"
+            showCharacterCount={true}
+            error={errors.comment}
+          />
+        </View>
+
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={styles.cancelButton}
@@ -372,6 +405,13 @@ export const WorkoutForm: React.FC<WorkoutFormProps> = ({
         </View>
       </View>
     </ScrollView>
+
+    <RestTimer
+      visible={showRestTimer}
+      onClose={() => setShowRestTimer(false)}
+      defaultDuration={90}
+    />
+  </>
   );
 };
 
@@ -496,5 +536,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  restTimerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F2F2F7',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    gap: 8,
+    marginTop: 8,
+  },
+  restTimerButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  commentSection: {
+    marginTop: 24,
+    marginBottom: 8,
   },
 });
