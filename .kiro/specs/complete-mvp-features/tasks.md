@@ -51,6 +51,13 @@
 
 
 
+
+
+
+
+
+
+
 ### 2.2 UI Components
 - [x] Create `components/CommentInput.tsx`
 
@@ -121,8 +128,13 @@
 
 
 - [ ] Update TypeScript types
+-
 
 - [x] Create `lib/prCalculator.ts`
+
+
+
+
 
 
 
@@ -133,9 +145,18 @@
 - [x] Implement 1RM calculation
 
 
+-
 
-- [ ] Implement PR detection
-- [ ] Add PR comparison logic
+- [x] Implement PR detection
+
+
+
+
+
+- [x] Add PR comparison logic
+
+
+
 
 ### 3.3 PR Components
 - [ ] Create `components/PRBadge.tsx`
