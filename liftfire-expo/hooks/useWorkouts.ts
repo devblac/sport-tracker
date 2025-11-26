@@ -12,12 +12,18 @@ import {
 } from '../types';
 import { getLocalWorkouts, saveLocalWorkout, deleteLocalWorkout } from '../lib/database';
 import { showSuccessToast, showErrorToast } from '../lib/toast';
+import { detectAndSavePRs } from '../lib/prCalculator';
 
 interface WorkoutsState {
   workouts: Workout[];
   loading: boolean;
   error: string | null;
   refreshing: boolean;
+}
+
+interface PRInfo {
+  exerciseName: string;
+  improvement: number;
 }
 
 interface UseWorkoutsReturn {
@@ -28,7 +34,12 @@ interface UseWorkoutsReturn {
   refreshing: boolean;
   
   // Actions
-  createWorkout: (data: CreateWorkoutInput) => Promise<{ success: boolean; workout?: Workout; error?: string }>;
+  createWorkout: (data: CreateWorkoutInput) => Promise<{ 
+    success: boolean; 
+    workout?: Workout; 
+    error?: string;
+    prs?: PRInfo[];
+  }>;
   updateWorkout: (id: string, data: Partial<UpdateWorkoutInput>) => Promise<{ success: boolean; workout?: Workout; error?: string }>;
   deleteWorkout: (id: string) => Promise<{ success: boolean; error?: string }>;
   refreshWorkouts: () => Promise<void>;
@@ -217,9 +228,22 @@ export const useWorkouts = (): UseWorkoutsReturn => {
         exercises: newWorkout.exercises,
       });
 
+      // Detect and save PRs (don't block on failure)
+      let prsAchieved: PRInfo[] = [];
+      try {
+        prsAchieved = await detectAndSavePRs(
+          user.id,
+          tempId,
+          validatedData.exercises
+        );
+      } catch (prError) {
+        console.error('[useWorkouts] PR detection failed:', prError);
+        // Continue - don't block workout save
+      }
+
       showSuccessToast(`Workout "${newWorkout.name}" created! +${xpEarned} XP`, 'Workout Completed');
 
-      return { success: true, workout: newWorkout };
+      return { success: true, workout: newWorkout, prs: prsAchieved };
 
     } catch (error) {
       console.error('[useWorkouts] Failed to create workout:', error);
